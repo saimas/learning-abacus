@@ -1,5 +1,12 @@
 import React from "react";
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Abacus } from "./src/components/Abacus/Abacus";
 import { QuizPanel } from "./src/components/Quiz/QuizPanel";
 import { useAbacus } from "./src/hooks/useAbacus";
@@ -9,7 +16,7 @@ import { colors } from "./src/theme/colors";
 const ROD_COUNT = 5;
 
 const App = () => {
-  const { state, value, reset, toggleLower, toggleUpper, setValue } = useAbacus(ROD_COUNT);
+  const { state, value, reset, toggleLower, toggleUpper } = useAbacus(ROD_COUNT);
   const { target, lastResult, nextQuestion, checkAnswer } = useQuiz(ROD_COUNT);
 
   const handleCheck = () => {
@@ -21,11 +28,6 @@ const App = () => {
     reset();
   };
 
-  const handleReset = () => {
-    reset();
-    setValue(0);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
@@ -34,14 +36,16 @@ const App = () => {
           <Text style={styles.title}>そろばんトレーニング</Text>
           <Text style={styles.subtitle}>珠を弾いて答えを作ろう</Text>
         </View>
+
         <Abacus state={state} onToggleUpper={toggleUpper} onToggleLower={toggleLower} />
+
         <QuizPanel
           target={target}
           answer={value}
           lastResult={lastResult}
           onCheck={handleCheck}
           onNext={handleNext}
-          onReset={handleReset}
+          onReset={reset}
         />
       </ScrollView>
     </SafeAreaView>
@@ -65,9 +69,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   subtitle: {
+    marginTop: 4,
     fontSize: 16,
     color: colors.textSecondary,
-    marginTop: 4,
   },
 });
 

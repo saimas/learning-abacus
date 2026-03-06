@@ -1,23 +1,23 @@
-import { useCallback, useMemo, useState } from "react";
-
-const randomInt = (min: number, max: number) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
+import { useCallback, useState } from "react";
+import { QuizResult } from "../models/quiz";
+import { createQuizQuestion, isAnswerCorrect } from "../services/quizEngine";
 
 export const useQuiz = (maxDigits: number) => {
-  const maxValue = useMemo(() => Math.pow(10, maxDigits) - 1, [maxDigits]);
-  const [target, setTarget] = useState<number>(() => randomInt(0, maxValue));
-  const [lastResult, setLastResult] = useState<"correct" | "wrong" | null>(null);
+  const [target, setTarget] = useState<number>(() => createQuizQuestion(maxDigits).target);
+  const [lastResult, setLastResult] = useState<QuizResult>(null);
 
   const nextQuestion = useCallback(() => {
-    setTarget(randomInt(0, maxValue));
+    setTarget(createQuizQuestion(maxDigits).target);
     setLastResult(null);
-  }, [maxValue]);
+  }, [maxDigits]);
 
   const checkAnswer = useCallback(
     (answer: number) => {
-      const isCorrect = answer === target;
-      setLastResult(isCorrect ? "correct" : "wrong");
-      return isCorrect;
+      const nextResult: QuizResult = isAnswerCorrect(target, answer)
+        ? "correct"
+        : "wrong";
+      setLastResult(nextResult);
+      return nextResult === "correct";
     },
     [target]
   );

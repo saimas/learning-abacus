@@ -2,106 +2,103 @@ import { AbacusState, BeadState, RodState } from "../models/abacus";
 
 const LOWER_BEAD_COUNT = 4;
 
-const createBead = (kind: BeadState["kind"], index: number): BeadState => ({
-  id: `${kind}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+const createUpperBead = (): BeadState => ({
+  id: "upper-0",
   active: false,
-  kind,
-  index,
+  kind: "upper",
+  index: 0,
 });
+
+const createLowerBeads = (): BeadState[] =>
+  Array.from({ length: LOWER_BEAD_COUNT }, (_, index) => ({
+    id: `lower-${index}`,
+    active: false,
+    kind: "lower",
+    index,
+  }));
+
+const updateRod = (
+  state: AbacusState,
+  rodIndex: number,
+  updater: (rod: RodState) => RodState
+): AbacusState => ({
+  rods: state.rods.map((rod, index) => (index === rodIndex ? updater(rod) : rod)),
+});
+
+const getDigit = (value: number, rodIndex: number, rodCount: number): number => {
+  const paddedDigits = value
+    .toString()
+    .padStart(rodCount, "0")
+    .slice(-rodCount)
+    .split("")
+    .map(Number);
+
+  return paddedDigits[rodIndex] ?? 0;
+};
 
 export const createRod = (rodIndex: number): RodState => ({
   id: `rod-${rodIndex}`,
-  upper: createBead("upper", 0),
-  lowers: Array.from({ length: LOWER_BEAD_COUNT }, (_, index) =>
-    createBead("lower", index)
-  ),
+  upper: createUpperBead(),
+  lowers: createLowerBeads(),
 });
 
 export const createAbacus = (rodCount: number): AbacusState => ({
   rods: Array.from({ length: rodCount }, (_, index) => createRod(index)),
 });
 
-export const toggleUpper = (state: AbacusState, rodIndex: number): AbacusState => {
-  const rods = state.rods.map((rod, index) => {
-    if (index !== rodIndex) return rod;
-    return {
-      ...rod,
-      upper: {
-        ...rod.upper,
-        active: !rod.upper.active,
-      },
-    };
-  });
-
-  return { rods };
-};
+export const toggleUpper = (state: AbacusState, rodIndex: number): AbacusState =>
+  updateRod(state, rodIndex, (rod) => ({
+    ...rod,
+    upper: {
+      ...rod.upper,
+      active: !rod.upper.active,
+    },
+  }));
 
 export const toggleLower = (
   state: AbacusState,
   rodIndex: number,
   beadIndex: number
-): AbacusState => {
-  const rods = state.rods.map((rod, index) => {
-    if (index !== rodIndex) return rod;
-
+): AbacusState =>
+  updateRod(state, rodIndex, (rod) => {
     const shouldActivate = !rod.lowers[beadIndex].active;
-    const lowers = rod.lowers.map((bead) => {
-      if (shouldActivate) {
-        return {
-          ...bead,
-          active: bead.index <= beadIndex,
-        };
-      }
 
-      return {
+    return {
+      ...rod,
+      lowers: rod.lowers.map((bead) => ({
         ...bead,
-        active: bead.index < beadIndex ? bead.active : false,
-      };
-    });
-
-    return { ...rod, lowers };
+        active: shouldActivate ? bead.index <= beadIndex : bead.index < beadIndex,
+      })),
+    };
   });
 
-  return { rods };
-};
-
 export const getRodValue = (rod: RodState): number => {
-  const lowerActiveCount = rod.lowers.filter((bead) => bead.active).length;
-  return (rod.upper.active ? 5 : 0) + lowerActiveCount;
+  const activeLowerCount = rod.lowers.filter((bead) => bead.active).length;
+  return (rod.upper.active ? 5 : 0) + activeLowerCount;
 };
 
-export const getAbacusValue = (state: AbacusState): number => {
-  return state.rods.reduce((total, rod, index) => {
-    const rodValue = getRodValue(rod);
+export const getAbacusValue = (state: AbacusState): number =>
+  state.rods.reduce((total, rod, index) => {
     const place = Math.pow(10, state.rods.length - index - 1);
-    return total + rodValue * place;
+    return total + getRodValue(rod) * place;
   }, 0);
-};
 
-export const applyNumberToAbacus = (
-  state: AbacusState,
-  value: number
-): AbacusState => {
-  const digits = value
-    .toString()
-    .padStart(state.rods.length, "0")
-    .split("")
-    .map(Number);
-
-  const rods = state.rods.map((rod, index) => {
-    const digit = digits[index] ?? 0;
-    const upperActive = digit >= 5;
+export const applyNumberToAbacus = (state: AbacusState, value: number): AbacusState => ({
+  rods: state.rods.map((rod, index) => {
+    const digit = getDigit(Math.max(0, Math.floor(value)), index, state.rods.length);
+    const hasUpperBead = digit >= 5;
     const lowerCount = digit % 5;
 
     return {
       ...rod,
-      upper: { ...rod.upper, active: upperActive },
+      upper: {
+        ...rod.upper,
+        active: hasUpperBead,
+      },
       lowers: rod.lowers.map((bead) => ({
         ...bead,
         active: bead.index < lowerCount,
       })),
     };
-  });
-
-  return { rods };
-};
+  }),
+});

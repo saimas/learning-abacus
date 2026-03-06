@@ -1,18 +1,37 @@
 # abacus
 
-React Native-only prototype for a touchable soroban (abacus) with quiz prompts.
+React Native で作る、タッチ操作可能なそろばんトレーニングアプリのプロトタイプです。
 
-## Quick start
+## できること
+
+- 珠をタップして上下に弾くアニメーション
+- そろばん値のリアルタイム計算
+- 問題表示と答え合わせ
+
+## 開発
 
 ```bash
 npm install
-npm run start
+npm run typecheck
 ```
 
-## Structure
+## 設計方針
 
-- `App.tsx` orchestrates the screen.
-- `src/components` contains UI components.
-- `src/hooks` provides reusable state/logic hooks.
-- `src/services` contains abacus calculation logic.
-- `src/models` defines data types.
+- **Separation of Concerns**
+  - `components`: 表示のみ
+  - `hooks`: 画面用状態管理
+  - `services`: 業務ロジック
+  - `models`: 型定義
+- **Open/Closed Principle**
+  - ロジックを `services` に閉じ込め、UI は差し替えや拡張をしやすくする
+- **Easy to read**
+  - 小さな関数へ分割し、責務が読み取りやすい構成
+
+## フォルダ構成
+
+- `App.tsx`: 画面オーケストレーション
+- `src/components/Abacus`: そろばんUI（フレーム・棒・珠）
+- `src/components/Quiz`: 問題と判定UI
+- `src/hooks`: `useAbacus`, `useQuiz`
+- `src/services`: `abacusEngine`, `quizEngine`
+- `src/models`: ドメイン型
