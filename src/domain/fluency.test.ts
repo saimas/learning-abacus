@@ -87,4 +87,16 @@ describe('applyAttempt', () => {
     for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, NOW)
     expect(record.fade).toBe(1)
   })
+
+  it('clears the streaks and the latency window when fade changes', () => {
+    // A fade promotion makes the atom a materially different exercise, so the
+    // old timings and streaks must not carry into it. This is the one test that
+    // observes that reset firing.
+    let record = newRecord('3+4', NOW)
+    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, NOW)
+    expect(record.fade).toBe(1)
+    expect(record.recentLatencyMs).toEqual([])
+    expect(record.consecutiveCorrect).toBe(0)
+    expect(record.consecutiveWrong).toBe(0)
+  })
 })
