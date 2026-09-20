@@ -4,7 +4,7 @@ import { ProgressProvider } from '@/ui/ProgressProvider'
 export default function RootLayout() {
   return (
     <ProgressProvider>
-      <Stack />
+      <Stack screenOptions={{ headerShown: false }} />
     </ProgressProvider>
   )
 }

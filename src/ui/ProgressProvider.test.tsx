@@ -65,4 +65,26 @@ describe('ProgressProvider', () => {
     })
     expect(mockSave).toHaveBeenCalledTimes(1)
   })
+
+  it('flush picks up an attempt made in the same tick', async () => {
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    await act(async () => {
+      api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500 })
+      await api?.flush()
+    })
+    const call = mockSave.mock.calls[0]
+    const saved = call?.[0]
+    expect(saved?.atoms['1+3']).toBeDefined()
+  })
 })

@@ -32,18 +32,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const attempt = useCallback((result: AttemptResult) => {
-    setProgress((previous) => {
-      const withAttempt = recordAttempt(
-        previous,
-        result.atomId,
-        result.correct,
-        result.latencyMs,
-        Date.now(),
-      )
-      const next = markDayPracticed(withAttempt, dayKey(Date.now()))
-      latest.current = next
-      return next
-    })
+    const now = Date.now()
+    const withAttempt = recordAttempt(
+      latest.current,
+      result.atomId,
+      result.correct,
+      result.latencyMs,
+      now,
+    )
+    const next = markDayPracticed(withAttempt, dayKey(now))
+    latest.current = next
+    setProgress(next)
   }, [])
 
   const flush = useCallback(async () => {
