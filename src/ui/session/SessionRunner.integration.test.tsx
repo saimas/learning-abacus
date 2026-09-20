@@ -19,13 +19,13 @@ function manualClock(start: number) {
 }
 
 function expectedFor(prompt: string): number {
-  const match = /^Rod shows (\d)\. (Add|Subtract) (\d)\.$/.exec(prompt)
+  const match = /^けたは(\d)。(\d)を(たす|ひく)。$/.exec(prompt)
   if (match === null) throw new Error(`unexpected prompt: ${prompt}`)
-  const [, rod, verb, operand] = match
-  if (rod === undefined || verb === undefined || operand === undefined) {
+  const [, rod, operand, verb] = match
+  if (rod === undefined || operand === undefined || verb === undefined) {
     throw new Error(`unexpected prompt: ${prompt}`)
   }
-  return Number(rod) + (verb === 'Add' ? 1 : -1) * Number(operand)
+  return Number(rod) + (verb === 'たす' ? 1 : -1) * Number(operand)
 }
 
 // Plays a whole session at a steady pace, always answering correctly so the

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import type { Atom } from '@/domain/atoms'
-import { explainMove } from '@/domain/explain'
 import type { FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
@@ -11,6 +10,7 @@ import {
   type SessionPlan,
 } from '@/domain/session'
 import { emptySoroban, setValue } from '@/domain/soroban'
+import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
 import { parseAnswer } from '@/ui/parseAnswer'
 
@@ -109,6 +109,7 @@ export function SessionRunner({
   onFinish: () => void
   now?: () => number
 }) {
+  const strings = useStrings()
   const [sessionStartedAt] = useState(() => now())
   const [state, setState] = useState<RunnerState>(
     () => findActiveBlock(plan.blocks, 0, {}) ?? { blockIndex: plan.blocks.length, queue: [] },
@@ -145,12 +146,10 @@ export function SessionRunner({
   if (block.kind === 'close') {
     return (
       <View testID="session-summary">
-        <Text testID="summary-text">Session complete</Text>
+        <Text testID="summary-text">{strings.sessionComplete}</Text>
         {/* Spec §6: the close block reports the result. Atoms mastered and
             tomorrow's preview still belong here and are not built yet. */}
-        <Text testID="summary-result">
-          {`${tally.answered} answered, ${tally.correct} correct`}
-        </Text>
+        <Text testID="summary-result">{strings.sessionResult(tally.answered, tally.correct)}</Text>
         <Pressable
           testID="finish-button"
           accessibilityRole="button"
@@ -160,7 +159,7 @@ export function SessionRunner({
             onFinish()
           }}
         >
-          <Text>Done</Text>
+          <Text>{strings.done}</Text>
         </Pressable>
       </View>
     )
@@ -213,7 +212,7 @@ export function SessionRunner({
       failures.current[current.atomId] = count
       // The number alone teaches nothing. What the learner has to take away
       // is the substitution the move stands for.
-      if (current.coaching !== 'silent') nextCorrection = `It is ${expected}. ${explainMove(atom)}`
+      if (current.coaching !== 'silent') nextCorrection = strings.correction(expected, atom)
       if (count < MAX_ATTEMPTS_PER_ATOM) {
         // A high-fade miss reveals one level for the retry, so the learner
         // sees what they should have been imagining.
@@ -253,11 +252,11 @@ export function SessionRunner({
   return (
     <View>
       <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
-      <Text testID="prompt">{`Rod shows ${rodValue}. ${sign === 1 ? 'Add' : 'Subtract'} ${operand}.`}</Text>
+      <Text testID="prompt">{strings.prompt(atom)}</Text>
       {/* Spec §4: F0 is where the app demonstrates the move, so the
           substitution is shown *before* the answer, not after a miss. */}
       {current.coaching === 'demo' ? (
-        <Text testID="demonstration">{explainMove(atom)}</Text>
+        <Text testID="demonstration">{strings.coaching(atom)}</Text>
       ) : null}
       <TextInput
         testID="answer-input"
@@ -266,7 +265,7 @@ export function SessionRunner({
         onChangeText={setAnswer}
       />
       <Pressable testID="submit" accessibilityRole="button" onPress={submit}>
-        <Text>Answer</Text>
+        <Text>{strings.answer}</Text>
       </Pressable>
       {correction !== null ? <Text testID="correction">{correction}</Text> : null}
     </View>

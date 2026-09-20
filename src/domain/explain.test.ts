@@ -1,5 +1,5 @@
 import { atomId, classify, type Atom, type Direction } from './atoms'
-import { describeSteps, explainMove } from './explain'
+import { describeSteps } from './explain'
 
 function atom(rodValue: number, operand: number, direction: Direction): Atom {
   return { id: atomId(rodValue, operand, direction), rodValue, operand, direction }
@@ -40,17 +40,5 @@ describe('describeSteps', () => {
     const a = atom(2, 6, 'sub')
     expect(classify(a)).toBe('both')
     expect(describeSteps(a)).toBe('−10 + 5 − 1')
-  })
-})
-
-describe('explainMove', () => {
-  // Spec §3: the rewiring has happened when "add 8" *means* "+10 − 2" and
-  // never means "8". The sentence is the substitution, stated as an identity.
-  it('states the substitution an addition stands for', () => {
-    expect(explainMove(atom(7, 8, 'add'))).toBe('Add 8 = +10 − 2')
-  })
-
-  it('states the substitution a subtraction stands for', () => {
-    expect(explainMove(atom(6, 4, 'sub'))).toBe('Subtract 4 = −5 + 1')
   })
 })
