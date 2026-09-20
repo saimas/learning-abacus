@@ -39,6 +39,7 @@ export function AtomGrid({ progress }: { progress: Progress }) {
           <View
             key={atom.id}
             testID={`atom-cell-${atom.id}`}
+            accessible={true}
             accessibilityLabel={`${atom.id} ${states[index] ?? 'unseen'}`}
             style={{
               width: 16,

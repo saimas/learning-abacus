@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router'
+import { Link, Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Text, View } from 'react-native'
 import { selectSession } from '@/domain/session'
@@ -34,6 +34,14 @@ export default function Today() {
   return (
     <View>
       <Text testID="days-practiced">{`${progress.daysPracticed} days practised`}</Text>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Link href="/progress" testID="link-progress">
+          Progress
+        </Link>
+        <Link href="/settings" testID="link-settings">
+          Settings
+        </Link>
+      </View>
       <SessionRunner
         plan={plan}
         onAttempt={attempt}

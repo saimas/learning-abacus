@@ -6,14 +6,17 @@ import { ProgressProvider } from '@/ui/ProgressProvider'
 
 jest.mock('@/storage/progressStore')
 
-// `<Redirect>` calls useRouter()/useFocusEffect() internally, which throw
-// outside a real navigation tree. Today only uses `Redirect` from
-// expo-router, so a minimal stand-in lets the redirect target be asserted
-// without mounting real navigation.
+// `<Redirect>` and `<Link>` both call useRouter()/useFocusEffect() internally,
+// which throw outside a real navigation tree. Today only uses these two
+// exports from expo-router, so minimal stand-ins let the target hrefs be
+// asserted without mounting real navigation.
 jest.mock('expo-router', () => {
   const { Text } = require('react-native')
   return {
     Redirect: ({ href }: { href: string }) => <Text testID="redirect-to">{href}</Text>,
+    Link: ({ href, testID }: { href: string; testID?: string }) => (
+      <Text testID={testID}>{href}</Text>
+    ),
   }
 })
 
@@ -46,6 +49,17 @@ describe('Today', () => {
     fireEvent.changeText(getByTestId('answer-input'), '1')
     fireEvent.press(getByTestId('submit'))
     expect(getByTestId('prompt')).toBeTruthy()
+  })
+
+  it('links to the progress and settings screens', async () => {
+    const { getByTestId } = render(
+      <ProgressProvider>
+        <Today />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(getByTestId('link-progress')).toBeTruthy())
+    expect(getByTestId('link-progress').props.children).toBe('/progress')
+    expect(getByTestId('link-settings').props.children).toBe('/settings')
   })
 
   it('does not run a session when the tutorial is not done', async () => {
