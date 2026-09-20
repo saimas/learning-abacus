@@ -195,6 +195,20 @@ describe('SessionRunner', () => {
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
 
+  it('renders the close screen with both its summary and a finish button', () => {
+    // Guards against a fallback branch silently taking over "session-summary"
+    // (the no-close-block and empty-queue guards render that testID's
+    // sibling but never a finish-button) — this asserts the legitimate close
+    // path, and only it, produces both together.
+    const plan: SessionPlan = {
+      blocks: [{ kind: 'close', seconds: 30, items: [] }],
+      totalSeconds: 30,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    expect(getByTestId('session-summary')).toBeTruthy()
+    expect(getByTestId('finish-button')).toBeTruthy()
+  })
+
   it('reaches the close summary and finishes only on acknowledgement', () => {
     const plan: SessionPlan = {
       blocks: [

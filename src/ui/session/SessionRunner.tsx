@@ -107,7 +107,9 @@ export function SessionRunner({
   }, [block, onFinish])
 
   if (block === undefined) {
-    return <View testID="session-summary" />
+    // Distinct testID from the real close screen: this branch means the
+    // plan had no terminal close block, which is a dead end, not a summary.
+    return <View testID="session-no-close-block" />
   }
 
   if (block.kind === 'close') {
@@ -132,8 +134,10 @@ export function SessionRunner({
   const current = state.queue[0]
   if (current === undefined) {
     // Invariant: findActiveBlock and the refill below never leave a
-    // non-close block active with an empty queue.
-    return <View testID="session-summary" />
+    // non-close block active with an empty queue. Distinct testID from the
+    // real close screen so a broken invariant fails loudly instead of
+    // looking like a legitimate session end.
+    return <View testID="session-empty-queue" />
   }
 
   const { rodValue, operand, sign } = parseAtomId(current.atomId)
