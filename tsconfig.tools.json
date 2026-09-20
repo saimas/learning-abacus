@@ -1,0 +1,17 @@
+{
+  // The build-time half of the typecheck: files that run in Node rather than on
+  // the device. Keeping them in their own program is what lets the app program
+  // above drop "node" from `types`, so a Node-only global in device code is a
+  // compile error again.
+  //
+  // src/domain/purity.test.ts imports nothing from the app — only node:fs and
+  // node:path — so this program is complete on its own. Anything added here
+  // must keep that property, or app files would get Node globals back through
+  // the side door.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": ["src/domain/purity.test.ts"],
+  "exclude": []
+}

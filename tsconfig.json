@@ -1,0 +1,21 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    // Deliberately NOT ["jest", "node"]. `types` installs global augmentations
+    // program-wide, so adding "node" here made process, Buffer, __dirname and
+    // setImmediate typecheck inside src/ui/, src/storage/ and app/ — none of
+    // which exist on iOS. A Node-only global reaching device code would then
+    // crash at runtime instead of failing to compile.
+    //
+    // The one file that genuinely needs them is src/domain/purity.test.ts,
+    // which walks the source tree with node:fs. It is excluded here and
+    // typechecked by tsconfig.tools.json instead; `npm run typecheck` runs both.
+    "types": ["jest"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["src/domain/purity.test.ts"]
+}
