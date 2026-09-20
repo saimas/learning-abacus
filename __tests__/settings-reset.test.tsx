@@ -38,7 +38,7 @@ function renderSettings() {
 describe('Settings', () => {
   it('shows days practised', async () => {
     const { getByTestId } = renderSettings()
-    await waitFor(() => expect(getByTestId('days-practiced').props.children).toContain('12 days'))
+    await waitFor(() => expect(getByTestId('days-practiced').props.children).toContain('12日'))
   })
 
   it('links back to today', async () => {
