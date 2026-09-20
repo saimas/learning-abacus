@@ -18,6 +18,9 @@ export type Progress = {
   lastSessionDay: string | null
   calibrationMs: number
   tutorialDone: boolean
+  // The highest stage ever reached. See currentStage for why this is stored
+  // rather than derived fresh each time.
+  highestStage: StageIndex
 }
 
 export function emptyProgress(): Progress {
@@ -28,7 +31,12 @@ export function emptyProgress(): Progress {
     lastSessionDay: null,
     calibrationMs: DEFAULT_CALIBRATION_MS,
     tutorialDone: false,
+    highestStage: 1,
   }
+}
+
+function higherStage(a: StageIndex, b: StageIndex): StageIndex {
+  return a >= b ? a : b
 }
 
 export function dayKey(now: number): string {
@@ -79,7 +87,13 @@ export function recordAttempt(
   const existing = progress.atoms[atomId] ?? newRecord(atomId, now)
   const updated = applyAttempt(existing, classFor(atomId), correct, latencyMs, progress.calibrationMs, now)
   const atoms = { ...progress.atoms, [atomId]: updated }
-  return { ...progress, atoms, calibrationMs: recalibrate(atoms, progress.calibrationMs) }
+  const calibrationMs = recalibrate(atoms, progress.calibrationMs)
+  return {
+    ...progress,
+    atoms,
+    calibrationMs,
+    highestStage: higherStage(progress.highestStage, highestUnlockedStage(atoms, calibrationMs)),
+  }
 }
 
 export function markDayPracticed(progress: Progress, day: string): Progress {
@@ -87,6 +101,18 @@ export function markDayPracticed(progress: Progress, day: string): Progress {
   return { ...progress, daysPracticed: progress.daysPracticed + 1, lastSessionDay: day }
 }
 
+// The unlock gate answers "is this learner ready to *start* new material", not
+// "do they still qualify". It asks whether 85% of the previous stage is at
+// Leitner box 4 or better right now, and box resets to 1 on any miss — so an
+// ordinary bad day re-closes a gate that has already opened, and the learner
+// watches new material appear and then vanish. Readiness is not revocable:
+// spec §8 is explicit that consecutive-streak thinking punishes ordinary life
+// and causes abandonment, and in Phase 1 visible progress is the only
+// milestone system there is.
+//
+// The stored latch is raised by recordAttempt, but a document written before
+// that field existed loads with the default, so the live gate still counts.
+// Whichever is higher wins, and neither can lower the other.
 export function currentStage(progress: Progress): StageIndex {
-  return highestUnlockedStage(progress.atoms, progress.calibrationMs)
+  return higherStage(progress.highestStage, highestUnlockedStage(progress.atoms, progress.calibrationMs))
 }

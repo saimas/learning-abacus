@@ -68,6 +68,41 @@ describe('loadProgress', () => {
     expect(result.daysPracticed).toBe(3)
     expect(result.tutorialDone).toBe(emptyProgress().tutorialDone)
   })
+
+  it('survives a document stored before highestStage existed', async () => {
+    // The field was added without a SCHEMA_VERSION bump, so every document
+    // already on a learner's phone arrives without it. It must load intact
+    // and simply pick up the default, not be discarded.
+    const beforeTheLatch = {
+      schemaVersion: SCHEMA_VERSION,
+      atoms: { '1+3': { atomId: '1+3', box: 4, fade: 3, consecutiveCorrect: 2, consecutiveWrong: 0, recentLatencyMs: [400, 420, 390], dueAt: 0 } },
+      daysPracticed: 41,
+      lastSessionDay: '2026-09-20',
+      calibrationMs: 730,
+      tutorialDone: true,
+    }
+    mockGetItem.mockResolvedValue(JSON.stringify(beforeTheLatch))
+    const result = await loadProgress()
+    expect(result.highestStage).toBe(1)
+    expect(result.daysPracticed).toBe(41)
+    expect(result.calibrationMs).toBe(730)
+    expect(result.tutorialDone).toBe(true)
+    expect(result.lastSessionDay).toBe('2026-09-20')
+    expect(result.atoms['1+3']?.box).toBe(4)
+  })
+
+  it('keeps a stored highestStage', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, highestStage: 3 }))
+    expect((await loadProgress()).highestStage).toBe(3)
+  })
+
+  it.each([['two'], [9], [-1], [2.5], [null]])(
+    'discards a highestStage of %p in favour of the default',
+    async (highestStage) => {
+      mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, highestStage }))
+      expect((await loadProgress()).highestStage).toBe(1)
+    },
+  )
 })
 
 describe('saveProgress', () => {

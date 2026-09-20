@@ -1,3 +1,5 @@
+import { atomsForStage, highestUnlockedStage } from './curriculum'
+import { newRecord, type AtomRecord } from './fluency'
 import {
   currentStage,
   dayKey,
@@ -6,9 +8,24 @@ import {
   markDayPracticed,
   recordAttempt,
   SCHEMA_VERSION,
+  type Progress,
 } from './progress'
 
 const NOW = 1_700_000_000_000
+
+function reflexRecord(atomId: string): AtomRecord {
+  return { ...newRecord(atomId, NOW), box: 5, fade: 4, recentLatencyMs: [300, 300, 300] }
+}
+
+// Every atom of the given stage at reflex fluency and well past F3, which is
+// what isStageUnlocked asks for.
+function mastered(...stages: (1 | 2 | 3 | 4)[]): Progress {
+  const atoms: Record<string, AtomRecord> = {}
+  for (const stage of stages) {
+    for (const atom of atomsForStage(stage)) atoms[atom.id] = reflexRecord(atom.id)
+  }
+  return { ...emptyProgress(), atoms }
+}
 
 describe('emptyProgress', () => {
   it('is stamped with the schema version', () => {
@@ -68,6 +85,48 @@ describe('markDayPracticed', () => {
 describe('currentStage', () => {
   it('is 1 for a new learner', () => {
     expect(currentStage(emptyProgress())).toBe(1)
+  })
+
+  it('starts latched at 1', () => {
+    expect(emptyProgress().highestStage).toBe(1)
+  })
+
+  it('raises the latch when a stage is genuinely unlocked', () => {
+    const progress = recordAttempt(mastered(1), '1+3', true, 300, NOW)
+    expect(progress.highestStage).toBe(2)
+    expect(currentStage(progress)).toBe(2)
+  })
+
+  it('keeps raising it as further stages open', () => {
+    const progress = recordAttempt(mastered(1, 2), '1+3', true, 300, NOW)
+    expect(progress.highestStage).toBe(3)
+  })
+
+  it('does not hand back a stage when current form would re-close the gate', () => {
+    // The gate asks whether 85% of the previous stage is at box >= 4 *right
+    // now*, and box resets to 1 on any miss — so a bad day re-closes it. The
+    // learner would watch new material appear and then vanish, which in an
+    // app whose only milestone system is visible progress is how a habit ends.
+    let progress = recordAttempt(mastered(1), '1+3', true, 300, NOW)
+    expect(progress.highestStage).toBe(2)
+
+    for (const atom of atomsForStage(1).slice(0, 20)) {
+      progress = recordAttempt(progress, atom.id, false, 9_000, NOW)
+    }
+
+    // The gate really has re-closed: without the latch this is what the
+    // learner would be given.
+    expect(highestUnlockedStage(progress.atoms, progress.calibrationMs)).toBe(1)
+    expect(progress.highestStage).toBe(2)
+    expect(currentStage(progress)).toBe(2)
+  })
+
+  it('honours a live gate that outruns a stale latch', () => {
+    // A document stored before the field existed loads with the default 1.
+    // Its owner must not be dropped back to stage 1 material for the session
+    // that follows, before any answer has had a chance to raise the latch.
+    const stale: Progress = { ...mastered(1), highestStage: 1 }
+    expect(currentStage(stale)).toBe(2)
   })
 })
 

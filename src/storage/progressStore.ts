@@ -1,7 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import type { StageIndex } from '@/domain/curriculum'
 import { emptyProgress, SCHEMA_VERSION, type Progress } from '@/domain/progress'
 
 export const STORAGE_KEY = 'learning-abacus/progress/v1'
+
+// Narrows to the union rather than trusting any number: a stored 9 would put
+// the learner on a stage that does not exist.
+function asStageIndex(value: unknown, fallback: StageIndex): StageIndex {
+  return value === 0 || value === 1 || value === 2 || value === 3 || value === 4 ? value : fallback
+}
 
 export async function loadProgress(): Promise<Progress> {
   try {
@@ -34,6 +41,9 @@ export async function loadProgress(): Promise<Progress> {
           ? candidate.calibrationMs
           : base.calibrationMs,
       tutorialDone: typeof candidate.tutorialDone === 'boolean' ? candidate.tutorialDone : base.tutorialDone,
+      // Added without a schema bump: documents written before the latch
+      // existed simply pick up the default here rather than being discarded.
+      highestStage: asStageIndex(candidate.highestStage, base.highestStage),
     }
   } catch {
     return emptyProgress()

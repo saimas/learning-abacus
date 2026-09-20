@@ -1,6 +1,6 @@
-import { atomsForStage, isStageUnlocked } from './curriculum'
+import { atomsForStage, highestUnlockedStage, isStageUnlocked } from './curriculum'
 import { applyAttempt, newRecord, type AtomRecord } from './fluency'
-import { emptyProgress, recordAttempt, type Progress } from './progress'
+import { currentStage, emptyProgress, recordAttempt, type Progress } from './progress'
 import { selectSession } from './session'
 
 // The fade ladder is the whole product: if an atom cannot climb it, beads
@@ -70,6 +70,10 @@ function practise(medianMs: number, days: number, seed: number) {
   let progress: Progress = emptyProgress()
   let now = 1_700_000_000_000
   let unlockedStage2OnDay: number | null = null
+  // Days on which the *live* gate read lower than the day before — a stage
+  // the learner had already been given closing again under them.
+  let liveRegressions = 0
+  let previousLive = 1
 
   for (let day = 1; day <= days; day++) {
     for (const block of selectSession(progress, now).blocks) {
@@ -89,11 +93,14 @@ function practise(medianMs: number, days: number, seed: number) {
     if (unlockedStage2OnDay === null && isStageUnlocked(progress.atoms, progress.calibrationMs, 2)) {
       unlockedStage2OnDay = day
     }
+    const live = highestUnlockedStage(progress.atoms, progress.calibrationMs)
+    if (live < previousLive) liveRegressions++
+    previousLive = live
     now += DAY_MS - (now % DAY_MS)
   }
 
   const fades = atomsForStage(1).map((atom) => progress.atoms[atom.id]?.fade ?? 0)
-  return { progress, fades, unlockedStage2OnDay }
+  return { progress, fades, unlockedStage2OnDay, liveRegressions }
 }
 
 describe('fade ladder progression', () => {
@@ -130,5 +137,19 @@ describe('fade ladder progression', () => {
     // Spec §6 budgets roughly three months to meet the atoms and six to nine
     // to make them reflex; stage 2 opening inside that window is the check.
     expect(unlockedStage2OnDay ?? Infinity).toBeLessThanOrEqual(90)
+  })
+
+  it('never hands back a stage the learner has already been given', () => {
+    const { progress, liveRegressions } = practise(2000, 180, 99)
+
+    // The gate is a snapshot of current form: box resets to 1 on any miss, so
+    // over six months it closes again repeatedly on a learner who is plainly
+    // still improving. If this ever reads 0 the test below has gone vacuous.
+    expect(liveRegressions).toBeGreaterThan(0)
+
+    // Unlatched, this learner reads stage 1 at day 180 with 49 of 50 stage 1
+    // atoms at F6 — their stage 2 and 3 material would have vanished.
+    expect(highestUnlockedStage(progress.atoms, progress.calibrationMs)).toBeLessThan(3)
+    expect(currentStage(progress)).toBeGreaterThanOrEqual(3)
   })
 })
