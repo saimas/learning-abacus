@@ -1,5 +1,10 @@
 import { Stack } from 'expo-router'
+import { ProgressProvider } from '@/ui/ProgressProvider'
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />
+  return (
+    <ProgressProvider>
+      <Stack />
+    </ProgressProvider>
+  )
 }
