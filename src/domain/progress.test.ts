@@ -75,4 +75,22 @@ describe('dayKey', () => {
   it('formats as YYYY-MM-DD', () => {
     expect(dayKey(Date.UTC(2026, 8, 20, 12))).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
+
+  describe('in a UTC+9 timezone', () => {
+    const originalTz = process.env.TZ
+
+    beforeAll(() => {
+      process.env.TZ = 'Asia/Tokyo'
+    })
+
+    afterAll(() => {
+      if (originalTz === undefined) delete process.env.TZ
+      else process.env.TZ = originalTz
+    })
+
+    it('uses the local calendar day, not the UTC day', () => {
+      // 2026-09-20T23:30Z is still 2026-09-20 in UTC, but already 2026-09-21 in Tokyo.
+      expect(dayKey(Date.UTC(2026, 8, 20, 23, 30))).toBe('2026-09-21')
+    })
+  })
 })
