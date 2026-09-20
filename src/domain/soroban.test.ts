@@ -37,3 +37,36 @@ describe('soroban', () => {
     expect(readValue(applyStep(s, { rod: 'carry', delta: 1 }, 1))).toBe(17)
   })
 })
+
+describe('error cases', () => {
+  describe('rodFor guards', () => {
+    it('throws on negative value', () => {
+      expect(() => rodFor(-1)).toThrow()
+    })
+
+    it('throws on value above 9', () => {
+      expect(() => rodFor(10)).toThrow()
+    })
+
+    it('throws on NaN', () => {
+      expect(() => rodFor(NaN)).toThrow()
+    })
+  })
+
+  describe('setValue guards', () => {
+    it('throws on negative value', () => {
+      expect(() => setValue(emptySoroban(2), -1)).toThrow()
+    })
+
+    it('throws on value too wide for rod count', () => {
+      expect(() => setValue(emptySoroban(2), 470)).toThrow()
+    })
+  })
+
+  describe('applyStep guards', () => {
+    it('throws when carry step would go off left edge', () => {
+      const s = setValue(emptySoroban(2), 0)
+      expect(() => applyStep(s, { rod: 'carry', delta: 1 }, 0)).toThrow()
+    })
+  })
+})

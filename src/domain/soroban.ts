@@ -9,7 +9,7 @@ export function readRod(rod: Rod): number {
 }
 
 export function rodFor(value: number): Rod {
-  if (value < 0 || value > ROD_MAX) throw new Error(`rod value out of range: ${value}`)
+  if (!Number.isInteger(value) || value < 0 || value > ROD_MAX) throw new Error(`rod value out of range: ${value}`)
   return { heaven: value >= 5, earth: value % 5 }
 }
 
@@ -22,6 +22,7 @@ export function readValue(s: Soroban): number {
 }
 
 export function setValue(s: Soroban, n: number): Soroban {
+  if (!Number.isInteger(n) || n < 0 || String(n).length > s.rods.length) throw new Error(`value does not fit ${s.rods.length} rods: ${n}`)
   const digits = String(n).padStart(s.rods.length, '0').split('')
   return { rods: digits.map((d) => rodFor(Number(d))) }
 }
