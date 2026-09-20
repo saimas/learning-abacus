@@ -12,6 +12,7 @@ signing and upload straight to App Store Connect. EAS is not used.
 | Private key           | `~/.appstoreconnect/private_keys/AuthKey_8LHJ29MNAD.p8` |
 | Team ID               | `H7PV4KT858`                                            |
 | Bundle ID             | `com.saimas.learningabacus`                             |
+| App Store Connect app | `6814269098`                                            |
 
 The Key ID and Issuer ID are identifiers, not secrets — the `.p8` is the
 credential and stays outside the repo. Never commit a `.p8`.
@@ -21,14 +22,25 @@ credential and stays outside the repo. Never commit a `.p8`.
 If a step fails to authenticate, check the key before debugging anything
 else.
 
-## One-time setup
+## One-time setup — already done
 
-The App Store Connect **app record** must exist before an upload will be
-accepted. Apple exposes no public API to create one and `fastlane produce`
-only accepts an interactive Apple ID login, so this step is manual:
-App Store Connect → Apps → **+**, with the bundle ID above. The bundle ID
-appears in the dropdown once an archive has been made with
-`-allowProvisioningUpdates` (cloud signing registers it).
+Both steps below are complete; they are recorded because neither is
+automatable and both have to be repeated for any future app.
+
+1. **Register the App ID** at Certificates, Identifiers & Profiles →
+   Identifiers → **+** → App IDs → App, explicit, `com.saimas.learningabacus`.
+   This must come first: the bundle ID does not appear in App Store
+   Connect's dropdown until it exists. Note that archiving with
+   `-allowProvisioningUpdates` does *not* create it — the explicit App ID
+   is created at **export** time, and export refuses to run without the
+   app record, so it is circular.
+2. **Create the app record** at App Store Connect → Apps → **+** → New App
+   (iOS, Japanese, the bundle ID above, SKU `learning-abacus-001`, Full
+   Access). Apple exposes no public API for this and `fastlane produce`
+   only accepts an interactive Apple ID login, so it is browser work.
+
+Without the record, `-exportArchive` fails with
+`DistributionAppRecordProviderError.missingApp`.
 
 ## Release
 
@@ -93,7 +105,12 @@ xcodebuild -exportArchive \
   App ID, distribution profile and certificate are created at export time
   by cloud signing — which is why the Admin-level key is needed.
 - Build appears in App Store Connect → TestFlight after ~5-15 min
-  processing.
+  processing. Poll `GET /v1/builds?filter[app]=6814269098` until
+  `processingState: VALID`. The 個人テスト group takes every new build
+  automatically.
+- The upload warns that React, ReactNativeDependencies and hermesvm ship
+  without dSYMs. Expected — they are prebuilt frameworks. It only costs
+  symbolication of crashes inside them; the upload itself is fine.
 - Incremental builds never delete bundled assets that stopped being
   bundled, hence the clean archive in step 3.
 - Step 3b exists because a framework can be linked but not embedded: the
