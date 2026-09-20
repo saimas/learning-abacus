@@ -20,7 +20,7 @@ export const CLASS_TARGET_MS: Record<AtomClass, number> = {
 
 export const LEITNER_MAX_BOX = 5
 export const REFLEX_MIN_BOX = 4
-export const LATENCY_WINDOW = 5
+export const LATENCY_WINDOW = 3
 
 const MINUTE = 60_000
 const BOX_INTERVAL_MS = [0, 10 * MINUTE, 60 * MINUTE, 24 * 60 * MINUTE, 3 * 24 * 60 * MINUTE, 7 * 24 * 60 * MINUTE]
@@ -67,13 +67,15 @@ export function isReflex(record: AtomRecord, cls: AtomClass, calibrationMs: numb
 
 export function applyAttempt(
   record: AtomRecord,
-  _cls: AtomClass,
+  cls: AtomClass,
   correct: boolean,
   latencyMs: number,
+  calibrationMs: number,
   now: number,
 ): AtomRecord {
   const box = correct ? Math.min(LEITNER_MAX_BOX, record.box + 1) : 1
-  const consecutiveCorrect = correct ? record.consecutiveCorrect + 1 : 0
+  const fastEnough = correct && latencyMs < latencyTargetMs(cls, calibrationMs)
+  const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
   const consecutiveWrong = correct ? 0 : record.consecutiveWrong + 1
   const recentLatencyMs = [...record.recentLatencyMs, latencyMs].slice(-LATENCY_WINDOW)
   const fade = nextFadeLevel(record.fade, consecutiveCorrect, consecutiveWrong)

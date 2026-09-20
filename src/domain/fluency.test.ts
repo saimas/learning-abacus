@@ -58,7 +58,7 @@ describe('isReflex', () => {
 
 describe('applyAttempt', () => {
   it('promotes the box and schedules further out on success', () => {
-    const next = applyAttempt(newRecord('3+4', NOW), 'direct', true, 600, NOW)
+    const next = applyAttempt(newRecord('3+4', NOW), 'direct', true, 600, CLASS_TARGET_MS.direct, NOW)
     expect(next.box).toBe(2)
     expect(next.consecutiveCorrect).toBe(1)
     expect(next.dueAt).toBeGreaterThan(NOW)
@@ -66,25 +66,25 @@ describe('applyAttempt', () => {
 
   it('resets to box 1 on failure', () => {
     const strong = { ...newRecord('3+4', NOW), box: 5, consecutiveCorrect: 4 }
-    const next = applyAttempt(strong, 'direct', false, 2500, NOW)
+    const next = applyAttempt(strong, 'direct', false, 2500, CLASS_TARGET_MS.direct, NOW)
     expect(next.box).toBe(1)
     expect(next.consecutiveCorrect).toBe(0)
     expect(next.consecutiveWrong).toBe(1)
   })
 
-  it('keeps only the last five latencies', () => {
+  it('keeps only the last three latencies', () => {
     // Seeded at MAX_FADE so the promotion at five correct answers cannot fire
     // and clear the window — this test is about the slice, not about fading.
     let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 6 }
     for (const ms of [100, 200, 300, 400, 500, 600]) {
-      record = applyAttempt(record, 'direct', true, ms, NOW)
+      record = applyAttempt(record, 'direct', true, ms, CLASS_TARGET_MS.direct, NOW)
     }
-    expect(record.recentLatencyMs).toEqual([200, 300, 400, 500, 600])
+    expect(record.recentLatencyMs).toEqual([400, 500, 600])
   })
 
   it('promotes fade once the streak is met', () => {
     let record = newRecord('3+4', NOW)
-    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, NOW)
+    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, CLASS_TARGET_MS.direct, NOW)
     expect(record.fade).toBe(1)
   })
 
@@ -93,10 +93,22 @@ describe('applyAttempt', () => {
     // old timings and streaks must not carry into it. This is the one test that
     // observes that reset firing.
     let record = newRecord('3+4', NOW)
-    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, NOW)
+    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, CLASS_TARGET_MS.direct, NOW)
     expect(record.fade).toBe(1)
     expect(record.recentLatencyMs).toEqual([])
     expect(record.consecutiveCorrect).toBe(0)
     expect(record.consecutiveWrong).toBe(0)
+  })
+
+  it('does not advance the fade streak on a slow correct answer', () => {
+    let record = newRecord('3+4', NOW)
+    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 5000, CLASS_TARGET_MS.direct, NOW)
+    expect(record.fade).toBe(0)
+    expect(record.consecutiveCorrect).toBe(0)
+  })
+
+  it('still advances the box on a slow correct answer', () => {
+    const record = applyAttempt(newRecord('3+4', NOW), 'direct', true, 5000, CLASS_TARGET_MS.direct, NOW)
+    expect(record.box).toBe(2)
   })
 })
