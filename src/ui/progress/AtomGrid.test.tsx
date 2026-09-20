@@ -40,4 +40,9 @@ describe('AtomGrid', () => {
     const { getByTestId } = render(<AtomGrid progress={emptyProgress()} />)
     expect(getByTestId('atom-summary').props.children).toContain('180手中 0手')
   })
+
+  it('labels each cell in the active language for screen readers', () => {
+    const { getByTestId } = render(<AtomGrid progress={emptyProgress()} />)
+    expect(getByTestId('atom-cell-1+3').props.accessibilityLabel).toBe('1+3 未学習')
+  })
 })
