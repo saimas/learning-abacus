@@ -305,6 +305,43 @@ describe('SessionRunner', () => {
     expect(getByTestId('prompt').props.children).toContain('2')
   })
 
+  it('reports the session result on the close screen', () => {
+    // Spec §6 gives the close block "result, atoms mastered, tomorrow's
+    // preview". It rendered only the words "Session complete".
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 10, items: [item('3+4')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 40,
+    }
+    const clock = manualClock(0)
+    const { getByTestId } = renderRunner(plan, clock.now)
+
+    clock.set(1_000)
+    answer(getByTestId, '7')
+    clock.set(2_000)
+    answer(getByTestId, '9')
+    clock.set(3_000)
+    answer(getByTestId, '7')
+
+    clock.set(11_000)
+    answer(getByTestId, '7')
+
+    const result = getByTestId('summary-result').props.children as string
+    expect(result).toContain('4 answered')
+    expect(result).toContain('3 correct')
+  })
+
+  it('counts nothing when nothing was answered', () => {
+    const plan: SessionPlan = {
+      blocks: [{ kind: 'close', seconds: 30, items: [] }],
+      totalSeconds: 30,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    expect(getByTestId('summary-result').props.children).toContain('0 answered')
+  })
+
   it('renders the close screen with both its summary and a finish button', () => {
     // Guards against a fallback branch silently taking over "session-summary"
     // (the no-close-block and empty-queue guards render that testID's

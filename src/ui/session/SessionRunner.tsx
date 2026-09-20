@@ -115,6 +115,7 @@ export function SessionRunner({
   )
   const [answer, setAnswer] = useState('')
   const [correction, setCorrection] = useState<string | null>(null)
+  const [tally, setTally] = useState({ answered: 0, correct: 0 })
   const failures = useRef<Record<string, number>>({})
   const shownAt = useRef<number>(sessionStartedAt)
   const finished = useRef(false)
@@ -145,6 +146,11 @@ export function SessionRunner({
     return (
       <View testID="session-summary">
         <Text testID="summary-text">Session complete</Text>
+        {/* Spec §6: the close block reports the result. Atoms mastered and
+            tomorrow's preview still belong here and are not built yet. */}
+        <Text testID="summary-result">
+          {`${tally.answered} answered, ${tally.correct} correct`}
+        </Text>
         <Pressable
           testID="finish-button"
           accessibilityRole="button"
@@ -194,6 +200,10 @@ export function SessionRunner({
     const correct = given === expected
 
     onAttempt({ atomId: current.atomId, correct, latencyMs })
+    setTally((previous) => ({
+      answered: previous.answered + 1,
+      correct: previous.correct + (correct ? 1 : 0),
+    }))
 
     let queue = state.queue.slice(1)
     let nextCorrection: string | null = null
