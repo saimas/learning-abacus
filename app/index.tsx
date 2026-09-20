@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Text, View } from 'react-native'
 import { selectSession } from '@/domain/session'
@@ -24,6 +25,10 @@ export default function Today() {
         <Text testID="hydrating">Loading your progress…</Text>
       </View>
     )
+  }
+
+  if (!progress.tutorialDone) {
+    return <Redirect href="/tutorial" />
   }
 
   return (

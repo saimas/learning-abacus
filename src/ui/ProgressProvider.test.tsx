@@ -66,6 +66,28 @@ describe('ProgressProvider', () => {
     expect(mockSave).toHaveBeenCalledTimes(1)
   })
 
+  it('completeTutorial sets tutorialDone and persists immediately', async () => {
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    await act(async () => {
+      await api?.completeTutorial()
+    })
+    await waitFor(() => expect(api?.progress?.tutorialDone).toBe(true))
+    expect(mockSave).toHaveBeenCalledTimes(1)
+    const call = mockSave.mock.calls[0]
+    expect(call?.[0]?.tutorialDone).toBe(true)
+  })
+
   it('flush picks up an attempt made in the same tick', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {

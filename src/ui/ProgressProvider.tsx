@@ -9,6 +9,7 @@ type ProgressApi = {
   attempt: (result: AttemptResult) => void
   flush: () => Promise<void>
   reset: () => Promise<void>
+  completeTutorial: () => Promise<void>
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null)
@@ -56,8 +57,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     await saveProgress(fresh)
   }, [])
 
+  const completeTutorial = useCallback(async () => {
+    const next = { ...latest.current, tutorialDone: true }
+    latest.current = next
+    setProgress(next)
+    await saveProgress(next)
+  }, [])
+
   return (
-    <ProgressContext.Provider value={{ progress, hydrated, attempt, flush, reset }}>
+    <ProgressContext.Provider
+      value={{ progress, hydrated, attempt, flush, reset, completeTutorial }}
+    >
       {children}
     </ProgressContext.Provider>
   )
