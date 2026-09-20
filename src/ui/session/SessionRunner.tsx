@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
+import type { Atom } from '@/domain/atoms'
+import { explainMove } from '@/domain/explain'
 import type { FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
@@ -111,7 +113,7 @@ export function SessionRunner({
     () => findActiveBlock(plan.blocks, 0, {}) ?? { blockIndex: plan.blocks.length, queue: [] },
   )
   const [answer, setAnswer] = useState('')
-  const [correction, setCorrection] = useState<number | null>(null)
+  const [correction, setCorrection] = useState<string | null>(null)
   const failures = useRef<Record<string, number>>({})
   const shownAt = useRef<number>(sessionStartedAt)
   const finished = useRef(false)
@@ -168,6 +170,12 @@ export function SessionRunner({
 
   const { rodValue, operand, sign } = parseAtomId(current.atomId)
   const expected = rodValue + sign * operand
+  const atom: Atom = {
+    id: current.atomId,
+    rodValue,
+    operand,
+    direction: sign === 1 ? 'add' : 'sub',
+  }
 
   function submit() {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
@@ -181,12 +189,14 @@ export function SessionRunner({
     onAttempt({ atomId: current.atomId, correct, latencyMs })
 
     let queue = state.queue.slice(1)
-    let nextCorrection: number | null = null
+    let nextCorrection: string | null = null
 
     if (!correct) {
       const count = (failures.current[current.atomId] ?? 0) + 1
       failures.current[current.atomId] = count
-      if (current.coaching !== 'silent') nextCorrection = expected
+      // The number alone teaches nothing. What the learner has to take away
+      // is the substitution the move stands for.
+      if (current.coaching !== 'silent') nextCorrection = `It is ${expected}. ${explainMove(atom)}`
       if (count < MAX_ATTEMPTS_PER_ATOM) {
         // A high-fade miss reveals one level for the retry, so the learner
         // sees what they should have been imagining.
@@ -227,6 +237,11 @@ export function SessionRunner({
     <View>
       <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
       <Text testID="prompt">{`Rod shows ${rodValue}. ${sign === 1 ? 'Add' : 'Subtract'} ${operand}.`}</Text>
+      {/* Spec §4: F0 is where the app demonstrates the move, so the
+          substitution is shown *before* the answer, not after a miss. */}
+      {current.coaching === 'demo' ? (
+        <Text testID="demonstration">{explainMove(atom)}</Text>
+      ) : null}
       <TextInput
         testID="answer-input"
         keyboardType="number-pad"
@@ -236,7 +251,7 @@ export function SessionRunner({
       <Pressable testID="submit" accessibilityRole="button" onPress={submit}>
         <Text>Answer</Text>
       </Pressable>
-      {correction !== null ? <Text testID="correction">{`It is ${correction}`}</Text> : null}
+      {correction !== null ? <Text testID="correction">{correction}</Text> : null}
     </View>
   )
 }

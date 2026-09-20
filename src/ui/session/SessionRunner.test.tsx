@@ -81,6 +81,41 @@ describe('SessionRunner', () => {
     expect(queryByTestId('correction')).not.toBeNull()
   })
 
+  it('demonstrates the move before the learner answers at F0', () => {
+    // Spec §4: F0 is "app demonstrates the move". Revealing the number after
+    // a miss is F1's job — at F0 the substitution has to be on screen first,
+    // or the app never teaches the soroban method at all.
+    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    expect(getByTestId('demonstration').props.children).toBe('Add 4 = +5 − 1')
+  })
+
+  it('stops demonstrating once coaching moves to F1', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4', { fade: 1, coaching: 'correct' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { queryByTestId } = renderRunner(plan, autoClock())
+    expect(queryByTestId('demonstration')).toBeNull()
+  })
+
+  it('corrects a wrong answer with the method, not only the number', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4', { fade: 1, coaching: 'correct' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    answer(getByTestId, '9')
+    const text = getByTestId('correction').props.children as string
+    expect(text).toContain('7')
+    expect(text).toContain('+5 − 1')
+  })
+
   it('does not show a correction for a wrong answer at silent coaching', () => {
     const plan: SessionPlan = {
       blocks: [
