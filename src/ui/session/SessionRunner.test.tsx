@@ -215,4 +215,28 @@ describe('SessionRunner', () => {
     fireEvent.press(getByTestId('finish-button'))
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
+
+  it('ends a block early if every item in it fails out before the deadline', () => {
+    const plan: SessionPlan = {
+      // A huge budget: if the block ends here, it is because both items
+      // were dropped, not because time ran out.
+      blocks: [
+        { kind: 'focus', seconds: 1_000, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 1_030,
+    }
+    const clock = manualClock(0)
+    const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, clock.now)
+
+    // Wrong answers to both atoms, three times each, drains the block.
+    for (let i = 0; i < 6; i++) {
+      clock.set((i + 1) * 100)
+      answer(getByTestId, '0')
+    }
+
+    expect(onBlockEnd).toHaveBeenCalledTimes(1)
+    expect(onBlockEnd).toHaveBeenCalledWith('focus')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
 })
