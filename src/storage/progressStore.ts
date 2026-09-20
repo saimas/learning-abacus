@@ -11,7 +11,30 @@ export async function loadProgress(): Promise<Progress> {
     if (typeof parsed !== 'object' || parsed === null) return emptyProgress()
     const candidate = parsed as Partial<Progress>
     if (candidate.schemaVersion !== SCHEMA_VERSION) return emptyProgress()
-    return { ...emptyProgress(), ...candidate } as Progress
+
+    const base = emptyProgress()
+    const atoms =
+      typeof candidate.atoms === 'object' && candidate.atoms !== null && !Array.isArray(candidate.atoms)
+        ? candidate.atoms
+        : base.atoms
+
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      atoms,
+      daysPracticed:
+        typeof candidate.daysPracticed === 'number' && Number.isFinite(candidate.daysPracticed)
+          ? candidate.daysPracticed
+          : base.daysPracticed,
+      lastSessionDay:
+        typeof candidate.lastSessionDay === 'string' || candidate.lastSessionDay === null
+          ? candidate.lastSessionDay
+          : base.lastSessionDay,
+      calibrationMs:
+        typeof candidate.calibrationMs === 'number' && Number.isFinite(candidate.calibrationMs)
+          ? candidate.calibrationMs
+          : base.calibrationMs,
+      tutorialDone: typeof candidate.tutorialDone === 'boolean' ? candidate.tutorialDone : base.tutorialDone,
+    }
   } catch {
     return emptyProgress()
   }
