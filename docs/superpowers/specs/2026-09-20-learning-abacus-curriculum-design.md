@@ -1,0 +1,300 @@
+# learning-abacus — Curriculum and App Design
+
+Date: 2026-09-20
+Status: Approved design, pre-implementation
+
+## 1. Goal and constraints
+
+Train the user to perform mental arithmetic by visualising a soroban (anzan),
+starting from zero soroban knowledge.
+
+Fixed constraints, given by the user:
+
+- **Total beginner.** No prior soroban knowledge. The course teaches bead
+  technique before visualisation.
+- **On-screen abacus only.** The app *is* the soroban. No physical device is
+  required, and the app can therefore verify every individual bead movement,
+  not merely the final answer.
+- **Five minutes per day.** The session length is fixed and must be honoured.
+  Extra practice is offered, never required.
+- **Open-ended.** No fixed finish line. The ladder keeps climbing, with
+  meaningful milestones along the way.
+
+Five minutes a day is roughly 30 hours a year, against the 2-3 hours a week
+plus homework of a traditional soroban school. The design compensates by
+maximising yield per minute, not by assuming more time will appear.
+
+## 2. Core idea: three independent dimensions
+
+The course is not a single linear sequence. Three dimensions advance
+independently:
+
+| Dimension | From → To | Driven by |
+|---|---|---|
+| **Scope** | 1 rod → multi-rod; add/sub → multiply/divide | Curriculum stages |
+| **Fluency** | deliberate → reflex | Spaced repetition on latency |
+| **Visibility** | solid beads → nothing | The fade ladder |
+
+**Anzan is the visibility dimension turned up, not a later subject.**
+Traditional instruction completes physical soroban and then begins mental
+work. Because the app renders the soroban, it can instead dim the beads by
+degrees, per atom. A learner performs single-rod addition with the beads
+hidden within the first fortnight — a genuine anzan repetition, years before
+tradition would permit one. The mental image is grown alongside scope rather
+than transplanted later.
+
+## 3. The atom alphabet
+
+Every soroban calculation decomposes into single-rod moves. A single-rod move
+is fully specified by *(current rod value, operand, direction)*. With rod
+values 0-9, operands 1-9, and two directions, there are exactly **180 atoms**.
+This is the complete alphabet of single-rod soroban arithmetic; nothing else
+exists at this level.
+
+Each atom belongs to exactly one technique class:
+
+| Class | Example | Cognitive substitution | Approx. count |
+|---|---|---|---|
+| Direct | 1+3, 2+5 | none — move beads | ~70 |
+| 5's complement (五の合成/分解) | 3+4 → +5−1 | "add 4" becomes "add five, take one" | ~30 |
+| 10's complement (十の繰上/繰下) | 7+8 → +10−2 | "add 8" becomes "carry ten, take two" | ~50 |
+| Both | 7+6 → +10−4, then −4 → −5+1 | two substitutions in one move | ~30 |
+
+Counts are approximate pending generation; the generator is the source of
+truth and the total is asserted at exactly 180 in tests.
+
+**The goal state is that all 180 fire below conscious thought.** When "add 8"
+*means* "+10−2" and never means "8", the rewiring has happened. The target is
+finite and countable, which makes progress visible.
+
+Atoms are **generated, never hand-authored**, and classified by rule.
+
+**Atoms are single-rod operations but require two rods on screen.** A 10's
+complement carries into the rod to the left, so every atom executes on a
+working rod plus its left neighbour. "Single-rod" describes the *operation*,
+not the display. The left neighbour shows only the carry digit and is not
+itself operated on until stage 5.
+
+## 4. The fade ladder
+
+Applied per atom, independently of scope.
+
+| Level | Rendering |
+|---|---|
+| F0 | App demonstrates the move |
+| F1 | User moves beads; app corrects immediately |
+| F2 | Beads shown, no hints |
+| F3 | Beads dim once the move settles |
+| F4 | Ghost outlines only |
+| F5 | Empty rod frame |
+| F6 | Nothing — number in, answer out |
+
+Fade advances only when fluency is high at the current level, so the image is
+always *almost* present — the condition under which the mind supplies the
+remainder. F6 on an atom means that move is performed mentally.
+
+**Seven levels map to five renderings.** F0, F1 and F2 are visually identical
+(solid beads) and differ only in coaching: F0 demonstrates, F1 corrects on
+error, F2 is silent. `FadeLayer` therefore takes the fade level and renders one
+of five visual states; the coaching difference belongs to the session runner,
+not to the rendering component.
+
+## 5. Scope stages
+
+| Stage | Content |
+|---|---|
+| 0 | Read and set a rod; place value |
+| 1 | Direct moves, one rod |
+| 2 | 5's complements |
+| 3 | 10's complements |
+| 4 | Combined 5's and 10's |
+| 5 | Multi-rod, cascading carry |
+| 6 | Multi-term strings (見取算) |
+| 7 | Multiplication (掛算) |
+| 8 | Division (割算) |
+
+### Relationship to the official 検定 ladder
+
+Verified against the published syllabi (日珠連, retrieved 2026-09-20):
+
+- 珠算能力検定 9/10級 already requires 見取算 of 2 digits × 5 terms **and**
+  掛算 to 実法3けた. Division enters at 7級.
+- The 検定 grades are graded by **problem size**, not by complement technique.
+
+Therefore **stages 0-4 lie entirely below 10級**. Complement technique is
+textbook progression, not exam ladder. Phase 1 earns no official grade, so the
+atom map (§9) must carry motivation by itself.
+
+The first realistic external milestone is **暗算検定 7-10級**: 見取暗算 only,
+1-2 digits, 3-5 terms, 50 questions in 12 minutes. It is mental-only, so it
+validates the fade approach directly, and it sits just past Phase 1.
+
+Sources:
+- https://www.shuzan.jp/kentei/shuzan/
+- https://www.shuzan.jp/kentei/anzan/
+
+## 6. The daily session
+
+Fixed five-minute structure. Predictability is what makes the habit survive a
+bad day.
+
+| Block | Time | Content | Fade |
+|---|---|---|---|
+| Warm-up | 45s | ~10 already-fluent atoms, rapid fire | current |
+| Focus | 120s | 1-3 new or shaky atoms, taught and drilled | F0-F1 |
+| Fade rep | 90s | fluent atoms pushed one level up | current +1 |
+| Close | 30s | result, atoms mastered, tomorrow's preview | — |
+
+Focus is where new material enters. Fade rep is where anzan is built. When the
+user has more time the app *offers* a further block; it never requires one,
+because a negotiable habit is a dead habit.
+
+**New atoms are capped at two per day.** At that rate all 180 atoms are met in
+about three months and become reflex in roughly six to nine — the honest
+year-one expectation.
+
+## 7. Scheduling
+
+### Fluency: latency is the mastery signal
+
+A correct answer in four seconds means the learner *computed* it. The object of
+the exercise is to stop computing. An atom therefore promotes only on
+consecutive correct answers **and** median latency under a target:
+
+| Class | Target |
+|---|---|
+| Direct | ~900ms |
+| 5's complement | ~1200ms |
+| 10's complement | ~1400ms |
+| Both | ~1800ms |
+
+Absolute thresholds are unfair across people and devices. These calibrate
+against the learner's own rolling median on direct-class atoms.
+
+Leitner boxes per (atom, fade level), following the `learning-database`
+pattern.
+
+**"Reflex"** is used throughout with one meaning: an atom at Leitner box 4 or
+higher whose median latency over its last five attempts is under its class
+target.
+
+### Fade promotion
+
+Five consecutive correct within the latency target promotes an atom one fade
+level. Two consecutive failures demote it one level.
+
+### Scope unlocking
+
+Stage N+1 unlocks when ≥85% of stage N atoms are at reflex fluency **and** at
+fade ≥ F3. Soroban is strictly cumulative — combined complements are
+impossible while 5's and 10's remain deliberate — so racing ahead only
+manufactures failure later.
+
+### Session selection
+
+- Warm-up: due atoms with the highest fluency (safe wins, activation)
+- Focus: lowest-fluency atoms in the current stage, plus at most 2 new
+- Fade rep: atoms eligible for promotion
+
+## 8. Error handling and absence
+
+**Wrong answer at low fade (F0-F2):** show the correct move immediately, mark
+the atom failed, requeue later in the session.
+
+**Wrong answer at high fade (F4-F6):** drop one fade level and reveal the
+beads, so the learner sees what they should have been imagining.
+
+**Three failures on one atom within a session:** stop presenting it, demote,
+return tomorrow. Frustration spirals are the primary cause of quitting.
+
+**Missed days:** the headline metric is *total days practised*, not consecutive
+streak. Consecutive streaks punish ordinary life and cause abandonment. After a
+gap beyond 14 days, one recalibration session re-tests a sample rather than
+assuming uniform decay.
+
+## 9. Architecture
+
+Stack follows the house pattern of `learning-vocabulary` and
+`learning-database`: Expo ~57, React Native 0.86, expo-router, TypeScript,
+react-native-reanimated for bead motion, AsyncStorage, jest-expo with
+@testing-library/react-native. iOS-first.
+
+**Fully offline.** A five-minute commute habit cannot depend on signal. No
+backend in Phase 1.
+
+The `Abacus`/`Rod`/`Bead` components on the existing
+`codex/create-soroban-app-with-animations` branch are worth salvaging. Its quiz
+engine is a stub and is replaced.
+
+### Domain core — pure TypeScript, no React
+
+| Module | Responsibility |
+|---|---|
+| `domain/soroban` | Bead state, `applyMove`, `readValue`, `setValue` |
+| `domain/atoms` | Atom generation, `classify()`, `decompose()` |
+| `domain/curriculum` | Stages, unlock gates |
+| `domain/scheduling` | `selectSession(progress, now, budget)`, `recordAttempt(...)` |
+| `domain/progress` | Persisted record, schema migrations |
+
+Every function above is pure, making the entire engine testable with a seeded
+clock and no simulator.
+
+### UI
+
+`FadeLayer` is the component that matters most. Visibility must be a **single
+prop driving one component** — solid → dim → ghost → frame → nothing. If fade
+logic scatters into conditionals across the bead components, the core feature
+rots.
+
+Three screens:
+
+- **Today** — the session
+- **Progress** — a 180-cell grid, one cell per atom, coloured by fluency and
+  fade. Cheap to build and it is the payoff: visible evidence of the rewiring.
+  A core feature, not a nice-to-have, and in Phase 1 the only milestone system.
+- **Settings**
+
+### Data flow
+
+Progress (AsyncStorage) → `selectSession` → `SessionPlan` → runner → per
+answer `recordAttempt` → new progress → **persisted at block boundaries**, not
+per attempt, so a crash costs at most one block.
+
+## 10. Testing
+
+The domain being pure means the bulk of the suite is fast unit tests, written
+test-first per the usual workflow.
+
+One property test carries most of the correctness weight:
+
+> For all 180 atoms, applying `decompose(atom)` to a rod showing `rodValue`
+> yields exactly `rodValue ± operand`.
+
+If complement decomposition is wrong anywhere, this fails.
+
+Further coverage:
+
+- Atom generation produces exactly 180 atoms; classification matches a
+  known-good table
+- Soroban engine round-trip: `readValue(setValue(s, n)) === n`
+- Scheduler determinism under a seeded clock: promotion, demotion, unlock
+  gates, and session plans that respect the time budget
+- Component tests for `SessionRunner` and `FadeLayer`
+
+## 11. Phase 1 scope
+
+**In:** stages 0-4 (all 180 single-rod atoms), the full fade ladder, the
+session engine, the progress map. iOS only.
+
+**Out:** multiplication, division, multi-rod, 検定 mock exams, 読上算 audio,
+any backend or sync.
+
+Phase 1 is a complete product: it delivers genuine single-rod anzan, the
+foundation everything later is built on.
+
+## 12. Open questions
+
+- Exact latency targets are first estimates and need calibration against real
+  data once the app is in use.
+- Whether the approximate per-class atom counts in §3 match the generator's
+  output — resolved by implementing the generator.
