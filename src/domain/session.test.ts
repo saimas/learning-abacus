@@ -50,13 +50,24 @@ describe('selectSession', () => {
   it('presents fade-rep atoms one level above their record', () => {
     let progress: Progress = emptyProgress()
     const atomId = atomsForStage(1)[0]?.id ?? '0+1'
-    progress = recordAttempt(progress, atomId, true, 400, NOW)
+    // Four fast correct answers reach box 5 with a full latency window, making
+    // the atom reflex — while staying one short of the five-answer fade promotion.
+    for (let i = 0; i < 4; i++) progress = recordAttempt(progress, atomId, true, 400, NOW)
     const record = progress.atoms[atomId]
+    expect(record).toBeDefined()
     const plan = selectSession(progress, NOW + 60_000)
-    const item = plan.blocks.find((b) => b.kind === 'faderep')?.items.find((i) => i.atomId === atomId)
-    if (item !== undefined && record !== undefined) {
-      expect(item.fade).toBe(record.fade + 1)
-    }
+    const found = plan.blocks.find((b) => b.kind === 'faderep')?.items.find((i) => i.atomId === atomId)
+    expect(found).toBeDefined()
+    expect(found?.fade).toBe((record?.fade ?? 0) + 1)
+  })
+
+  it('keeps atoms that are not yet fluent out of the fade-rep block', () => {
+    let progress: Progress = emptyProgress()
+    const atomId = atomsForStage(1)[0]?.id ?? '0+1'
+    progress = recordAttempt(progress, atomId, true, 400, NOW)
+    const plan = selectSession(progress, NOW + 60_000)
+    const faderep = plan.blocks.find((b) => b.kind === 'faderep')
+    expect(faderep?.items.map((i) => i.atomId)).not.toContain(atomId)
   })
 
   it('never shows the same atom twice within one block', () => {

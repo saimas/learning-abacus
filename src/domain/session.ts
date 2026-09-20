@@ -1,5 +1,7 @@
+import { classify } from './atoms'
 import { atomsForStage, type StageIndex } from './curriculum'
 import { coachingForFade, MAX_FADE, type Coaching, type FadeLevel } from './fade'
+import { isReflex } from './fluency'
 import { currentStage, type Progress } from './progress'
 
 export type BlockKind = 'warmup' | 'focus' | 'faderep' | 'close'
@@ -54,7 +56,14 @@ export function selectSession(progress: Progress, now: number): SessionPlan {
   const focus = focusAtoms.map((atom) => item(atom.id, progress.atoms[atom.id]?.fade ?? 0))
 
   const faderep = seen
-    .filter((atom) => (progress.atoms[atom.id]?.fade ?? 0) < MAX_FADE)
+    .filter((atom) => {
+      const record = progress.atoms[atom.id]
+      if (record === undefined) return false
+      if (record.fade >= MAX_FADE) return false
+      // Spec §4: stretch an atom's visibility only once it is fluent where it
+      // stands, so the mental image is always almost there rather than absent.
+      return isReflex(record, classify(atom), progress.calibrationMs)
+    })
     .slice(0, FADEREP_ITEMS)
     .map((atom) => item(atom.id, ((progress.atoms[atom.id]?.fade ?? 0) + 1) as FadeLevel))
 
