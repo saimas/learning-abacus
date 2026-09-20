@@ -1,0 +1,90 @@
+import {
+  applyAttempt,
+  CLASS_TARGET_MS,
+  isReflex,
+  latencyTargetMs,
+  medianLatencyMs,
+  newRecord,
+} from './fluency'
+import type { AtomRecord } from './fluency'
+
+const NOW = 1_700_000_000_000
+
+function recordWith(latencies: number[], box: number) {
+  return { ...newRecord('3+4', NOW), recentLatencyMs: latencies, box }
+}
+
+describe('medianLatencyMs', () => {
+  it('is null before any attempt', () => {
+    expect(medianLatencyMs(newRecord('3+4', NOW))).toBeNull()
+  })
+
+  it('takes the middle of an odd-length window', () => {
+    expect(medianLatencyMs(recordWith([500, 900, 1500], 1))).toBe(900)
+  })
+})
+
+describe('latencyTargetMs', () => {
+  it('is the class target when calibration matches the direct baseline', () => {
+    expect(latencyTargetMs('five', CLASS_TARGET_MS.direct)).toBe(CLASS_TARGET_MS.five)
+  })
+
+  it('scales up for a slower learner', () => {
+    expect(latencyTargetMs('direct', 1800)).toBe(1800)
+  })
+
+  it('clamps runaway calibration', () => {
+    expect(latencyTargetMs('direct', 90_000)).toBe(CLASS_TARGET_MS.direct * 2.5)
+  })
+})
+
+describe('isReflex', () => {
+  it('requires both box and speed', () => {
+    expect(isReflex(recordWith([400, 500, 600, 500, 400], 4), 'direct', 900)).toBe(true)
+  })
+
+  it('rejects a fast atom in a low box', () => {
+    expect(isReflex(recordWith([400, 500, 600, 500, 400], 2), 'direct', 900)).toBe(false)
+  })
+
+  it('rejects a high-box atom that is still slow', () => {
+    expect(isReflex(recordWith([3000, 3200, 3100, 3000, 3300], 5), 'direct', 900)).toBe(false)
+  })
+
+  it('rejects an atom with too few timings to judge', () => {
+    expect(isReflex(recordWith([400], 5), 'direct', 900)).toBe(false)
+  })
+})
+
+describe('applyAttempt', () => {
+  it('promotes the box and schedules further out on success', () => {
+    const next = applyAttempt(newRecord('3+4', NOW), 'direct', true, 600, NOW)
+    expect(next.box).toBe(2)
+    expect(next.consecutiveCorrect).toBe(1)
+    expect(next.dueAt).toBeGreaterThan(NOW)
+  })
+
+  it('resets to box 1 on failure', () => {
+    const strong = { ...newRecord('3+4', NOW), box: 5, consecutiveCorrect: 4 }
+    const next = applyAttempt(strong, 'direct', false, 2500, NOW)
+    expect(next.box).toBe(1)
+    expect(next.consecutiveCorrect).toBe(0)
+    expect(next.consecutiveWrong).toBe(1)
+  })
+
+  it('keeps only the last five latencies', () => {
+    // Seeded at MAX_FADE so the promotion at five correct answers cannot fire
+    // and clear the window — this test is about the slice, not about fading.
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 6 }
+    for (const ms of [100, 200, 300, 400, 500, 600]) {
+      record = applyAttempt(record, 'direct', true, ms, NOW)
+    }
+    expect(record.recentLatencyMs).toEqual([200, 300, 400, 500, 600])
+  })
+
+  it('promotes fade once the streak is met', () => {
+    let record = newRecord('3+4', NOW)
+    for (let i = 0; i < 5; i++) record = applyAttempt(record, 'direct', true, 500, NOW)
+    expect(record.fade).toBe(1)
+  })
+})
