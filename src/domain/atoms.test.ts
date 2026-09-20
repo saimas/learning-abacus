@@ -30,6 +30,20 @@ describe('classification', () => {
   ] as const)('%i %s %i is %s', (v, n, direction, expected) => {
     expect(classify({ id: atomId(v, n, direction), rodValue: v, operand: n, direction })).toBe(expected)
   })
+
+  // These four counts are recorded in §3 of the curriculum spec as the source
+  // of truth for how curriculum content is partitioned by class (Tasks 6 and
+  // 14). The 180-case property test above only checks that decompose's steps
+  // sum to the right value — it never checks their shape, which is what
+  // classify keys off. Without this assertion, a future change to
+  // decomposeWithinRod's step count could reclassify an atom while every
+  // other test still passes, silently desyncing the spec's numbers. The
+  // assertion is exact, not a range, so any such drift fails here.
+  it('has the classification distribution the spec records', () => {
+    const counts = { direct: 0, five: 0, ten: 0, both: 0 }
+    for (const atom of ATOMS) counts[classify(atom)] += 1
+    expect(counts).toEqual({ direct: 50, five: 40, ten: 50, both: 40 })
+  })
 })
 
 describe('decomposition', () => {
