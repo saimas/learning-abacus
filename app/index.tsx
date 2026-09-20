@@ -2,11 +2,13 @@ import { Link, Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Text, View } from 'react-native'
 import { selectSession } from '@/domain/session'
+import { useStrings } from '@/i18n'
 import { useProgress } from '@/ui/ProgressProvider'
 import { SessionRunner } from '@/ui/session/SessionRunner'
 
 export default function Today() {
   const { progress, hydrated, attempt, flush } = useProgress()
+  const strings = useStrings()
   // Captured once at mount, not read fresh from Date.now() during render:
   // react-hooks/purity forbids calling an impure function while rendering.
   const [startedAt] = useState(() => Date.now())
@@ -22,7 +24,7 @@ export default function Today() {
   if (!hydrated || plan === null) {
     return (
       <View>
-        <Text testID="hydrating">Loading your progress…</Text>
+        <Text testID="hydrating">{strings.loadingProgress}</Text>
       </View>
     )
   }
@@ -33,13 +35,13 @@ export default function Today() {
 
   return (
     <View>
-      <Text testID="days-practiced">{`${progress.daysPracticed} days practised`}</Text>
+      <Text testID="days-practiced">{strings.daysPracticed(progress.daysPracticed)}</Text>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Link href="/progress" testID="link-progress">
-          Progress
+          {strings.navProgress}
         </Link>
         <Link href="/settings" testID="link-settings">
-          Settings
+          {strings.navSettings}
         </Link>
       </View>
       <SessionRunner

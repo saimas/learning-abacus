@@ -3,6 +3,7 @@ import { ATOMS, classify, type AtomClass } from '@/domain/atoms'
 import { isReflex, type AtomRecord } from '@/domain/fluency'
 import { MAX_FADE } from '@/domain/fade'
 import type { Progress } from '@/domain/progress'
+import { useStrings } from '@/i18n'
 
 export type CellState = 'unseen' | 'learning' | 'reflex' | 'mental'
 
@@ -26,6 +27,7 @@ export function cellState(
 }
 
 export function AtomGrid({ progress }: { progress: Progress }) {
+  const strings = useStrings()
   const states = ATOMS.map((atom) =>
     cellState(progress.atoms[atom.id], classify(atom), progress.calibrationMs),
   )
@@ -33,14 +35,14 @@ export function AtomGrid({ progress }: { progress: Progress }) {
 
   return (
     <View>
-      <Text testID="atom-summary">{`${mental} of ${ATOMS.length} moves are mental`}</Text>
+      <Text testID="atom-summary">{strings.atomSummary(mental, ATOMS.length)}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {ATOMS.map((atom, index) => (
           <View
             key={atom.id}
             testID={`atom-cell-${atom.id}`}
             accessible={true}
-            accessibilityLabel={`${atom.id} ${states[index] ?? 'unseen'}`}
+            accessibilityLabel={strings.cellLabel(atom.id, states[index] ?? 'unseen')}
             style={{
               width: 16,
               height: 16,
