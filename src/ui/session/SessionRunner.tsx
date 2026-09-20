@@ -46,6 +46,32 @@ function cumulativeDeadlines(blocks: SessionBlock[], sessionStartedAt: number): 
   return deadlines
 }
 
+// The block's own cumulative deadline is the right stopping point only when
+// something follows it that will actually be shown. Empty blocks at the *tail*
+// are skipped straight past by findActiveBlock, and their slice of the budget
+// would simply vanish — and fade rep is empty for every learner on day one, so
+// that is the normal case, not an edge case. Left alone it turns the spec's
+// 255s of practice into 165s every single day, which breaks the one promise
+// the fixed five-minute session is making. The active block therefore inherits
+// the deadline of the last practice block that will be skipped after it.
+function effectiveDeadline(
+  blocks: SessionBlock[],
+  deadlines: number[],
+  index: number,
+  failures: Record<string, number>,
+): number | undefined {
+  let last = index
+  for (let next = index + 1; next < blocks.length; next++) {
+    const block = blocks[next]
+    if (block === undefined) continue
+    // Close is never skipped, and its 30s is its own.
+    if (block.kind === 'close') break
+    if (liveItems(block.items, failures).length > 0) break
+    last = next
+  }
+  return deadlines[last]
+}
+
 // Scans forward from `fromIndex` for the next block the learner should see.
 // A block with nothing presentable — empty by design, or drained by failure
 // caps — is skipped without ever becoming "active"; its slice of the
@@ -172,7 +198,7 @@ export function SessionRunner({
       // At MAX_ATTEMPTS_PER_ATOM the item is simply not requeued — dropped.
     }
 
-    const deadline = deadlines[state.blockIndex]
+    const deadline = effectiveDeadline(plan.blocks, deadlines, state.blockIndex, failures.current)
     const timeUp = deadline !== undefined && t >= deadline
 
     if (!timeUp && queue.length === 0) {

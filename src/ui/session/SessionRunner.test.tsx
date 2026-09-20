@@ -195,6 +195,55 @@ describe('SessionRunner', () => {
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
 
+  it('inherits the budget of empty practice blocks that follow it', () => {
+    // Fade rep is empty for every learner on day one, and empty blocks at the
+    // *tail* are skipped by findActiveBlock — so without this their 90s is
+    // simply lost and the session delivers 165s of practice instead of 255s,
+    // every single day.
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'warmup', seconds: 45, items: [] },
+        { kind: 'focus', seconds: 120, items: [item('3+4')] },
+        { kind: 'faderep', seconds: 90, items: [] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 285,
+    }
+    const clock = manualClock(0)
+    const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, clock.now)
+
+    // Past focus's own cumulative deadline (45 + 120 = 165s), but inside the
+    // full practice budget the skipped fade-rep block hands it.
+    clock.set(200_000)
+    answer(getByTestId, '7')
+    expect(onBlockEnd).not.toHaveBeenCalled()
+    expect(getByTestId('prompt')).toBeTruthy()
+
+    // Past the whole practice budget (45 + 120 + 90 = 255s).
+    clock.set(256_000)
+    answer(getByTestId, '7')
+    expect(onBlockEnd).toHaveBeenCalledWith('focus')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('does not raid the budget of a following block that still has items', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4')] },
+        { kind: 'faderep', seconds: 90, items: [item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 240,
+    }
+    const clock = manualClock(0)
+    const { getByTestId, onBlockEnd } = renderRunner(plan, clock.now)
+
+    clock.set(121_000)
+    answer(getByTestId, '7')
+    expect(onBlockEnd).toHaveBeenCalledWith('focus')
+    expect(getByTestId('prompt').props.children).toContain('2')
+  })
+
   it('renders the close screen with both its summary and a finish button', () => {
     // Guards against a fallback branch silently taking over "session-summary"
     // (the no-close-block and empty-queue guards render that testID's
