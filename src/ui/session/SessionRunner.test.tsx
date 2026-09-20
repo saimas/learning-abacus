@@ -167,6 +167,32 @@ describe('SessionRunner', () => {
     expect(droppedAttempts.every((call) => call[0].correct === false)).toBe(true)
   })
 
+  it('ignores a submit with an empty field instead of scoring it correct', () => {
+    // Number('') is 0, so on an n−n atom an empty submit used to be marked
+    // correct. It must not count as a wrong answer either — that would burn
+    // one of the atom's three attempts for no answer at all.
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('4-4')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    fireEvent.press(getByTestId('submit'))
+    expect(onAttempt).not.toHaveBeenCalled()
+    expect(getByTestId('prompt').props.children).toContain('4')
+
+    answer(getByTestId, '0')
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ correct: true }))
+  })
+
+  it('ignores a submit with unparseable input', () => {
+    const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
+    answer(getByTestId, 'abc')
+    expect(onAttempt).not.toHaveBeenCalled()
+  })
+
   it('cycles items within a block while time remains', () => {
     const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
     answer(getByTestId, '7')

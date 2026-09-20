@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { Abacus } from '@/ui/abacus/Abacus'
+import { parseAnswer } from '@/ui/parseAnswer'
 
 const DEFAULT_VALUES = [1, 4, 5, 6, 9, 3, 8, 2, 7, 0]
 
@@ -17,7 +18,12 @@ export function ReadingDrill({
   const target = values[index] ?? 0
 
   function submit() {
-    if (Number(answer) !== target) {
+    // Number('') is 0, so without this a blank field would read as a correct
+    // answer on the drill's 0 rod and finish the tutorial.
+    const given = parseAnswer(answer)
+    if (given === null) return
+
+    if (given !== target) {
       setAnswer('')
       return
     }

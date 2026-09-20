@@ -12,6 +12,7 @@ import {
 } from '@/domain/session'
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { Abacus } from '@/ui/abacus/Abacus'
+import { parseAnswer } from '@/ui/parseAnswer'
 
 export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number }
 
@@ -182,9 +183,15 @@ export function SessionRunner({
     // does not carry a const's narrowing into a nested closure.
     if (block === undefined || current === undefined) return
 
+    // A blank or unparseable field is not an answer. Scoring it would mark
+    // every n−n atom correct, and scoring it wrong would burn an attempt for
+    // a mistap, so nothing happens at all.
+    const given = parseAnswer(answer)
+    if (given === null) return
+
     const t = now()
     const latencyMs = Math.max(0, t - shownAt.current)
-    const correct = Number(answer) === expected
+    const correct = given === expected
 
     onAttempt({ atomId: current.atomId, correct, latencyMs })
 
