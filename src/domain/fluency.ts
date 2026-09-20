@@ -25,8 +25,26 @@ export const LATENCY_WINDOW = 3
 const MINUTE = 60_000
 const BOX_INTERVAL_MS = [0, 10 * MINUTE, 60 * MINUTE, 24 * 60 * MINUTE, 3 * 24 * 60 * MINUTE, 7 * 24 * 60 * MINUTE]
 
+// The promotion gate is "median latency under target", and the target is
+// derived from the learner's own rolling median. Without a margin above that
+// median the gate reduces to "beat your own median" — a coin flip per attempt,
+// which makes a FADE_PROMOTE_STREAK run a ~1-in-100 event and the fade ladder
+// effectively unclimbable. 1.2 is deliberately modest: latency is measured
+// submit-to-submit, so it carries a near-constant input cost (reading, typing,
+// tapping) that does not shrink as the arithmetic does, and a looser margin
+// would let an atom clear the whole ladder in a couple of days.
+export const TARGET_MARGIN = 1.2
+
+// Scale has a floor but no ceiling: capping it would pin a slow learner's
+// target *below* their own median and freeze them at F0 forever, which is the
+// opposite of calibrating to the learner. Runaway values are caught by the
+// absolute clamp on the resulting target instead.
 const MIN_SCALE = 0.6
-const MAX_SCALE = 2.5
+export const MIN_TARGET_MS = 400
+export const MAX_TARGET_MS = 8_000
+
+// Spec §12: these are first estimates. They need calibration against real
+// usage data before they can be trusted as anything more.
 
 export function newRecord(atomId: string, now: number): AtomRecord {
   return {
@@ -52,9 +70,9 @@ export function medianLatencyMs(record: AtomRecord): number | null {
 }
 
 export function latencyTargetMs(cls: AtomClass, calibrationMs: number): number {
-  const raw = calibrationMs / CLASS_TARGET_MS.direct
-  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, raw))
-  return CLASS_TARGET_MS[cls] * scale
+  const scale = Math.max(MIN_SCALE, calibrationMs / CLASS_TARGET_MS.direct)
+  const target = CLASS_TARGET_MS[cls] * scale * TARGET_MARGIN
+  return Math.min(MAX_TARGET_MS, Math.max(MIN_TARGET_MS, target))
 }
 
 export function isReflex(record: AtomRecord, cls: AtomClass, calibrationMs: number): boolean {
