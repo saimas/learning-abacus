@@ -70,6 +70,8 @@ touched: no scheduling, fluency, fade or session-planning rule changes.
 | `muted` | `#7A6D61` | secondary text |
 | `accent` | `#B5412C` | vermilion: primary buttons, seals, corrections |
 | `accentShadow` | `#8E3322` | 1.5–2pt bottom edge under accent buttons |
+| `keyEdge` | `#D6C8B0` | 2pt bottom edge under keypad keys |
+| `shadow` | `#3C2314` | soroban and segmented-control drop shadows |
 | `onAccent` | `#FFF8F0` | text on accent |
 | `frameTop` / `frameBottom` | `#6E4A2F` / `#4E3220` | soroban frame |
 | `deck` | `#EFE3CC` | soroban interior |
@@ -103,6 +105,9 @@ primary buttons, 12 for keys, 10 for inline panels. Spacing steps
   `outline`, or `stamped` (filled), and it takes short text.
 - **`BackLink`**: "‹ 今日" at the top left of pushed screens.
 - **`SegmentedControl`**: used by the language choice.
+- **`Icon` / `IconButton`**: five outline icons (grid, gear, close, back,
+  delete), drawn with `react-native-svg` after Feather's shapes. No icon font
+  is added.
 
 ## 4. Screens and flow
 
@@ -130,8 +135,10 @@ from Expo's default blue to `paper`. The status bar is dark.
 
 From the top:
 
-- A small date line, plus two icon buttons for 進捗 and 設定. Their
-  accessibility labels are the existing `navProgress` and `navSettings`.
+- Two icon buttons at the top right for 進捗 and 設定. Their accessibility
+  labels are the existing `navProgress` and `navSettings`. The mockup's date
+  line is dropped: it would need locale-aware date formatting and is only
+  decoration.
 - The title 今日の五分.
 - A **days seal** showing `daysPracticed`, next to "練習 N日間" and a status
   line:
@@ -210,9 +217,11 @@ moves fill in first, then the 5- and 10-complement areas. Cell `testID`s
 
 ### 4.6 Settings (`/settings`)
 
-`BackLink`, then the heading 設定. A card holds two rows: 練習した日数 (N日間)
-and 言語, where 言語 is a `SegmentedControl` of the untranslated
-`LOCALE_NAMES`. Reset stays last on the screen. It is an `outline` button
+`BackLink`, then the heading 設定. A card holds two rows: the existing
+`daysPracticed` sentence (練習 N日間), and 言語 with a `SegmentedControl` of
+the untranslated `LOCALE_NAMES`. The mockup split the first row into a
+label and a value. Keeping the existing sentence means the locale tests
+that read it keep passing, with no new strings. Reset stays last on the screen. It is an `outline` button
 (すべての進捗を消す) that, once armed, becomes a `primary` button
 (本当にすべての進捗を消しますか？). The two-press guard and its testIDs are
 unchanged.
@@ -290,7 +299,7 @@ New keys, added to both catalogs:
 | `seeYouTomorrow` | またあした。 | See you tomorrow. |
 | `practiseAgain` | もう一度練習する | Practise again |
 | `mapPreviewTitle` | 暗算できる動き | Moves you can do mentally |
-| `blockLabel(kind)` | 準備 / 集中 / 暗算 | Warm-up / Focus / Fade |
+| `blockLabel(kind)` | 準備 / 集中 / 暗算 / まとめ | Warm-up / Focus / Fade / Close |
 | `previousProblem` | さっきの問題 | Previous problem |
 | `correctionAnswer(n)` | こたえは n | The answer is n |
 | `correct` | 正解 | Correct |
@@ -303,10 +312,9 @@ New keys, added to both catalogs:
 | `readingTitle` | そろばんの読み方 | Reading the soroban |
 | `mapAdd` / `mapSub` | たし算 / ひき算 | Addition / Subtraction |
 | `mapAxis` | 縦：いまのけたの数（0〜9）　横：たす数・ひく数（1〜9） | Rows: the rod's value (0–9) · Columns: the number added or taken away (1–9) |
-| `daysPracticedLabel` | 練習した日数 | Days practised |
-| `daysCount(n)` | n日間 | n day / n days |
 | `back` | 今日 | Today |
 | `deleteKey` | 1文字消す | Delete |
+| `cellStateName(state)` | 未学習 / 学習中 / 即答 / 暗算 | unseen / learning / reflex / mental |
 
 `correction` is replaced by `correctionAnswer` plus the existing `coaching`,
 and `navToday` is replaced by `back`. Both old keys are removed once they
@@ -351,8 +359,10 @@ Domain tests are untouched. The whole redesign sits in `src/ui/`, `app/` and
 - **Session screen:** ✕ confirms through `Alert` (mocked), and やめる
   flushes and navigates home; finishing navigates home.
 - **Catalogs:** the existing parity and arity tests cover the new keys
-  automatically. Add value checks for `sealDays` and `daysCount` pluralisation
-  in English.
+  automatically. Add value checks for `sealDays` pluralisation in English
+  and for `blockLabel`.
+- **react-native-svg** is replaced in Jest by plain Views that keep their
+  props (`jest.setup.js`). Tests check layout and props, never the drawing.
 
 **Visual verification.** Run the app in the iOS Simulator and screenshot
 every screen and state in sections 4 and 5 (reading drill right and wrong,
@@ -368,3 +378,10 @@ must pass.
 - A new app icon, and iPad layouts (`supportsTablet` is false).
 - The close block's "atoms mastered" and "tomorrow's preview" from the
   curriculum spec, and any extra-block offer beyond もう一度練習する.
+
+**Known issue, not fixed here.** From stage 3 onward, a borrowing
+subtraction atom such as 3−5 is shown as 3 on the ones rod with 0 on the
+tens rod, and `SessionRunner` expects `rodValue − operand` (−2). Neither the
+old iOS number pad nor the new keypad can enter a minus sign. The fix, which
+is to show 1 on the tens rod so the problem reads 13−5 = 8, belongs to the
+session logic and needs its own change.
