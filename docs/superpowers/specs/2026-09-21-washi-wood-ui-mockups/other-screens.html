@@ -1,0 +1,248 @@
+<style>
+  .row4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start; }
+  .frame-box { background: var(--bg-tertiary); border-radius: 12px; padding: 1.25rem 0; display: flex; justify-content: center; }
+  .cap { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: var(--text-secondary); }
+  .cap b { color: var(--text-primary); }
+
+  .phone {
+    --p-bg:#F4EEE2; --p-ink:#2A2320; --p-muted:#7A6D61; --p-line:#E2D8C6; --p-accent:#B5412C; --p-on-accent:#FFF8F0; --p-card:#FBF7EF;
+    --p-display:"Hiragino Mincho ProN","Yu Mincho",serif; --p-body:"Hiragino Sans",sans-serif;
+    width: 290px; height: 620px; border-radius: 44px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 9px #111, 0 12px 30px rgba(0,0,0,.25);
+    background: var(--p-bg); color: var(--p-ink); font-family: var(--p-body);
+    display: flex; flex-direction: column;
+  }
+  .status { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px 0 30px; font: 600 14px -apple-system, sans-serif; flex: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 28px; background: #000; border-radius: 20px; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 4px 20px 18px; min-height: 0; }
+  .spacer { flex: 1; min-height: 4px; }
+
+  .hdr { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--p-muted); flex: none; }
+  .icons { display: flex; gap: 14px; }
+  .ic { width: 22px; height: 22px; display: grid; place-items: center; color: var(--p-ink); }
+  .ic svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+  .back { display: flex; align-items: center; gap: 2px; color: var(--p-ink); font-size: 14px; }
+  .back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .h1 { font-family: var(--p-display); font-weight: 600; font-size: 28px; letter-spacing: .06em; margin-top: 12px; flex: none; }
+
+  .streak { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex: none; }
+  .seal { width: 54px; height: 54px; border-radius: 50%; border: 2.5px solid var(--p-accent); color: var(--p-accent); display: grid; place-items: center;
+          font-family: var(--p-display); font-weight: 700; font-size: 15px; line-height: 1.05; text-align: center; transform: rotate(-6deg); }
+  .seal.stamped { background: var(--p-accent); color: var(--p-on-accent); }
+  .streak p { font-size: 13px; color: var(--p-muted); line-height: 1.5; margin: 0; }
+  .streak p b { color: var(--p-ink); font-size: 15px; }
+
+  .card2 { margin-top: 16px; background: var(--p-card); border: 1px solid #E4D8C3; border-radius: 14px; padding: 12px; flex: none; }
+  .card2 .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--p-muted); margin-bottom: 8px; }
+  .card2 .row b { font-family: var(--p-display); color: var(--p-ink); font-size: 16px; }
+
+  .g { display: grid; gap: 2px; }
+  .g i { aspect-ratio: 1; border-radius: 2px; background: #E6DCCB; display: block; }
+  .g i.l { background: #E0BE7E; } .g i.r { background: #B8743F; } .g i.m { background: #4E3220; }
+  .mini18 { grid-template-columns: repeat(18, 1fr); }
+
+  .primary { height: 54px; border-radius: 14px; background: var(--p-accent); color: var(--p-on-accent); display: grid; place-items: center; font-weight: 600; font-size: 16px; letter-spacing: .1em; box-shadow: 0 2px 0 #8E3322; flex: none; }
+  .secondary { height: 50px; border-radius: 14px; border: 1.5px solid var(--p-accent); color: var(--p-accent); display: grid; place-items: center; font-weight: 600; font-size: 15px; letter-spacing: .08em; flex: none; }
+
+  /* soroban */
+  .soroban { margin: 14px auto 0; padding: 9px 12px; border-radius: 14px; background: linear-gradient(180deg,#6E4A2F,#4E3220);
+             box-shadow: 0 6px 16px rgba(60,35,20,.28), inset 0 1px 0 rgba(255,255,255,.15); flex: none; }
+  .deck { display: flex; background: #EFE3CC; border-radius: 8px; padding: 0 6px; }
+  .rod { width: 64px; display: flex; flex-direction: column; align-items: center;
+         background: linear-gradient(90deg, transparent calc(50% - 1.5px), #9C7A55 calc(50% - 1.5px), #9C7A55 calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .heaven { height: 40px; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 3px; }
+  .heaven.on { justify-content: flex-end; padding: 0; }
+  .beam { height: 9px; width: 100%; background: linear-gradient(180deg,#5A3A24,#3E2717); position: relative; }
+  .beam.unit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #F4EEE2; }
+  .earth { height: 106px; display: flex; flex-direction: column; padding-bottom: 3px; }
+  .earth .gap { flex: 1; }
+  .bead { width: 50px; height: 20px; flex: none; clip-path: polygon(0 50%, 19% 0, 81% 0, 100% 50%, 81% 100%, 19% 100%);
+          background: linear-gradient(180deg,#6B4028 0%,#3A2014 55%,#24130B 100%); }
+
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: #DCCFB8; }
+  .dots i.on { background: var(--p-accent); }
+  .instr { margin-top: 12px; font-size: 12.5px; line-height: 1.6; color: var(--p-ink); background: #EAE1D0; border-radius: 10px; padding: 9px 12px; flex: none; }
+  .instr b { font-weight: 600; }
+  .prompt { margin-top: 12px; text-align: center; font-family: var(--p-display); font-size: 20px; letter-spacing: .04em; font-weight: 600; flex: none; }
+  .readout { margin: 6px auto 0; width: 100px; height: 38px; border-bottom: 2px solid var(--p-accent); flex: none; }
+  .fix { margin-top: 8px; background: var(--p-card); border: 1px solid #E4D8C3; border-left: 3px solid var(--p-accent); border-radius: 10px; padding: 7px 11px; font-size: 12px; line-height: 1.5; flex: none; }
+  .fix b { color: var(--p-accent); font-weight: 600; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 36px; gap: 6px; flex: none; }
+  .pad div { border-radius: 11px; background: #FBF7EF; border: 1px solid #DDD0BA; box-shadow: 0 1.5px 0 #D6C8B0; display: grid; place-items: center; font-family: var(--p-display); font-size: 18px; font-weight: 600; }
+  .pad .del { background: transparent; border-color: transparent; box-shadow: none; color: var(--p-muted); font-family: var(--p-body); }
+  .pad .go { background: var(--p-accent); border-color: var(--p-accent); box-shadow: 0 1.5px 0 #8E3322; color: var(--p-on-accent); font-family: var(--p-body); font-size: 12.5px; letter-spacing: .04em; }
+
+  /* progress */
+  .big { font-family: var(--p-display); font-weight: 600; font-size: 34px; margin-top: 6px; flex: none; }
+  .big small { font-size: 15px; color: var(--p-muted); font-weight: 400; margin-left: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--p-muted); margin-top: 8px; flex: none; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .maps { display: flex; gap: 12px; margin-top: 16px; flex: none; }
+  .map { flex: 1; }
+  .map h5 { font-family: var(--p-display); font-size: 14px; font-weight: 600; margin: 0 0 6px 12px; }
+  .axis { display: grid; grid-template-columns: 10px repeat(9, 1fr); gap: 2px; font-size: 7.5px; color: var(--p-muted); text-align: center; line-height: 1; }
+  .axis span { display: grid; place-items: center; }
+  .axis i { aspect-ratio: 1; border-radius: 2px; background: #E6DCCB; display: block; }
+  .axis i.l { background: #E0BE7E; } .axis i.r { background: #B8743F; } .axis i.m { background: #4E3220; }
+  .axnote { font-size: 10px; color: var(--p-muted); margin-top: 8px; line-height: 1.5; flex: none; }
+
+  /* settings */
+  .group { margin-top: 18px; background: var(--p-card); border: 1px solid #E4D8C3; border-radius: 14px; flex: none; }
+  .item { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; font-size: 14px; }
+  .item + .item { border-top: 1px solid #EDE3D2; }
+  .item .v { color: var(--p-muted); }
+  .segc { display: flex; background: #EDE3D2; border-radius: 9px; padding: 2px; }
+  .segc span { padding: 5px 12px; border-radius: 7px; font-size: 13px; color: var(--p-muted); }
+  .segc span.on { background: #FFFDF8; color: var(--p-ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 600; }
+  .glabel { font-size: 11px; color: var(--p-muted); margin: 22px 0 -10px 4px; letter-spacing: .05em; flex: none; }
+  .danger { height: 48px; border-radius: 12px; border: 1.5px solid var(--p-accent); color: var(--p-accent); display: grid; place-items: center; font-size: 14px; font-weight: 600; margin-top: 18px; flex: none; }
+  .danger.armed { background: var(--p-accent); color: var(--p-on-accent); }
+  .hint { font-size: 11px; color: var(--p-muted); text-align: center; margin-top: 6px; flex: none; }
+</style>
+
+<h2>Home (after practice), reading drill, progress, settings</h2>
+<p class="subtitle">Style A throughout. The Japanese labels marked * are new copy for you to check; the rest is existing catalog text.</p>
+
+<div class="row4">
+
+  <!-- Home, done -->
+  <div>
+    <div class="frame-box"><div class="phone">
+      <div class="island"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="hdr"><span>9月21日（月）</span><div class="icons">
+          <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span>
+        </div></div>
+        <div class="h1">今日の五分*</div>
+        <div class="streak"><div class="seal stamped">12<br>日</div><p><b>練習 12日間</b><br>今日の練習はおわりました*<br>またあした。*</p></div>
+        <div class="card2"><div class="row"><span>暗算できる動き*</span><b>23 / 180</b></div><div style="display:flex;gap:10px"><div class="g" id="hadd" style="flex:1;grid-template-columns:repeat(9,1fr)"></div><div class="g" id="hsub" style="flex:1;grid-template-columns:repeat(9,1fr)"></div></div></div>
+        <div class="spacer"></div>
+        <div class="secondary">もう一度練習する*</div>
+      </div>
+    </div></div>
+    <p class="cap"><b>Home, after today's session.</b> The seal fills in solid vermilion, like a stamp that's been pressed. The main button becomes a quieter outline button (もう一度練習する). Practising again stays on offer but is never pushed. "Done today" comes from the existing <code>lastSessionDay</code>, so nothing new is stored.</p>
+  </div>
+
+  <!-- Reading drill -->
+  <div>
+    <div class="frame-box"><div class="phone">
+      <div class="island"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="hdr"><span style="font-family:var(--p-display);font-size:15px;color:var(--p-ink);font-weight:600">そろばんの読み方*</span>
+          <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="instr">梁（はり）につけた珠だけを数えます。上の<b>五珠は5</b>、下の<b>一珠は1つにつき1</b>です。けたの数はその合計です。</div>
+        <div class="soroban"><div class="deck">
+          <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+        </div></div>
+        <div class="prompt">このけたはいくつですか？</div>
+        <div class="fix"><b>ちがいます。</b>このけたは6です。五珠と一珠1つで 5 + 1。</div>
+        <div class="readout"></div>
+        <div class="spacer"></div>
+        <div class="pad"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div class="del">⌫</div><div>0</div><div class="go">たしかめる</div></div>
+      </div>
+    </div></div>
+    <p class="cap"><b>Reading drill (first launch).</b> Ten dots replace "10問中 5問目", and the instruction sits in a paper card. This is where drawing beads by <em>position</em> matters most: the instruction says to count beads touching the beam, and now they visibly do. A wrong answer keeps the same rod and explains it, as now. Same keypad, with たしかめる as the submit key.</p>
+  </div>
+
+  <!-- Progress -->
+  <div>
+    <div class="frame-box"><div class="phone">
+      <div class="island"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="hdr"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>今日</span><span>練習 12日間</span></div>
+        <div class="h1">進捗</div>
+        <div class="big">23<small>/ 180 が暗算</small></div>
+        <div class="legend">
+          <span><i style="background:#E6DCCB;border:1px solid #D6C9B3"></i>未学習</span>
+          <span><i style="background:#E0BE7E"></i>学習中</span>
+          <span><i style="background:#B8743F"></i>即答</span>
+          <span><i style="background:#4E3220"></i>暗算</span>
+        </div>
+        <div class="maps">
+          <div class="map"><h5>たし算*</h5><div class="axis" id="gadd"></div></div>
+          <div class="map"><h5>ひき算*</h5><div class="axis" id="gsub"></div></div>
+        </div>
+        <div class="axnote">縦：いまのけたの数（0〜9）*　横：たす数・ひく数（1〜9）*</div>
+      </div>
+    </div></div>
+    <p class="cap"><b>Progress.</b> Today's flat wrap of 180 cells becomes <em>two real maps</em>. Addition and subtraction each get a grid with one row per starting value (0–9) and one column per operand (1–9). Every atom has one fixed cell, so the regions show structure: the direct moves fill in first (top-left of addition), then the 5- and 10-complement areas. Because it's the same 180 cells with the same test IDs and screen-reader labels, the existing tests still apply.</p>
+  </div>
+
+  <!-- Settings -->
+  <div>
+    <div class="frame-box"><div class="phone">
+      <div class="island"></div>
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="screen">
+        <div class="hdr"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>今日</span><span></span></div>
+        <div class="h1">設定</div>
+        <div class="group">
+          <div class="item"><span>練習した日数*</span><span class="v">12日間</span></div>
+          <div class="item"><span>言語</span><span class="segc"><span class="on">日本語</span><span>English</span></span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="danger">すべての進捗を消す</div>
+        <div class="hint">もう一度押すと確認します*</div>
+        <div style="height:26px"></div>
+        <div class="danger armed">本当にすべての進捗を消しますか？</div>
+        <div class="hint">↑ armed state, after the first press</div>
+      </div>
+    </div></div>
+    <p class="cap"><b>Settings.</b> The language choice becomes a segmented control. The labels are still never translated, so someone who taps into a language they can't read can still find the way back. Reset stays at the bottom with the same two-press guard: an outline button first, then solid vermilion once armed. (Both states are stacked here only to show them. On device only one shows at a time.)</p>
+  </div>
+
+</div>
+
+<p class="cap" style="margin-top:1.5rem">Common to every screen: a <code>Screen</code> wrapper handles safe-area insets and the paper background. Pushed screens (Progress, Settings) use the ‹ 今日 back link instead of the current "今日にもどる" text link, and the session runs full-screen from はじめる.</p>
+
+<script>
+  // Rough single-rod classifier, only to make the mock map look like a real learner's.
+  function cls(v, n, add) {
+    var h = v >= 5, e = v % 5;
+    function subDirect(v, m) { var h = v >= 5, e = v % 5; return m >= 5 ? (h && e >= m - 5) : e >= m; }
+    function addDirect(v, n) { var h = v >= 5, e = v % 5; return n >= 5 ? (!h && e + n - 5 <= 4) : e + n <= 4; }
+    if (add) {
+      if (v + n < 10) return addDirect(v, n) ? 'direct' : 'five';
+      return subDirect(v, 10 - n) ? 'ten' : 'both';
+    }
+    if (subDirect(v, n)) return 'direct';
+    if (v >= n) return 'five';
+    return addDirect(v, 10 - n) ? 'ten' : 'both';
+  }
+  function state(c, k) {
+    if (c === 'direct') return k % 5 === 0 ? 'r' : 'm';
+    if (c === 'five') return k % 3 === 0 ? 'r' : 'l';
+    if (c === 'ten') return k % 4 === 0 ? 'l' : '';
+    return '';
+  }
+  function build(id, add) {
+    var el = document.getElementById(id); if (!el) return;
+    var h = '<span></span>';
+    for (var n = 1; n <= 9; n++) h += '<span>' + n + '</span>';
+    for (var v = 0; v <= 9; v++) {
+      h += '<span>' + v + '</span>';
+      for (var n2 = 1; n2 <= 9; n2++) {
+        var s = state(cls(v, n2, add), v * 9 + n2);
+        h += '<i' + (s ? ' class="' + s + '"' : '') + '></i>';
+      }
+    }
+    el.innerHTML = h;
+  }
+  build('gadd', true); build('gsub', false);
+  function mini(id, add) {
+    var el = document.getElementById(id); if (!el) return;
+    var h = '';
+    for (var v = 0; v <= 9; v++) for (var n = 1; n <= 9; n++) {
+      var st = state(cls(v, n, add), v * 9 + n);
+      h += '<i' + (st ? ' class="' + st + '"' : '') + '></i>';
+    }
+    el.innerHTML = h;
+  }
+  mini('hadd', true); mini('hsub', false);
+</script>

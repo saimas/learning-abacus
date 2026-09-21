@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, Text, TextInput, View } from 'react-native'
+import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { Atom } from '@/domain/atoms'
 import type { FadeLevel } from '@/domain/fade'
 import {
@@ -12,11 +12,22 @@ import {
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
+import { AnswerPad } from '@/ui/answer/AnswerPad'
+import { Button } from '@/ui/kit/Button'
+import { Seal } from '@/ui/kit/Seal'
 import { parseAnswer } from '@/ui/parseAnswer'
+import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
+import { CorrectionCard } from './CorrectionCard'
+import { Maru } from './Maru'
+import { SessionTrack } from './SessionTrack'
 
 export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number }
 
 type RunnerState = { blockIndex: number; queue: SessionItem[] }
+
+// What a correction card needs. Kept as data rather than a finished sentence
+// so the card can name the problem as well as its answer.
+type Correction = { atom: Atom; expected: number }
 
 function parseAtomId(atomId: string): { rodValue: number; operand: number; sign: 1 | -1 } {
   const match = /^(\d)([+-])(\d)$/.exec(atomId)
@@ -101,12 +112,14 @@ export function SessionRunner({
   onAttempt,
   onBlockEnd,
   onFinish,
+  onQuit,
   now = Date.now,
 }: {
   plan: SessionPlan
   onAttempt: (result: AttemptResult) => void
   onBlockEnd: (kind: BlockKind) => void
   onFinish: () => void
+  onQuit?: () => void
   now?: () => number
 }) {
   const strings = useStrings()
@@ -115,8 +128,11 @@ export function SessionRunner({
     () => findActiveBlock(plan.blocks, 0, {}) ?? { blockIndex: plan.blocks.length, queue: [] },
   )
   const [answer, setAnswer] = useState('')
-  const [correction, setCorrection] = useState<string | null>(null)
+  const [correction, setCorrection] = useState<Correction | null>(null)
   const [tally, setTally] = useState({ answered: 0, correct: 0 })
+  // Counts correct answers, so each one remounts the 〇 and replays its fade.
+  // 0 means the last answer was wrong, or there has not been one.
+  const [maru, setMaru] = useState(0)
   const failures = useRef<Record<string, number>>({})
   const shownAt = useRef<number>(sessionStartedAt)
   const finished = useRef(false)
@@ -124,6 +140,13 @@ export function SessionRunner({
   const deadlines = useMemo(
     () => cumulativeDeadlines(plan.blocks, sessionStartedAt),
     [plan, sessionStartedAt],
+  )
+
+  // The practice blocks' seconds, for the time track. Close is a summary that
+  // waits for おわる, not a timed stretch, so it gets no segment.
+  const segments = useMemo(
+    () => plan.blocks.filter((b) => b.kind !== 'close' && b.seconds > 0).map((b) => b.seconds),
+    [plan],
   )
 
   const block = plan.blocks[state.blockIndex]
@@ -145,22 +168,27 @@ export function SessionRunner({
 
   if (block.kind === 'close') {
     return (
-      <View testID="session-summary">
-        <Text testID="summary-text">{strings.sessionComplete}</Text>
-        {/* Spec §6: the close block reports the result. Atoms mastered and
-            tomorrow's preview still belong here and are not built yet. */}
-        <Text testID="summary-result">{strings.sessionResult(tally.answered, tally.correct)}</Text>
-        <Pressable
+      <View testID="session-summary" style={styles.summary}>
+        <View style={styles.summaryBody}>
+          <Seal text={strings.sealDone} state="stamped" size={118} animateIn />
+          <Text testID="summary-text" style={styles.summaryTitle}>
+            {strings.sessionComplete}
+          </Text>
+          {/* Spec §6: the close block reports the result. Atoms mastered and
+              tomorrow's preview still belong here and are not built yet. */}
+          <Text testID="summary-result" style={styles.summaryResult}>
+            {strings.sessionResult(tally.answered, tally.correct)}
+          </Text>
+        </View>
+        <Button
           testID="finish-button"
-          accessibilityRole="button"
+          label={strings.done}
           onPress={() => {
             if (finished.current) return
             finished.current = true
             onFinish()
           }}
-        >
-          <Text>{strings.done}</Text>
-        </Pressable>
+        />
       </View>
     )
   }
@@ -204,15 +232,22 @@ export function SessionRunner({
       correct: previous.correct + (correct ? 1 : 0),
     }))
 
+    if (correct) {
+      setMaru((previous) => previous + 1)
+      AccessibilityInfo.announceForAccessibility(strings.correct)
+    } else {
+      setMaru(0)
+    }
+
     let queue = state.queue.slice(1)
-    let nextCorrection: string | null = null
+    let nextCorrection: Correction | null = null
 
     if (!correct) {
       const count = (failures.current[current.atomId] ?? 0) + 1
       failures.current[current.atomId] = count
       // The number alone teaches nothing. What the learner has to take away
       // is the substitution the move stands for.
-      if (current.coaching !== 'silent') nextCorrection = strings.correction(expected, atom)
+      if (current.coaching !== 'silent') nextCorrection = { atom, expected }
       if (count < MAX_ATTEMPTS_PER_ATOM) {
         // A high-fade miss reveals one level for the retry, so the learner
         // sees what they should have been imagining.
@@ -250,24 +285,81 @@ export function SessionRunner({
   }
 
   return (
-    <View>
-      <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
-      <Text testID="prompt">{strings.prompt(atom)}</Text>
-      {/* Spec §4: F0 is where the app demonstrates the move, so the
-          substitution is shown *before* the answer, not after a miss. */}
-      {current.coaching === 'demo' ? (
-        <Text testID="demonstration">{strings.coaching(atom)}</Text>
-      ) : null}
-      <TextInput
-        testID="answer-input"
-        keyboardType="number-pad"
-        value={answer}
-        onChangeText={setAnswer}
+    <View style={styles.practice}>
+      <SessionTrack
+        segments={segments}
+        label={strings.blockLabel(block.kind)}
+        quitLabel={strings.quitLabel}
+        onQuit={onQuit}
       />
-      <Pressable testID="submit" accessibilityRole="button" onPress={submit}>
-        <Text>{strings.answer}</Text>
-      </Pressable>
-      {correction !== null ? <Text testID="correction">{correction}</Text> : null}
+      {/* R9: the keypad below is always fully visible, pinned at the bottom.
+          Everything here that can grow — the demonstration and the
+          correction card, on top of the soroban and prompt — scrolls
+          instead of pushing the keypad off a short screen. On a screen tall
+          enough to show it all, this scrolls nowhere and looks the same as
+          a plain View. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.soroban}>
+          <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
+        </View>
+        <Text testID="prompt" style={styles.prompt}>
+          {strings.prompt(atom)}
+        </Text>
+        {/* Spec §4: F0 is where the app demonstrates the move, so the
+            substitution is shown *before* the answer, not after a miss. */}
+        {current.coaching === 'demo' ? (
+          <Text testID="demonstration" style={styles.demonstration}>
+            {strings.coaching(atom)}
+          </Text>
+        ) : null}
+        {correction !== null ? (
+          <CorrectionCard atom={correction.atom} expected={correction.expected} />
+        ) : null}
+      </ScrollView>
+      <AnswerPad
+        value={answer}
+        onChange={setAnswer}
+        onSubmit={submit}
+        submitLabel={strings.answer}
+        submitTestID="submit"
+        adornment={maru > 0 ? <Maru key={maru} /> : null}
+      />
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  practice: { flex: 1 },
+  soroban: { marginTop: space.md },
+  prompt: {
+    marginTop: space.lg,
+    textAlign: 'center',
+    fontFamily: fonts.display,
+    fontSize: fontSizes.prompt,
+    color: colors.ink,
+    letterSpacing: 1,
+  },
+  demonstration: {
+    alignSelf: 'center',
+    marginTop: space.sm,
+    paddingVertical: 7,
+    paddingHorizontal: space.md,
+    borderRadius: radius.panel,
+    overflow: 'hidden',
+    backgroundColor: colors.soft,
+    color: colors.muted,
+    fontSize: fontSizes.small,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: space.sm },
+  summary: { flex: 1 },
+  summaryBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  summaryTitle: {
+    marginTop: 26,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    letterSpacing: 2,
+    color: colors.ink,
+  },
+  summaryResult: { marginTop: space.sm, fontSize: fontSizes.body, color: colors.muted },
+})

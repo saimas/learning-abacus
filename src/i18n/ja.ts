@@ -2,6 +2,7 @@ import { classify, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
+import type { BlockKind } from '@/domain/session'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
 // `both` names the two substitutions in the order they are performed: a
@@ -21,9 +22,17 @@ const CELL_STATE: Record<CellState, string> = {
   mental: '暗算',
 }
 
-// Declared as a function rather than inline on the object: `correction` calls
-// it, and a member referencing `ja` from inside the initialiser of `ja` makes
-// `typeof ja` circular, which TypeScript rejects.
+// Fade rep is where anzan is actually built, so it is named for that.
+const BLOCK_LABEL: Record<BlockKind, string> = {
+  warmup: '準備',
+  focus: '集中',
+  faderep: '暗算',
+  close: 'まとめ',
+}
+
+// Declared as a function rather than inline on the object: a member
+// referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
+// circular, which TypeScript rejects.
 function coaching(atom: Atom): string {
   const name = TECHNIQUE[classify(atom)][atom.direction]
   const verb = atom.direction === 'add' ? 'たす' : 'ひく'
@@ -46,7 +55,17 @@ export const ja = {
   daysPracticed: (days: number) => `練習 ${days}日間`,
   navProgress: '進捗',
   navSettings: '設定',
-  navToday: '今日にもどる',
+
+  homeTitle: '今日の五分',
+  start: 'はじめる',
+  startMinutes: '5分',
+  notYetToday: '今日の練習はまだです',
+  practisedToday: '今日は練習しました',
+  seeYouTomorrow: 'またあした。',
+  practiseAgain: 'もう一度練習する',
+  mapPreviewTitle: '暗算できる動き',
+  sealDays: (days: number) => `${days}\n日`,
+  back: '今日',
 
   languageLabel: '言語',
   resetAll: 'すべての進捗を消す',
@@ -61,16 +80,31 @@ export const ja = {
       ? `${atom.rodValue}に${atom.operand}をたす。`
       : `${atom.rodValue}から${atom.operand}をひく。`,
   coaching,
-  correction: (expected: number, atom: Atom) => `こたえは${expected}。${coaching(atom)}`,
+  blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
+  previousProblem: 'さっきの問題',
+  correctionAnswer: (expected: number) => `こたえは ${expected}`,
+  correct: '正解',
+  quitLabel: '練習をやめる',
+  quitTitle: '練習をやめますか？',
+  quitBody: 'ここまでの答えは記録されています。',
+  quitStop: 'やめる',
+  quitContinue: 'つづける',
+  sealDone: '済',
+  deleteKey: '1文字消す',
 
   atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
   cellLabel: (atomId: string, state: CellState) => `${atomId} ${CELL_STATE[state]}`,
+  cellStateName: (state: CellState) => CELL_STATE[state],
+  mapAdd: 'たし算',
+  mapSub: 'ひき算',
+  mapAxis: '縦：いまのけたの数（0〜9）　横：たす数・ひく数（1〜9）',
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',
   check: 'たしかめる',
   readingInstruction: '梁（はり）につけた珠だけを数えます。上の五珠は5、下の一珠は1つにつき1です。けたの数はその合計です。',
   readingFeedback: (target: number) => `ちがいます。このけたは${target}です。${breakdown(target)}。`,
+  readingTitle: 'そろばんの読み方',
 }
 
 // The contract every catalog satisfies, derived from the catalog that ships

@@ -2,6 +2,7 @@ import type { Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
+import type { BlockKind } from '@/domain/session'
 import type { Strings } from './ja'
 
 const CELL_STATE: Record<CellState, string> = {
@@ -9,6 +10,13 @@ const CELL_STATE: Record<CellState, string> = {
   learning: 'learning',
   reflex: 'reflex',
   mental: 'mental',
+}
+
+const BLOCK_LABEL: Record<BlockKind, string> = {
+  warmup: 'Warm-up',
+  focus: 'Focus',
+  faderep: 'Fade',
+  close: 'Close',
 }
 
 // English names no technique: this is the wording `explainMove` has today,
@@ -34,7 +42,17 @@ export const en: Strings = {
   daysPracticed: (days) => `${days} days practised`,
   navProgress: 'Progress',
   navSettings: 'Settings',
-  navToday: 'Back to today',
+
+  homeTitle: "Today's five minutes",
+  start: 'Start',
+  startMinutes: '5 min',
+  notYetToday: 'Not practised yet today',
+  practisedToday: 'You practised today',
+  seeYouTomorrow: 'See you tomorrow.',
+  practiseAgain: 'Practise again',
+  mapPreviewTitle: 'Moves you can do mentally',
+  sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
+  back: 'Today',
 
   languageLabel: 'Language',
   resetAll: 'Reset all progress',
@@ -47,10 +65,24 @@ export const en: Strings = {
   prompt: (atom) =>
     `Rod shows ${atom.rodValue}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
   coaching,
-  correction: (expected, atom) => `It is ${expected}. ${coaching(atom)}`,
+  blockLabel: (kind) => BLOCK_LABEL[kind],
+  previousProblem: 'Previous problem',
+  correctionAnswer: (expected) => `The answer is ${expected}`,
+  correct: 'Correct',
+  quitLabel: 'Stop practice',
+  quitTitle: 'Stop practising?',
+  quitBody: 'Your answers so far are saved.',
+  quitStop: 'Stop',
+  quitContinue: 'Keep going',
+  sealDone: 'Done',
+  deleteKey: 'Delete',
 
   atomSummary: (mental, total) => `${mental} of ${total} moves are mental`,
   cellLabel: (atomId, state) => `${atomId} ${CELL_STATE[state]}`,
+  cellStateName: (state) => CELL_STATE[state],
+  mapAdd: 'Addition',
+  mapSub: 'Subtraction',
+  mapAxis: "Rows: the rod's value (0–9) · Columns: the number added or taken away (1–9)",
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',
@@ -58,4 +90,5 @@ export const en: Strings = {
   readingInstruction:
     'The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total.',
   readingFeedback: (target) => `Not quite. This rod shows ${target}: ${breakdown(target)}.`,
+  readingTitle: 'Reading the soroban',
 }
