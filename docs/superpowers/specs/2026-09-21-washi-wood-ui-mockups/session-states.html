@@ -1,0 +1,167 @@
+<style>
+  .row4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start; }
+  .frame-box { background: var(--bg-tertiary); border-radius: 12px; padding: 1.25rem 0; display: flex; justify-content: center; }
+  .cap { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: var(--text-secondary); }
+  .cap b { color: var(--text-primary); }
+
+  .phone {
+    --p-bg:#F4EEE2; --p-ink:#2A2320; --p-muted:#7A6D61; --p-line:#E2D8C6; --p-accent:#B5412C; --p-on-accent:#FFF8F0; --p-card:#FBF7EF;
+    --p-display:"Hiragino Mincho ProN","Yu Mincho",serif; --p-body:"Hiragino Sans",sans-serif;
+    width: 290px; height: 620px; border-radius: 44px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 9px #111, 0 12px 30px rgba(0,0,0,.25);
+    background: var(--p-bg); color: var(--p-ink); font-family: var(--p-body);
+    display: flex; flex-direction: column;
+  }
+  .status { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px 0 30px; font: 600 14px -apple-system, sans-serif; flex: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 28px; background: #000; border-radius: 20px; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 4px 20px 18px; min-height: 0; }
+  .spacer { flex: 1; min-height: 4px; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--p-muted); flex: none; }
+  .topbar .x { font-size: 16px; line-height: 1; color: var(--p-ink); }
+  .track { flex: 1; display: flex; gap: 3px; height: 4px; }
+  .track i { border-radius: 2px; background: #E2D8C6; position: relative; overflow: hidden; }
+  .track i.done { background: var(--p-accent); }
+  .track i.part::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--p-accent); }
+
+  .soroban { margin: 14px auto 0; padding: 9px 12px; border-radius: 14px; background: linear-gradient(180deg,#6E4A2F,#4E3220);
+             box-shadow: 0 6px 16px rgba(60,35,20,.28), inset 0 1px 0 rgba(255,255,255,.15); flex: none; }
+  .deck { display: flex; background: #EFE3CC; border-radius: 8px; padding: 0 6px; }
+  .rod { width: 64px; display: flex; flex-direction: column; align-items: center;
+         background: linear-gradient(90deg, transparent calc(50% - 1.5px), #9C7A55 calc(50% - 1.5px), #9C7A55 calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .heaven { height: 40px; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 3px; }
+  .heaven.on { justify-content: flex-end; padding: 0; }
+  .beam { height: 9px; width: 100%; background: linear-gradient(180deg,#5A3A24,#3E2717); position: relative; }
+  .beam.unit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #F4EEE2; }
+  .earth { height: 106px; display: flex; flex-direction: column; padding-bottom: 3px; }
+  .earth .gap { flex: 1; }
+  .bead { width: 50px; height: 20px; flex: none; clip-path: polygon(0 50%, 19% 0, 81% 0, 100% 50%, 81% 100%, 19% 100%);
+          background: linear-gradient(180deg,#6B4028 0%,#3A2014 55%,#24130B 100%); }
+
+  .prompt { margin-top: 14px; text-align: center; font-family: var(--p-display); font-size: 28px; letter-spacing: .04em; font-weight: 600; flex: none; }
+  .readrow { position: relative; margin: 8px auto 0; flex: none; }
+  .readout { width: 110px; height: 42px; border-bottom: 2px solid var(--p-accent); display: grid; place-items: center; font-family: var(--p-display); font-size: 28px; font-weight: 600; }
+  .maru { position: absolute; right: -44px; top: 2px; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--p-accent); opacity: .55; transform: rotate(-8deg); }
+
+  .fix { margin-top: 10px; background: var(--p-card); border: 1px solid #E4D8C3; border-left: 3px solid var(--p-accent); border-radius: 10px; padding: 8px 12px; flex: none; }
+  .fix .lab { font-size: 11px; color: var(--p-muted); }
+  .fix .lab b { color: var(--p-accent); font-weight: 600; margin-right: 6px; }
+  .fix .ans { font-family: var(--p-display); font-weight: 600; font-size: 17px; margin-top: 2px; }
+  .fix .how { font-size: 12px; color: var(--p-muted); margin-top: 2px; }
+  .fix .how b { color: var(--p-ink); font-weight: 600; }
+
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 40px; gap: 7px; flex: none; }
+  .pad div { border-radius: 12px; background: #FBF7EF; border: 1px solid #DDD0BA; box-shadow: 0 1.5px 0 #D6C8B0; display: grid; place-items: center; font-family: var(--p-display); font-size: 19px; font-weight: 600; }
+  .pad .del { background: transparent; border-color: transparent; box-shadow: none; color: var(--p-muted); font-family: var(--p-body); }
+  .pad .go { background: var(--p-accent); border-color: var(--p-accent); box-shadow: 0 1.5px 0 #8E3322; color: var(--p-on-accent); font-family: var(--p-body); font-size: 13px; letter-spacing: .06em; }
+
+  /* summary */
+  .sum { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .bigseal { width: 118px; height: 118px; border-radius: 50%; border: 4px solid var(--p-accent); color: var(--p-accent); display: grid; place-items: center;
+             font-family: var(--p-display); font-weight: 700; font-size: 44px; transform: rotate(-8deg); box-shadow: inset 0 0 0 5px var(--p-bg), inset 0 0 0 6.5px var(--p-accent); }
+  .sum h4 { font-family: var(--p-display); font-weight: 600; font-size: 24px; letter-spacing: .08em; margin: 26px 0 8px; color: var(--p-ink); }
+  .sum p { color: var(--p-muted); font-size: 14px; margin: 0; }
+  .sum p b { font-family: var(--p-display); font-size: 22px; color: var(--p-ink); margin: 0 2px; }
+  .primary { height: 54px; border-radius: 14px; background: var(--p-accent); color: var(--p-on-accent); display: grid; place-items: center; font-weight: 600; font-size: 16px; letter-spacing: .1em; box-shadow: 0 2px 0 #8E3322; flex: none; }
+
+  /* fade ladder strip */
+  .ladder { margin-top: 2.25rem; }
+  .ladder h3 { margin-bottom: .25rem; }
+  .strip { display: flex; gap: 14px; flex-wrap: wrap; background: #F4EEE2; border-radius: 14px; padding: 18px; margin-top: .75rem; }
+  .step { display: flex; flex-direction: column; align-items: center; gap: 8px; font: 12px "Hiragino Sans", sans-serif; color: #7A6D61; }
+  .step b { color: #2A2320; font-weight: 600; }
+  .mini { padding: 7px 9px; border-radius: 11px; background: linear-gradient(180deg,#6E4A2F,#4E3220); box-shadow: 0 4px 10px rgba(60,35,20,.22); }
+  .mini .deck { padding: 0 4px; border-radius: 6px; }
+  .mini .rod { width: 50px; }
+  .mini .heaven { height: 32px; } .mini .earth { height: 86px; } .mini .beam { height: 7px; }
+  .mini .bead { width: 40px; height: 16px; }
+  .beads-dim .bead { opacity: .35; }
+  .beads-ghost .bead { opacity: .12; }
+  .beads-none .bead { opacity: 0; }
+  .blank { width: 132px; height: 139px; border-radius: 11px; border: 1.5px dashed transparent; }
+</style>
+
+<h2>The session, in the states the learner actually sees</h2>
+<p class="subtitle">These follow what the runner does today. A wrong answer is queued again at the back of the block, so the correction appears <em>under the next question</em>. That's why the card names the problem it's correcting.</p>
+
+<div class="row4">
+
+  <div>
+    <div class="frame-box">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="topbar"><span class="x">✕</span><div class="track"><i class="done" style="flex:45"></i><i class="part" style="flex:120"></i><i style="flex:90"></i><i style="flex:30"></i></div><span>集中</span></div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt">3に2をたす。</div>
+          <div class="readrow"><div class="readout"></div><div class="maru"></div></div>
+          <div class="spacer"></div>
+          <div class="pad"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div class="del">⌫</div><div>0</div><div class="go">こたえる</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>Right after a correct answer.</b> The next question appears <em>immediately</em>, as it does now. A faint vermilion 〇 (maru) fades out beside the answer line over about 0.6s. It doesn't block input or delay the next question, so the latency the fluency model measures stays accurate. The bar at the top fills with elapsed time, one segment per block.</p>
+  </div>
+
+  <div>
+    <div class="frame-box">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="topbar"><span class="x">✕</span><div class="track"><i class="done" style="flex:45"></i><i class="part" style="flex:120"></i><i style="flex:90"></i><i style="flex:30"></i></div><span>集中</span></div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt">3に2をたす。</div>
+          <div class="fix">
+            <div class="lab"><b>さっきの問題</b>7に4をたす</div>
+            <div class="ans">こたえは 11</div>
+            <div class="how">十の繰上：4をたす = <b>+10 − 6</b></div>
+          </div>
+          <div class="readrow"><div class="readout"></div></div>
+          <div class="spacer"></div>
+          <div class="pad"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div class="del">⌫</div><div>0</div><div class="go">こたえる</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>Right after a wrong answer.</b> A paper card with a vermilion edge names the problem it corrects (さっきの問題), gives the answer, and gives the substitution, which is the part that actually teaches. It stays until the next answer, as the current correction text does. At the "silent" coaching levels no card appears, as now.</p>
+  </div>
+
+  <div>
+    <div class="frame-box">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="sum">
+            <div class="bigseal">済</div>
+            <h4>今日の練習おわり</h4>
+            <p><b>18</b>問中 <b>16</b>問正解</p>
+          </div>
+          <div class="primary">おわる</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>The close block.</b> A large 済 ("done") seal stamps in (a short scale-and-settle animation), followed by the existing result line. おわる returns to the home screen. The spec's "atoms mastered" and "tomorrow's preview" still aren't built, and I'm not adding them here.</p>
+  </div>
+
+</div>
+
+<div class="ladder">
+  <h3>The fade ladder, in the 和紙と木 style</h3>
+  <p class="subtitle" style="margin:0">One change from today: the frame, beam and rods are drawn <em>outside</em> the fade layer, so only the beads fade. Today the fade layer covers the rods too, so the "empty frame" level shows a bare rectangle and the learner has no rods to imagine beads on. The spec's rule still holds: one component, one prop, drives visibility.</p>
+  <div class="strip">
+    <div class="step"><div class="mini"><div class="deck"><div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div></div></div><span><b>solid</b> · F0–F2</span></div>
+    <div class="step"><div class="mini beads-dim"><div class="deck"><div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div></div></div><span><b>dim</b> · F3</span></div>
+    <div class="step"><div class="mini beads-ghost"><div class="deck"><div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div></div></div><span><b>ghost</b> · F4</span></div>
+    <div class="step"><div class="mini beads-none"><div class="deck"><div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div></div></div><span><b>frame</b> · F5</span></div>
+    <div class="step"><div class="blank"></div><span><b>hidden</b> · F6</span></div>
+  </div>
+  <p class="cap">At F6 the space stays reserved, so the prompt and keypad don't jump when a soroban disappears. The learner is looking at paper where the soroban was.</p>
+</div>

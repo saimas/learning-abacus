@@ -1,0 +1,138 @@
+<style>
+  .dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; align-items: start; max-width: 780px; margin: 0 auto; }
+  .dirs .card-image { aspect-ratio: auto; padding: 1.25rem 0; background: var(--bg-tertiary); }
+
+  .phone {
+    --p-bg:#F4EEE2; --p-ink:#2A2320; --p-muted:#7A6D61; --p-track:#E2D8C6; --p-accent:#B5412C; --p-on-accent:#FFF8F0;
+    --p-display:"Hiragino Mincho ProN","Yu Mincho",serif; --p-body:"Hiragino Sans",sans-serif;
+    width: 290px; height: 620px; border-radius: 44px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 9px #111, 0 12px 30px rgba(0,0,0,.25);
+    background: var(--p-bg); color: var(--p-ink); font-family: var(--p-body);
+    display: flex; flex-direction: column;
+  }
+  .status { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px 0 30px; font: 600 14px -apple-system, sans-serif; flex: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 28px; background: #000; border-radius: 20px; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 4px 20px 18px; min-height: 0; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--p-muted); flex: none; }
+  .topbar .x { font-size: 16px; line-height: 1; }
+  .track { flex: 1; height: 4px; border-radius: 2px; background: var(--p-track); overflow: hidden; }
+  .track i { display: block; height: 100%; width: 38%; background: var(--p-accent); }
+
+  .soroban { margin: 14px auto 0; padding: 9px 12px; border-radius: 14px; background: linear-gradient(180deg,#6E4A2F,#4E3220);
+             box-shadow: 0 6px 16px rgba(60,35,20,.28), inset 0 1px 0 rgba(255,255,255,.15); flex: none; transform-origin: top center; }
+  .deck { display: flex; background: #EFE3CC; border-radius: 8px; padding: 0 6px; }
+  .rod { width: 64px; display: flex; flex-direction: column; align-items: center;
+         background: linear-gradient(90deg, transparent calc(50% - 1.5px), #9C7A55 calc(50% - 1.5px), #9C7A55 calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .heaven { height: 40px; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 3px; }
+  .heaven.on { justify-content: flex-end; padding: 0; }
+  .beam { height: 9px; width: 100%; background: linear-gradient(180deg,#5A3A24,#3E2717); position: relative; }
+  .beam.unit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #F4EEE2; }
+  .earth { height: 106px; display: flex; flex-direction: column; padding-bottom: 3px; }
+  .earth .gap { flex: 1; }
+  .bead { width: 50px; height: 20px; flex: none; clip-path: polygon(0 50%, 19% 0, 81% 0, 100% 50%, 81% 100%, 19% 100%);
+          background: linear-gradient(180deg,#6B4028 0%,#3A2014 55%,#24130B 100%); }
+
+  .prompt { margin-top: 16px; text-align: center; font-family: var(--p-display); font-size: 28px; letter-spacing: .04em; font-weight: 600; flex: none; }
+  .demo { margin: 8px auto 0; font-size: 12.5px; color: var(--p-muted); text-align: center; padding: 7px 12px; border-radius: 10px; background: #EAE1D0; flex: none; }
+  .demo b { color: var(--p-ink); font-weight: 600; }
+  .spacer { flex: 1; min-height: 6px; }
+
+  /* Option 1 — system keyboard */
+  .k1 .soroban { transform: scale(.72); margin-top: 8px; margin-bottom: -52px; }
+  .k1 .prompt { margin-top: 6px; font-size: 24px; }
+  .answer { display: flex; gap: 10px; flex: none; }
+  .field { flex: 1; height: 46px; border-radius: 12px; border: 1.5px solid var(--p-accent); background: #FBF7EF; display: flex; align-items: center; justify-content: center; font-size: 24px; font-family: var(--p-display); font-weight: 600; }
+  .caret { width: 2px; height: 24px; background: var(--p-accent); margin-left: 2px; }
+  .btn { flex: 1.3; height: 46px; border-radius: 12px; background: var(--p-accent); color: var(--p-on-accent); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; letter-spacing: .08em; }
+  .k1 .screen { padding-bottom: 10px; }
+  .ioskb { flex: none; height: 214px; background: #D3D5DB; padding: 6px 5px 30px; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; }
+  .ioskb div { background: #FFF; border-radius: 6px; box-shadow: 0 1px 0 rgba(0,0,0,.3); display: flex; flex-direction: column; align-items: center; justify-content: center; font: 400 22px -apple-system, sans-serif; color: #000; line-height: 1; }
+  .ioskb div small { font-size: 8px; letter-spacing: .15em; font-weight: 600; margin-top: 1px; }
+  .ioskb .blank { background: transparent; box-shadow: none; }
+
+  /* Option 2 — built-in keypad */
+  .readout { margin: 12px auto 0; width: 120px; height: 46px; border-bottom: 2px solid var(--p-accent); display: flex; align-items: center; justify-content: center; font-family: var(--p-display); font-size: 30px; font-weight: 600; flex: none; }
+  .pad { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 42px; gap: 7px; }
+  .pad div { border-radius: 12px; background: #FBF7EF; border: 1px solid #DDD0BA; box-shadow: 0 1.5px 0 #D6C8B0;
+             display: flex; align-items: center; justify-content: center; font-family: var(--p-display); font-size: 20px; font-weight: 600; }
+  .pad .del { font-family: var(--p-body); font-size: 17px; color: var(--p-muted); background: transparent; border-color: transparent; box-shadow: none; }
+  .pad .go { background: var(--p-accent); border-color: var(--p-accent); box-shadow: 0 1.5px 0 #8E3322; color: var(--p-on-accent); font-family: var(--p-body); font-size: 14px; letter-spacing: .08em; }
+
+  .note { margin: 1.5rem auto 0; max-width: 780px; font-size: .85rem; color: var(--text-secondary); line-height: 1.55; }
+  .pc { margin-top: .6rem; font-size: .82rem; line-height: 1.5; }
+  .pc b { color: var(--text-primary); }
+</style>
+
+<h2>How should the learner type the answer?</h2>
+<p class="subtitle">Style A throughout. Both phones show the moment right after typing "1" (the answer to 7+4 is 11).</p>
+
+<div class="dirs cards">
+
+  <div class="card" data-choice="system-keyboard" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="phone k1">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="topbar"><span class="x">✕</span><div class="track"><i></i></div><span>集中</span></div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt">7に4をたす。</div>
+          <div class="demo">十の繰上：4をたす = <b>+10 − 6</b></div>
+          <div class="spacer"></div>
+          <div class="answer"><div class="field">1<span class="caret"></span></div><div class="btn">こたえる</div></div>
+        </div>
+        <div class="ioskb">
+          <div>1<small>&nbsp;</small></div><div>2<small>ABC</small></div><div>3<small>DEF</small></div>
+          <div>4<small>GHI</small></div><div>5<small>JKL</small></div><div>6<small>MNO</small></div>
+          <div>7<small>PQRS</small></div><div>8<small>TUV</small></div><div>9<small>WXYZ</small></div>
+          <div class="blank"></div><div>0</div><div class="blank" style="font-size:18px">⌫</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 · iOS number pad</h3>
+      <p>The standard system keyboard, kept open for the whole session.</p>
+      <div class="pc"><b>+</b> Familiar, and the least code to write.<br>
+        <b>−</b> It takes up 40% of the screen, so the soroban has to shrink. The keyboard's grey clashes with the paper, and the letters under each digit don't belong here. The iPhone number pad has no return key, so you still need a separate button.</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="built-in-keypad" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="phone k2">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="topbar"><span class="x">✕</span><div class="track"><i></i></div><span>集中</span></div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt">7に4をたす。</div>
+          <div class="demo">十の繰上：4をたす = <b>+10 − 6</b></div>
+          <div class="readout">1</div>
+          <div class="spacer"></div>
+          <div class="pad">
+            <div>1</div><div>2</div><div>3</div>
+            <div>4</div><div>5</div><div>6</div>
+            <div>7</div><div>8</div><div>9</div>
+            <div class="del">⌫</div><div>0</div><div class="go">こたえる</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 · Built-in keypad (recommended)</h3>
+      <p>A keypad drawn in the app's own paper-and-ink style. The submit button (こたえる) is one of its keys.</p>
+      <div class="pc"><b>+</b> The soroban stays full size. The layout never jumps when a keyboard opens. Digits and submit sit together under one thumb, and every key fits the style.<br>
+        <b>−</b> One more component to build and test, and the session tests have to switch from typing into a text field to pressing keys.</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">Also worth knowing: in the app as it stands, the answer field isn't focused automatically. The keyboard only appears after you tap an invisible, unstyled field, so the learner has to find it first. Either option fixes that. The reading drill (0–9) and the session (answers up to 18) would share the same input.</p>

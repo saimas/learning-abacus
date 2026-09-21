@@ -1,0 +1,210 @@
+<style>
+  .dirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start; }
+  .dirs .card-image { aspect-ratio: auto; padding: 1.25rem 0; background: var(--bg-tertiary); }
+
+  .phone {
+    --p-bg:#F4EEE2; --p-ink:#2A2320; --p-muted:#7A6D61; --p-line:#E2D8C6; --p-accent:#B5412C; --p-on-accent:#FFF8F0; --p-card:#FBF7EF;
+    --p-display:"Hiragino Mincho ProN","Yu Mincho",serif; --p-body:"Hiragino Sans",sans-serif;
+    width: 290px; height: 620px; border-radius: 44px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 9px #111, 0 12px 30px rgba(0,0,0,.25);
+    background: var(--p-bg); color: var(--p-ink); font-family: var(--p-body);
+    display: flex; flex-direction: column;
+  }
+  .status { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px 0 30px; font: 600 14px -apple-system, sans-serif; flex: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 28px; background: #000; border-radius: 20px; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 4px 20px 18px; min-height: 0; }
+  .spacer { flex: 1; }
+
+  .hdr { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--p-muted); }
+  .icons { display: flex; gap: 14px; }
+  .ic { width: 22px; height: 22px; display: grid; place-items: center; color: var(--p-ink); }
+  .ic svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+
+  .title { font-family: var(--p-display); font-weight: 600; font-size: 30px; letter-spacing: .06em; margin-top: 14px; }
+  .streak { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .seal { width: 54px; height: 54px; border-radius: 50%; border: 2.5px solid var(--p-accent); color: var(--p-accent); display: grid; place-items: center;
+          font-family: var(--p-display); font-weight: 700; font-size: 15px; line-height: 1.05; text-align: center; transform: rotate(-6deg); }
+  .streak p { font-size: 13px; color: var(--p-muted); line-height: 1.5; margin: 0; }
+  .streak p b { color: var(--p-ink); font-size: 15px; }
+
+  .plan { margin-top: 18px; }
+  .seg { display: flex; gap: 3px; height: 6px; }
+  .seg i { border-radius: 3px; background: #D9CBB2; }
+  .seglab { display: flex; gap: 3px; margin-top: 6px; font-size: 10.5px; color: var(--p-muted); }
+  .seglab span { overflow: hidden; white-space: nowrap; }
+
+  .mapcard { margin-top: 18px; background: var(--p-card); border: 1px solid #E4D8C3; border-radius: 14px; padding: 12px; }
+  .mapcard .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--p-muted); margin-bottom: 8px; }
+  .mapcard .row b { font-family: var(--p-display); color: var(--p-ink); font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 2px; }
+  .grid i { aspect-ratio: 1; border-radius: 2px; background: #E6DCCB; }
+  .grid i.l { background: #E0BE7E; } .grid i.r { background: #B8743F; } .grid i.m { background: #4E3220; }
+
+  .start { height: 54px; border-radius: 14px; background: var(--p-accent); color: var(--p-on-accent); display: flex; align-items: center; justify-content: center;
+           font-weight: 600; font-size: 16px; letter-spacing: .1em; box-shadow: 0 2px 0 #8E3322; }
+  .start small { font-weight: 400; opacity: .8; margin-left: 8px; letter-spacing: .02em; font-size: 12px; }
+
+  /* tab bar */
+  .tabs { flex: none; height: 78px; border-top: 1px solid var(--p-line); background: #F7F2E8; display: flex; justify-content: space-around; padding: 8px 20px 26px; }
+  .tabs div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--p-muted); }
+  .tabs div.on { color: var(--p-accent); }
+  .tabs svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+
+  /* session-first */
+  .topbar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--p-muted); }
+  .track { flex: 1; display: flex; gap: 3px; height: 4px; }
+  .track i { border-radius: 2px; background: #E2D8C6; }
+  .track i.done { background: var(--p-accent); }
+  .soroban { margin: 18px auto 0; padding: 9px 12px; border-radius: 14px; background: linear-gradient(180deg,#6E4A2F,#4E3220);
+             box-shadow: 0 6px 16px rgba(60,35,20,.28), inset 0 1px 0 rgba(255,255,255,.15); }
+  .deck { display: flex; background: #EFE3CC; border-radius: 8px; padding: 0 6px; }
+  .rod { width: 64px; display: flex; flex-direction: column; align-items: center;
+         background: linear-gradient(90deg, transparent calc(50% - 1.5px), #9C7A55 calc(50% - 1.5px), #9C7A55 calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .heaven { height: 40px; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 3px; }
+  .heaven.on { justify-content: flex-end; padding: 0; }
+  .beam { height: 9px; width: 100%; background: linear-gradient(180deg,#5A3A24,#3E2717); position: relative; }
+  .beam.unit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #F4EEE2; }
+  .earth { height: 106px; display: flex; flex-direction: column; padding-bottom: 3px; }
+  .earth .gap { flex: 1; }
+  .bead { width: 50px; height: 20px; flex: none; clip-path: polygon(0 50%, 19% 0, 81% 0, 100% 50%, 81% 100%, 19% 100%);
+          background: linear-gradient(180deg,#6B4028 0%,#3A2014 55%,#24130B 100%); }
+  .prompt { margin-top: 16px; text-align: center; font-family: var(--p-display); font-size: 28px; letter-spacing: .04em; font-weight: 600; }
+  .readout { margin: 10px auto 0; width: 110px; height: 42px; border-bottom: 2px solid var(--p-accent); }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 40px; gap: 7px; }
+  .pad div { border-radius: 12px; background: #FBF7EF; border: 1px solid #DDD0BA; box-shadow: 0 1.5px 0 #D6C8B0; display: grid; place-items: center; font-family: var(--p-display); font-size: 19px; font-weight: 600; }
+  .pad .del { background: transparent; border-color: transparent; box-shadow: none; color: var(--p-muted); font-family: var(--p-body); }
+  .pad .go { background: var(--p-accent); border-color: var(--p-accent); box-shadow: 0 1.5px 0 #8E3322; color: var(--p-on-accent); font-family: var(--p-body); font-size: 13px; letter-spacing: .06em; }
+
+  .note { margin-top: 1.5rem; font-size: .85rem; color: var(--text-secondary); line-height: 1.55; }
+  .pc { margin-top: .6rem; font-size: .82rem; line-height: 1.5; }
+  .pc b { color: var(--text-primary); }
+</style>
+
+<h2>How should the app be organised?</h2>
+<p class="subtitle">Right now, opening the app starts the 5-minute session immediately. Progress and Settings are text links above the soroban, and each has a "back to today" link.</p>
+
+<div class="dirs cards">
+
+  <!-- 1: Home screen -->
+  <div class="card" data-choice="home-screen" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="hdr"><span>9月21日（月）</span>
+            <div class="icons">
+              <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+              <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span>
+            </div>
+          </div>
+          <div class="title">今日の五分</div>
+          <div class="streak">
+            <div class="seal">12<br>日</div>
+            <p><b>練習 12日間</b><br>今日の練習はまだです</p>
+          </div>
+          <div class="plan">
+            <div class="seg"><i style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i><i style="flex:30"></i></div>
+            <div class="seglab"><span style="flex:45">準備</span><span style="flex:120">集中</span><span style="flex:90">暗算</span><span style="flex:30">まとめ</span></div>
+          </div>
+          <div class="mapcard">
+            <div class="row"><span>暗算できる動き</span><b>23 / 180</b></div>
+            <div class="grid" id="mini"></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="start">はじめる<small>5分</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1 · A home screen (recommended)</h3>
+      <p>Opening the app lands here: a streak seal, today's five-minute plan, and a live preview of the 180-move map. はじめる starts the session full-screen, and ✕ brings you back here. Progress and Settings open from the two icons.</p>
+      <div class="pc"><b>+</b> The progress map is the app's only source of motivation (per the spec), and it's the first thing you see each day. The timer starts only when the learner taps はじめる.<br>
+        <b>−</b> Starting a session takes one extra tap. ✕ mid-session needs a decision about what happens to that session.</div>
+    </div>
+  </div>
+
+  <!-- 2: Tab bar -->
+  <div class="card" data-choice="tab-bar" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen" style="padding-bottom:10px">
+          <div class="topbar"><div class="track"><i class="done" style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i><i style="flex:30"></i></div><span>集中</span></div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt" style="font-size:24px;margin-top:10px">7に4をたす。</div>
+          <div class="spacer"></div>
+          <div class="pad" style="grid-auto-rows:34px;gap:6px">
+            <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div>
+            <div class="del">⌫</div><div>0</div><div class="go">こたえる</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>今日</div>
+          <div><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>進捗</div>
+          <div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>設定</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2 · Bottom tab bar</h3>
+      <p>The standard iOS pattern: 今日 / 進捗 / 設定 as tabs. The session runs inside the 今日 tab.</p>
+      <div class="pc"><b>+</b> Familiar, and every screen is always one tap away.<br>
+        <b>−</b> The tab bar takes space from the soroban and keypad (note how cramped it is). Being able to switch tabs mid-question works against a fixed, focused five minutes.</div>
+    </div>
+  </div>
+
+  <!-- 3: Session-first -->
+  <div class="card" data-choice="session-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="phone">
+        <div class="island"></div>
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="screen">
+          <div class="topbar">
+            <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+            <div class="track"><i class="done" style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i><i style="flex:30"></i></div>
+            <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span>
+          </div>
+          <div class="soroban"><div class="deck">
+            <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+            <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+          </div></div>
+          <div class="prompt">7に4をたす。</div>
+          <div class="readout"></div>
+          <div class="spacer"></div>
+          <div class="pad">
+            <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div>
+            <div class="del">⌫</div><div>0</div><div class="go">こたえる</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3 · Straight into the session (the current flow, restyled)</h3>
+      <p>Opening the app starts practice right away, as it does now. Progress and Settings become two small icons on either side of the session's progress bar.</p>
+      <div class="pc"><b>+</b> Nothing stands between opening the app and practising, and it's the smallest change.<br>
+        <b>−</b> The streak and the map only show if you go looking for them. The clock is already running while the learner settles in, and it's easy to tap the icons mid-session.</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">Map colours in style A get darker as a move is learned, like wood deepening under lacquer: unseen (pale paper) → learning (ochre) → reflex (boxwood) → mental (walnut). Because only the lightness changes, colour-blind learners can read it too. The Japanese labels here (準備・集中・暗算・まとめ, 今日の五分) are placeholder copy.</p>
+
+<script>
+  // 180 cells, deterministic, roughly a learner a fortnight in.
+  (function () {
+    var g = document.getElementById('mini'); if (!g) return;
+    var html = '';
+    for (var i = 0; i < 180; i++) {
+      var c = i < 23 ? 'm' : i < 41 ? 'r' : i < 52 ? 'l' : '';
+      html += '<i' + (c ? ' class="' + c + '"' : '') + '></i>';
+    }
+    g.innerHTML = html;
+  })();
+</script>
