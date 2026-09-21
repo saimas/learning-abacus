@@ -1,7 +1,7 @@
 # learning-abacus — 和紙と木 UI redesign
 
 Date: 2026-09-21
-Status: Approved design, pre-implementation
+Status: Implemented on feature/washi-wood-ui
 
 ## 1. Goal and constraints
 
