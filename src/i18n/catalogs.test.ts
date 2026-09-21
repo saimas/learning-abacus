@@ -101,3 +101,41 @@ describe('cellLabel', () => {
     expect(en.cellLabel('7+8', 'mental')).toBe('7+8 mental')
   })
 })
+
+describe('sealDays', () => {
+  it('stacks the count over its unit', () => {
+    expect(ja.sealDays(12)).toBe('12\n日')
+    expect(en.sealDays(12)).toBe('12\ndays')
+  })
+
+  it('keeps the English singular', () => {
+    expect(en.sealDays(1)).toBe('1\nday')
+  })
+})
+
+describe('blockLabel', () => {
+  it('names every block kind in both locales', () => {
+    for (const kind of ['warmup', 'focus', 'faderep', 'close'] as const) {
+      expect(ja.blockLabel(kind).length).toBeGreaterThan(0)
+      expect(en.blockLabel(kind).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('calls fade rep the anzan block in Japanese', () => {
+    expect(ja.blockLabel('faderep')).toBe('暗算')
+  })
+})
+
+describe('correctionAnswer', () => {
+  it('states the answer', () => {
+    expect(ja.correctionAnswer(11)).toBe('こたえは 11')
+    expect(en.correctionAnswer(11)).toBe('The answer is 11')
+  })
+})
+
+describe('cellStateName', () => {
+  it('uses the same names as the cell labels', () => {
+    expect(ja.cellStateName('mental')).toBe('暗算')
+    expect(en.cellStateName('unseen')).toBe('unseen')
+  })
+})

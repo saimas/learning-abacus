@@ -12,7 +12,7 @@ export function BackLink() {
     <Link href="/" dismissTo asChild testID="link-today">
       <Pressable accessibilityRole="link" hitSlop={10} style={styles.back}>
         <Icon name="back" size={18} />
-        <Text style={styles.label}>{strings.navToday}</Text>
+        <Text style={styles.label}>{strings.back}</Text>
       </Pressable>
     </Link>
   )
