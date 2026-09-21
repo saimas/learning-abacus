@@ -129,7 +129,11 @@ looking at the home screen.
 `_layout.tsx` sets the `Stack` content background to `paper`, so no white
 flashes between screens, and disables the swipe-back gesture on `/session`.
 `app.json` changes `userInterfaceStyle` to `light` and the splash background
-from Expo's default blue to `paper`. The status bar is dark.
+from Expo's default blue to `paper`. The splash screen has no glyph: Expo's
+default splash image is a pure-white mark drawn for that old blue
+background, and on `paper` it reads as a ghost. The `expo-splash-screen`
+plugin config drops the `image` and `imageWidth` keys, leaving plain paper.
+The status bar is dark.
 
 ### 4.2 Home (`/`)
 
