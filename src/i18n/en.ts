@@ -42,7 +42,6 @@ export const en: Strings = {
   daysPracticed: (days) => `${days} days practised`,
   navProgress: 'Progress',
   navSettings: 'Settings',
-  navToday: 'Back to today',
 
   homeTitle: "Today's five minutes",
   start: 'Start',

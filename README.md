@@ -55,10 +55,14 @@ but never requires one — a negotiable habit is a dead habit.
 
 ## Screens
 
-- **Today** — runs the daily session.
-- **Progress** — the 180-cell atom map.
-- **Settings** — days practised, and a guarded reset (two presses; the first only arms it) that
-  erases all stored progress.
+- **Home** — days practised, today's five-minute plan, a preview of the atom map, and the button
+  that starts the session.
+- **Session** — the daily session, full-screen, answered on a built-in keypad. ✕ asks before
+  leaving and keeps what was answered.
+- **Progress** — the 180-atom map, as an addition grid and a subtraction grid (rows: the rod's
+  value, columns: the operand).
+- **Settings** — days practised, the language toggle, and a guarded reset (two presses; the first
+  only arms it) that erases all stored progress.
 
 ## Phase 1 scope
 

@@ -55,7 +55,6 @@ export const ja = {
   daysPracticed: (days: number) => `練習 ${days}日間`,
   navProgress: '進捗',
   navSettings: '設定',
-  navToday: '今日にもどる',
 
   homeTitle: '今日の五分',
   start: 'はじめる',
