@@ -1,24 +1,11 @@
 import { useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { emptySoroban, setValue } from '@/domain/soroban'
+import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
 import { parseAnswer } from '@/ui/parseAnswer'
 
 const DEFAULT_VALUES = [1, 4, 5, 6, 9, 3, 8, 2, 7, 0]
-
-const INSTRUCTION =
-  'The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total.'
-
-// Says what the beads on this rod actually add up to, so a miss teaches the
-// reading rather than just resetting the field.
-function breakdown(value: number): string {
-  const earth = value % 5
-  const beads = `${earth} earth bead${earth === 1 ? '' : 's'}`
-  if (value === 0) return 'no beads pushed in'
-  if (value < 5) return beads
-  if (earth === 0) return 'the heaven bead on its own'
-  return `the heaven bead and ${beads}, 5 + ${earth}`
-}
 
 export function ReadingDrill({
   onComplete,
@@ -27,6 +14,7 @@ export function ReadingDrill({
   onComplete: () => void
   values?: number[]
 }) {
+  const strings = useStrings()
   const [index, setIndex] = useState(0)
   const [answer, setAnswer] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -39,7 +27,7 @@ export function ReadingDrill({
     if (given === null) return
 
     if (given !== target) {
-      setFeedback(`Not quite. This rod shows ${target}: ${breakdown(target)}.`)
+      setFeedback(strings.readingFeedback(target))
       setAnswer('')
       return
     }
@@ -54,10 +42,10 @@ export function ReadingDrill({
 
   return (
     <View>
-      <Text testID="reading-index">{`Rod ${index + 1} of ${values.length}`}</Text>
-      <Text testID="reading-instruction">{INSTRUCTION}</Text>
+      <Text testID="reading-index">{strings.readingIndex(index + 1, values.length)}</Text>
+      <Text testID="reading-instruction">{strings.readingInstruction}</Text>
       <Abacus soroban={setValue(emptySoroban(1), target)} fade={0} />
-      <Text>What number is on this rod?</Text>
+      <Text>{strings.readingPrompt}</Text>
       <TextInput
         testID="reading-input"
         keyboardType="number-pad"
@@ -65,7 +53,7 @@ export function ReadingDrill({
         onChangeText={setAnswer}
       />
       <Pressable testID="reading-submit" accessibilityRole="button" onPress={submit}>
-        <Text>Check</Text>
+        <Text>{strings.check}</Text>
       </Pressable>
       {feedback !== null ? <Text testID="reading-feedback">{feedback}</Text> : null}
     </View>
