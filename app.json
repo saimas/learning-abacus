@@ -11,7 +11,7 @@
       "icon": "./assets/expo.icon",
       "supportsTablet": false,
       "bundleIdentifier": "com.saimas.learningabacus",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "config": {
         "usesNonExemptEncryption": false
       },
