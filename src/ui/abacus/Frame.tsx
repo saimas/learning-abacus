@@ -11,18 +11,23 @@ import {
   UNIT_DOT,
 } from './geometry'
 
-// The walnut frame, lit from above.
+// The walnut frame, lit from above. Clipped to the frame's own bounds: an
+// absolutely-filled Svg sizes its percentage width/height against the
+// screen, not the (content-sized) frame View, so without this wrapper the
+// gradient paints past the frame's edges.
 export function FrameBackground() {
   return (
-    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-      <Defs>
-        <LinearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={colors.frameTop} />
-          <Stop offset="1" stopColor={colors.frameBottom} />
-        </LinearGradient>
-      </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" rx={FRAME_RADIUS} ry={FRAME_RADIUS} fill="url(#frame)" />
-    </Svg>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.clip]}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.frameTop} />
+            <Stop offset="1" stopColor={colors.frameBottom} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" rx={FRAME_RADIUS} ry={FRAME_RADIUS} fill="url(#frame)" />
+      </Svg>
+    </View>
   )
 }
 
@@ -50,6 +55,7 @@ export function DeckLines({ rodCount }: { rodCount: number }) {
 }
 
 const styles = StyleSheet.create({
+  clip: { borderRadius: FRAME_RADIUS, overflow: 'hidden' },
   rodLine: { position: 'absolute', top: 0, bottom: 0, width: ROD_LINE, backgroundColor: colors.rod },
   beam: {
     position: 'absolute',
