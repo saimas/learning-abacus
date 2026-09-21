@@ -24,9 +24,14 @@ const mockLoad = store.loadProgress as jest.MockedFunction<typeof store.loadProg
 const mockSave = store.saveProgress as jest.MockedFunction<typeof store.saveProgress>
 
 beforeEach(() => {
+  jest.useFakeTimers()
   jest.clearAllMocks()
   mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true })
   mockSave.mockResolvedValue()
+})
+
+afterEach(() => {
+  jest.useRealTimers()
 })
 
 describe('Today', () => {
@@ -46,7 +51,7 @@ describe('Today', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
-    fireEvent.changeText(getByTestId('answer-input'), '1')
+    fireEvent.press(getByTestId('key-1'))
     fireEvent.press(getByTestId('submit'))
     expect(getByTestId('prompt')).toBeTruthy()
   })

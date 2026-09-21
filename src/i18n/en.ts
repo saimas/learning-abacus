@@ -66,7 +66,6 @@ export const en: Strings = {
   prompt: (atom) =>
     `Rod shows ${atom.rodValue}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
   coaching,
-  correction: (expected, atom) => `It is ${expected}. ${coaching(atom)}`,
   blockLabel: (kind) => BLOCK_LABEL[kind],
   previousProblem: 'Previous problem',
   correctionAnswer: (expected) => `The answer is ${expected}`,

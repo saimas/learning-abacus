@@ -30,9 +30,9 @@ const BLOCK_LABEL: Record<BlockKind, string> = {
   close: 'まとめ',
 }
 
-// Declared as a function rather than inline on the object: `correction` calls
-// it, and a member referencing `ja` from inside the initialiser of `ja` makes
-// `typeof ja` circular, which TypeScript rejects.
+// Declared as a function rather than inline on the object: a member
+// referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
+// circular, which TypeScript rejects.
 function coaching(atom: Atom): string {
   const name = TECHNIQUE[classify(atom)][atom.direction]
   const verb = atom.direction === 'add' ? 'たす' : 'ひく'
@@ -81,7 +81,6 @@ export const ja = {
       ? `${atom.rodValue}に${atom.operand}をたす。`
       : `${atom.rodValue}から${atom.operand}をひく。`,
   coaching,
-  correction: (expected: number, atom: Atom) => `こたえは${expected}。${coaching(atom)}`,
   blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
   previousProblem: 'さっきの問題',
   correctionAnswer: (expected: number) => `こたえは ${expected}`,

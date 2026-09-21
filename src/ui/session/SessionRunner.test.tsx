@@ -1,10 +1,25 @@
 import { fireEvent, render } from '@testing-library/react-native'
+import { AccessibilityInfo } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
 
 function item(atomId: string, overrides: Partial<SessionItem> = {}): SessionItem {
   return { atomId, fade: 0, coaching: 'demo', ...overrides }
 }
+
+// SessionTrack, Maru and the close screen's Seal each run a real
+// Animated.timing on mount. Under real timers, its zero-delay
+// requestAnimationFrame tick can fire between tests and update an
+// already-rendered component outside `act(...)`, printing a warning that is
+// unrelated to what any given test asserts. Fake timers keep that tick from
+// firing unless a test explicitly advances the clock.
+beforeEach(() => {
+  jest.useFakeTimers()
+})
+
+afterEach(() => {
+  jest.useRealTimers()
+})
 
 // Advances by a fixed step every call. Good enough when a test only needs
 // "some positive time passed" and the block budget is generous.
@@ -40,8 +55,9 @@ function renderRunner(
   return { ...utils, onAttempt, onBlockEnd, onFinish }
 }
 
+// Types the answer on the keypad, one key per digit, then submits.
 function answer(getByTestId: ReturnType<typeof render>['getByTestId'], value: string) {
-  fireEvent.changeText(getByTestId('answer-input'), value)
+  for (const digit of value) fireEvent.press(getByTestId(`key-${digit}`))
   fireEvent.press(getByTestId('submit'))
 }
 
@@ -81,6 +97,50 @@ describe('SessionRunner', () => {
     expect(queryByTestId('correction')).not.toBeNull()
   })
 
+  it('names the problem a correction belongs to, since it shows under the next one', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    answer(getByTestId, '9')
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    expect(getByTestId('correction-problem').props.children).toBe('3に4をたす。')
+    expect(getByTestId('correction-answer').props.children).toBe('こたえは 7')
+  })
+
+  it('marks a correct answer without holding up the next question', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    answer(getByTestId, '7')
+    expect(getByTestId('maru')).toBeTruthy()
+    expect(getByTestId('prompt')).toBeTruthy()
+    expect(announce).toHaveBeenCalledWith('正解')
+    announce.mockRestore()
+  })
+
+  it('shows no mark after a wrong answer', () => {
+    const { getByTestId, queryByTestId } = renderRunner(basicPlan, autoClock())
+    answer(getByTestId, '7')
+    answer(getByTestId, '9')
+    expect(queryByTestId('maru')).toBeNull()
+  })
+
+  it('shows which block the learner is in', () => {
+    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    expect(getByTestId('block-label').props.children).toBe('集中')
+  })
+
+  it('offers the way out it is given', () => {
+    const onQuit = jest.fn()
+    const { getByTestId } = renderRunner(basicPlan, autoClock(), { onQuit })
+    fireEvent.press(getByTestId('quit'))
+    expect(onQuit).toHaveBeenCalledTimes(1)
+  })
+
   it('demonstrates the move before the learner answers at F0', () => {
     // Spec §4: F0 is "app demonstrates the move". Revealing the number after
     // a miss is F1's job — at F0 the substitution has to be on screen first,
@@ -111,9 +171,8 @@ describe('SessionRunner', () => {
     }
     const { getByTestId } = renderRunner(plan, autoClock())
     answer(getByTestId, '9')
-    const text = getByTestId('correction').props.children as string
-    expect(text).toContain('7')
-    expect(text).toContain('+5 − 1')
+    expect(getByTestId('correction-answer').props.children).toContain('7')
+    expect(getByTestId('correction-coaching').props.children).toContain('+5 − 1')
   })
 
   it('does not show a correction for a wrong answer at silent coaching', () => {
@@ -185,12 +244,6 @@ describe('SessionRunner', () => {
 
     answer(getByTestId, '0')
     expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ correct: true }))
-  })
-
-  it('ignores a submit with unparseable input', () => {
-    const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
-    answer(getByTestId, 'abc')
-    expect(onAttempt).not.toHaveBeenCalled()
   })
 
   it('cycles items within a block while time remains', () => {

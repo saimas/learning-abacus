@@ -13,6 +13,20 @@ import { SessionRunner } from './SessionRunner'
 const START = 1_700_000_000_000
 const PRACTICE_SECONDS = SESSION_SECONDS - BLOCK_SECONDS.close
 
+// SessionTrack, Maru and the close screen's Seal each run a real
+// Animated.timing on mount. Under real timers, its zero-delay
+// requestAnimationFrame tick can fire between tests and update an
+// already-rendered component outside `act(...)`, printing a warning that is
+// unrelated to what any given test asserts. Fake timers keep that tick from
+// firing unless a test explicitly advances the clock.
+beforeEach(() => {
+  jest.useFakeTimers()
+})
+
+afterEach(() => {
+  jest.useRealTimers()
+})
+
 function manualClock(start: number) {
   let value = start
   return { now: () => value, set: (next: number) => (value = next) }
@@ -62,7 +76,7 @@ function playSession(stepMs: number, maxSubmits: number) {
     const prompt = getByTestId('prompt').props.children as string
     elapsedMs += stepMs
     clock.set(START + elapsedMs)
-    fireEvent.changeText(getByTestId('answer-input'), String(expectedFor(prompt)))
+    for (const digit of String(expectedFor(prompt))) fireEvent.press(getByTestId(`key-${digit}`))
     fireEvent.press(getByTestId('submit'))
     submits++
   }
