@@ -97,7 +97,9 @@ UI language they chose. `emptyProgress()`, the `Progress` type, and
 costs one blank frame at launch and guarantees the learner never sees a flash
 of the wrong language — which matters precisely for the minority who
 deliberately switched to English, and who would otherwise see Japanese flash
-on every single launch.
+on every single launch. Because `ProgressProvider` mounts only after the
+locale resolves, the two AsyncStorage reads now run in sequence rather than in
+parallel — a small launch cost accepted for the no-flash guarantee.
 
 ## 4. The toggle
 
@@ -131,8 +133,8 @@ everything else is a constant.
 | Key | English | Japanese |
 |---|---|---|
 | `loading` | Loading… | 読み込み中… |
-| `loadingProgress` | Loading your progress… | 進捗を読み込んでいます… |
-| `daysPracticed(n)` | `${n} days practised` | `練習 ${n}日` |
+| `loadingProgress` | Loading your progress… | 進捗を読み込み中… |
+| `daysPracticed(n)` | `${n} days practised` | `練習 ${n}日間` |
 | `navProgress` | Progress | 進捗 |
 | `navSettings` | Settings | 設定 |
 | `navToday` | Back to today | 今日にもどる |
@@ -143,17 +145,17 @@ everything else is a constant.
 |---|---|---|
 | `languageLabel` | Language | 言語 |
 | `resetAll` | Reset all progress | すべての進捗を消す |
-| `resetConfirm` | Really erase everything? | 本当にすべて消しますか？ |
+| `resetConfirm` | Really erase all progress? | 本当にすべての進捗を消しますか？ |
 
 ### Session
 
 | Key | English | Japanese |
 |---|---|---|
-| `sessionComplete` | Session complete | セッション完了 |
+| `sessionComplete` | Session complete | 今日の練習おわり |
 | `sessionResult(a, c)` | `${a} answered, ${c} correct` | `${a}問中 ${c}問正解` |
 | `done` | Done | おわる |
 | `answer` | Answer | こたえる |
-| `prompt(atom)` | `Rod shows 7. Add 8.` | `けたは7。8をたす。` |
+| `prompt(atom)` | `Rod shows 7. Add 8.` | `7に8をたす。` (sub: `7から8をひく。`) |
 | `correction(e, atom)` | `It is ${e}. ${coaching(atom)}` | `こたえは${e}。${coaching(atom)}` |
 | `coaching(atom)` | `Add 8 = +10 − 2` | `十の繰上：8をたす = +10 − 2` |
 
@@ -161,8 +163,8 @@ everything else is a constant.
 
 | Key | English | Japanese |
 |---|---|---|
-| `atomSummary(m, total)` | `${m} of ${total} moves are mental` | `${total}手中 ${m}手が暗算` |
-| `cellLabel(atomId, state)` | `7+8 reflex` | `7+8 反射` |
+| `atomSummary(m, total)` | `${m} of ${total} moves are mental` | `全${total}問中 ${m}問が暗算` |
+| `cellLabel(atomId, state)` | `7+8 reflex` | `7+8 即答` |
 
 `cellLabel` is the per-cell `accessibilityLabel` on the 180-atom grid — copy
 that only a VoiceOver user ever hears, and the one place where leaving English
@@ -173,7 +175,7 @@ in place would be invisible in review. `cellState()` keeps returning the
 |---|---|---|
 | `unseen` | unseen | 未学習 |
 | `learning` | learning | 学習中 |
-| `reflex` | reflex | 反射 |
+| `reflex` | reflex | 即答 |
 | `mental` | mental | 暗算 |
 
 This is the same split as `coaching`: the logic yields an identifier, the
@@ -186,8 +188,8 @@ catalog yields the sentence.
 | `readingIndex(i, n)` | `Rod ${i} of ${n}` | `${n}問中 ${i}問目` |
 | `readingPrompt` | What number is on this rod? | このけたはいくつですか？ |
 | `check` | Check | たしかめる |
-| `readingInstruction` | The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total. | 天珠（上の珠）は5、一珠（下の珠）は1です。けたの数はその合計です。 |
-| `readingFeedback(t)` | `Not quite. This rod shows ${t}: ${breakdown(t)}.` | `ちがいます。このけたは${t}です：${breakdown(t)}。` |
+| `readingInstruction` | The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total. | 梁（はり）につけた珠だけを数えます。上の五珠は5、下の一珠は1つにつき1です。けたの数はその合計です。 |
+| `readingFeedback(t)` | `Not quite. This rod shows ${t}: ${breakdown(t)}.` | `ちがいます。このけたは${t}です。${breakdown(t)}。` |
 
 `breakdown` is internal to each catalog, not a public key:
 
@@ -195,10 +197,16 @@ catalog yields the sentence.
 |---|---|---|
 | `0` | no beads pushed in | 珠がひとつも入っていません |
 | `< 5` | `${e} earth bead(s)` | `一珠が${e}つ` |
-| `e === 0` | the heaven bead on its own | 天珠だけ |
-| otherwise | `the heaven bead and ${e} earth bead(s), 5 + ${e}` | `天珠と一珠が${e}つ、5 + ${e}` |
+| `e === 0` | the heaven bead on its own | 五珠だけ |
+| otherwise | `the heaven bead and ${e} earth bead(s), 5 + ${e}` | `五珠と一珠${e}つで 5 + ${e}` |
 
 The Japanese cases carry no plural branch.
+
+The upper bead is 五珠, paired with 一珠 for the lower beads, because both
+name a bead by its value. An earlier draft of this spec used a
+back-translation of "heaven bead" instead, which named the upper bead by its
+position while 一珠 names the lower ones by value — mixing the value and
+position axes in a single pair.
 
 ## 6. Technique names
 
@@ -243,7 +251,7 @@ only the file it lives in moves.
 | `src/ui/tutorial/ReadingDrill.test.tsx:25-27` | `'heaven'`/`'earth'` assertions → Japanese |
 | `src/domain/explain.test.ts:50,54` | the two `explainMove` assertions move to the i18n tests |
 | `src/ui/progress/AtomGrid.test.tsx:41` | `'0 of 180'` → the Japanese default |
-| component tests | gain a `LocaleProvider` wrapper |
+| component tests | render without a provider and get the Japanese catalog through `StringsContext`'s default value; only `__tests__/settings-locale.test.tsx`, which exercises switching, mounts a real provider |
 
 ### Untouched
 

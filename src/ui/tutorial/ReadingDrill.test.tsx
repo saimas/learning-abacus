@@ -7,14 +7,14 @@ describe('ReadingDrill', () => {
     const { getByTestId } = render(<ReadingDrill onComplete={onComplete} values={[7, 3]} />)
     fireEvent.changeText(getByTestId('reading-input'), '7')
     fireEvent.press(getByTestId('reading-submit'))
-    expect(getByTestId('reading-index').props.children).toContain('Rod 2')
+    expect(getByTestId('reading-index').props.children).toContain('2問目')
   })
 
   it('does not advance on a wrong reading', () => {
     const { getByTestId } = render(<ReadingDrill onComplete={jest.fn()} values={[7, 3]} />)
     fireEvent.changeText(getByTestId('reading-input'), '2')
     fireEvent.press(getByTestId('reading-submit'))
-    expect(getByTestId('reading-index').props.children).toContain('Rod 1')
+    expect(getByTestId('reading-index').props.children).toContain('1問目')
   })
 
   it('says how a rod is read before asking for a reading', () => {
@@ -22,9 +22,10 @@ describe('ReadingDrill', () => {
     // way out. Nothing on screen explained what the beads were worth.
     const { getByTestId } = render(<ReadingDrill onComplete={jest.fn()} values={[7]} />)
     const instruction = getByTestId('reading-instruction').props.children as string
-    expect(instruction).toContain('heaven')
-    expect(instruction).toContain('earth')
+    expect(instruction).toContain('五珠')
+    expect(instruction).toContain('一珠')
     expect(instruction).toContain('5')
+    expect(instruction).toContain('梁')
   })
 
   it('shows the correct reading after a wrong answer instead of silently clearing', () => {
@@ -40,7 +41,7 @@ describe('ReadingDrill', () => {
     const { getByTestId } = render(<ReadingDrill onComplete={jest.fn()} values={[3]} />)
     fireEvent.changeText(getByTestId('reading-input'), '8')
     fireEvent.press(getByTestId('reading-submit'))
-    expect(getByTestId('reading-feedback').props.children).toContain('3 earth beads')
+    expect(getByTestId('reading-feedback').props.children).toContain('一珠が3つ')
   })
 
   it('clears the feedback once the learner gets it right', () => {

@@ -86,7 +86,7 @@ describe('SessionRunner', () => {
     // a miss is F1's job — at F0 the substitution has to be on screen first,
     // or the app never teaches the soroban method at all.
     const { getByTestId } = renderRunner(basicPlan, autoClock())
-    expect(getByTestId('demonstration').props.children).toBe('Add 4 = +5 − 1')
+    expect(getByTestId('demonstration').props.children).toBe('五の合成：4をたす = +5 − 1')
   })
 
   it('stops demonstrating once coaching moves to F1', () => {
@@ -329,8 +329,8 @@ describe('SessionRunner', () => {
     answer(getByTestId, '7')
 
     const result = getByTestId('summary-result').props.children as string
-    expect(result).toContain('4 answered')
-    expect(result).toContain('3 correct')
+    expect(result).toContain('4問中')
+    expect(result).toContain('3問正解')
   })
 
   it('counts nothing when nothing was answered', () => {
@@ -339,7 +339,7 @@ describe('SessionRunner', () => {
       totalSeconds: 30,
     }
     const { getByTestId } = renderRunner(plan, autoClock())
-    expect(getByTestId('summary-result').props.children).toContain('0 answered')
+    expect(getByTestId('summary-result').props.children).toContain('0問中')
   })
 
   it('renders the close screen with both its summary and a finish button', () => {

@@ -32,8 +32,3 @@ export function describeSteps(atom: Atom): string {
     )
     .join(' ')
 }
-
-export function explainMove(atom: Atom): string {
-  const verb = atom.direction === 'add' ? 'Add' : 'Subtract'
-  return `${verb} ${atom.operand} = ${describeSteps(atom)}`
-}
