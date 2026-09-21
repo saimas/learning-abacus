@@ -151,8 +151,14 @@ From the top:
     practised today.
   - It is `stamped` with 今日は練習しました and またあした。 when they have.
   "Practised today" means `progress.lastSessionDay === dayKey(now)`, the
-  same rule `markDayPracticed` already uses, so nothing new is stored. `now`
-  is captured once at mount, the same way `Today` captures `startedAt`.
+  same rule `markDayPracticed` already uses, so nothing new is stored. Unlike
+  `Today`'s `startedAt`, `now` is not captured once at mount: Home stays
+  mounted underneath `/session`, `/progress` and `/settings`, and iOS keeps a
+  suspended app alive overnight, so a value fixed at mount would still read
+  as yesterday the next morning. It is instead refreshed outside render — on
+  screen focus (`useFocusEffect`) and when the app returns to the foreground
+  (an `AppState` `'change'` listener that fires on `'active'`) — never read
+  fresh from `Date.now()` during render, which `react-hooks/purity` forbids.
 - A **plan bar**: three segments sized 45 : 120 : 90 and labelled
   準備 / 集中 / 暗算. It shows the fixed shape of every session. The
   mockups also drew a fourth まとめ segment. It is dropped because the close

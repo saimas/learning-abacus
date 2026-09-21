@@ -1,4 +1,5 @@
-import { render, waitFor } from '@testing-library/react-native'
+import { act, render, waitFor } from '@testing-library/react-native'
+import { AppState, type AppStateStatus } from 'react-native'
 import { emptyProgress, type Progress } from '@/domain/progress'
 import * as store from '@/storage/progressStore'
 import Home from '../app/index'
@@ -8,8 +9,11 @@ jest.mock('@/storage/progressStore')
 
 // Real <Link>/<Redirect> need a navigation tree. These stand-ins keep the
 // children visible (so labels can be asserted) and expose the target href
-// through nativeID, a string prop every View accepts.
+// through nativeID, a string prop every View accepts. useFocusEffect stands
+// in for expo-router's version: it just runs the (memoized) callback in an
+// effect, which is enough to exercise Home's on-focus refresh under Jest.
 jest.mock('expo-router', () => {
+  const { useEffect } = require('react')
   const { Text, View } = require('react-native')
   return {
     Redirect: ({ href }: { href: string }) => <Text testID="redirect-to">{href}</Text>,
@@ -26,6 +30,9 @@ jest.mock('expo-router', () => {
         {children}
       </View>
     ),
+    useFocusEffect: (effect: () => void | (() => void)) => {
+      useEffect(effect, [effect])
+    },
   }
 })
 
@@ -34,6 +41,8 @@ const mockSave = store.saveProgress as jest.MockedFunction<typeof store.saveProg
 
 // 2026-09-21 09:00, local time, the same clock dayKey reads.
 const NOW = new Date(2026, 8, 21, 9, 0).getTime()
+// The next morning, still local time.
+const NEXT_DAY = new Date(2026, 8, 22, 9, 0).getTime()
 
 function learner(overrides: Partial<Progress>): Progress {
   return { ...emptyProgress(), tutorialDone: true, ...overrides }
@@ -47,10 +56,27 @@ function renderHome() {
   )
 }
 
+// Home and ProgressProvider each register their own AppState 'change'
+// listener. Capturing every one lets a test replay a foregrounding without a
+// simulator and without caring which component subscribed in which order.
+let appStateHandlers: ((status: AppStateStatus) => void)[] = []
+
+function fireAppStateChange(status: AppStateStatus) {
+  appStateHandlers.forEach((handler) => handler(status))
+}
+
 beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(Date, 'now').mockReturnValue(NOW)
   mockSave.mockResolvedValue()
+  appStateHandlers = []
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+    _event: string,
+    handler: (status: AppStateStatus) => void,
+  ) => {
+    appStateHandlers.push(handler)
+    return { remove: jest.fn() }
+  }) as unknown as typeof AppState.addEventListener)
 })
 
 afterEach(() => {
@@ -110,5 +136,24 @@ describe('Home', () => {
     expect(getByTestId('link-progress').props.nativeID).toBe('/progress')
     expect(getByTestId('link-settings').props.nativeID).toBe('/settings')
     expect(getByTestId('link-map').props.nativeID).toBe('/progress')
+  })
+
+  it('refreshes a stale today when the app returns to the foreground overnight', async () => {
+    // Home stays mounted under /session, /progress and /settings, and iOS
+    // keeps a suspended app alive overnight. A `today` captured only once at
+    // mount would still say yesterday the next morning, even though
+    // lastSessionDay (and so practisedToday) has moved on.
+    mockLoad.mockResolvedValue(learner({ daysPracticed: 12, lastSessionDay: '2026-09-21' }))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('seal-stamped')).toBeTruthy())
+    expect(getByTestId('today-status').props.children).toBe('今日は練習しました')
+
+    ;(Date.now as jest.Mock).mockReturnValue(NEXT_DAY)
+    await act(async () => {
+      fireAppStateChange('active')
+    })
+
+    await waitFor(() => expect(getByTestId('seal-outline')).toBeTruthy())
+    expect(getByTestId('today-status').props.children).toBe('今日の練習はまだです')
   })
 })

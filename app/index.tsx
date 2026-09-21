@@ -1,6 +1,6 @@
-import { Link, Redirect } from 'expo-router'
-import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Link, Redirect, useFocusEffect } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { ATOMS } from '@/domain/atoms'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
@@ -17,9 +17,26 @@ import { colors, fonts, fontSizes, space } from '@/ui/theme'
 export default function Home() {
   const { progress, hydrated } = useProgress()
   const strings = useStrings()
-  // Captured once at mount, not read fresh from Date.now() during render:
-  // react-hooks/purity forbids calling an impure function while rendering.
-  const [today] = useState(() => dayKey(Date.now()))
+  // Never read fresh from Date.now() during render: react-hooks/purity
+  // forbids calling an impure function while rendering. Home stays mounted
+  // underneath /session, /progress and /settings, and iOS keeps a suspended
+  // app alive overnight, so a value captured only once at mount would still
+  // say yesterday the next morning. Instead it is refreshed from effects: on
+  // focus, and whenever the app comes back to the foreground.
+  const [today, setToday] = useState(() => dayKey(Date.now()))
+
+  const refreshToday = useCallback(() => {
+    setToday(dayKey(Date.now()))
+  }, [])
+
+  useFocusEffect(refreshToday)
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (status) => {
+      if (status === 'active') refreshToday()
+    })
+    return () => subscription.remove()
+  }, [refreshToday])
 
   if (!hydrated) {
     return (
