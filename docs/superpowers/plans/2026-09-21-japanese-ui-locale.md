@@ -1,5 +1,7 @@
 # Japanese UI and Locale Toggle Implementation Plan
 
+> **Post-review amendment (2026-09-21).** The final whole-branch review corrected several Japanese strings after this plan was executed — most importantly 天珠 → 五珠 and a rewritten tutorial instruction. The code blocks below are the strings as originally planned. **Spec §5 is the authoritative source for all copy.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship the app with a Japanese UI by default and a 日本語/English toggle on the Settings screen.
