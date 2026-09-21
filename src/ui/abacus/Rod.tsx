@@ -1,26 +1,21 @@
 import { View } from 'react-native'
 import { readRod, type Rod as RodState } from '@/domain/soroban'
 import { Bead } from './Bead'
+import { beadTops, COLUMN_HEIGHT, ROD_WIDTH } from './geometry'
 
-export function Rod({
-  rod,
-  index,
-  onBeadPress,
-}: {
-  rod: RodState
-  index: number
-  onBeadPress?: (kind: 'heaven' | 'earth', beadIndex: number) => void
-}) {
+// One rod's beads, placed by value. The rod line and beam live in the static
+// layer (Frame.tsx), so they survive the fade.
+export function Rod({ rod, index }: { rod: RodState; index: number }) {
+  const tops = beadTops(rod)
   return (
     <View
       testID={`rod-${index}`}
       accessibilityValue={{ text: String(readRod(rod)) }}
-      style={{ alignItems: 'center', marginHorizontal: 6 }}
+      style={{ width: ROD_WIDTH, height: COLUMN_HEIGHT }}
     >
-      <Bead active={rod.heaven} kind="heaven" onPress={() => onBeadPress?.('heaven', 0)} />
-      <View style={{ height: 2, width: 40, backgroundColor: '#444', marginVertical: 6 }} />
-      {[0, 1, 2, 3].map((i) => (
-        <Bead key={i} active={i < rod.earth} kind="earth" onPress={() => onBeadPress?.('earth', i)} />
+      <Bead kind="heaven" top={tops.heaven} />
+      {tops.earth.map((top, i) => (
+        <Bead key={i} kind="earth" top={top} />
       ))}
     </View>
   )
