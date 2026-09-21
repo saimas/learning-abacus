@@ -3,7 +3,7 @@ import { en } from './en'
 import { ja } from './ja'
 import { LOCALES } from './locale'
 
-const CATALOGS = { ja, en }
+const ALL = { ja, en }
 
 // Same helper as src/domain/explain.test.ts, so the atoms here are built the
 // way the domain's own tests build them.
@@ -13,7 +13,7 @@ function atom(rodValue: number, operand: number, direction: Direction): Atom {
 
 describe('catalog parity', () => {
   it('covers every locale', () => {
-    expect(Object.keys(CATALOGS).sort()).toEqual([...LOCALES].sort())
+    expect(Object.keys(ALL).sort()).toEqual([...LOCALES].sort())
   })
 
   // `Strings = typeof ja` already makes a missing key a compile error. This
@@ -31,7 +31,7 @@ describe('catalog parity', () => {
   })
 
   it('leaves no constant entry blank', () => {
-    for (const catalog of Object.values(CATALOGS)) {
+    for (const catalog of Object.values(ALL)) {
       for (const value of Object.values(catalog)) {
         if (typeof value === 'string') expect(value.trim().length).toBeGreaterThan(0)
       }
@@ -52,6 +52,7 @@ describe('coaching', () => {
     expect(ja.coaching(atom(2, 6, 'sub'))).toBe('十の繰下と五の合成：6をひく = −10 + 5 − 1')
   })
 
+  // Spec §3 (curriculum design): the rewiring has happened when "add 8" *means* "+10 − 2" and never means "8". The sentence is the substitution, stated as an identity.
   it('keeps the English wording that explainMove had', () => {
     expect(en.coaching(atom(7, 8, 'add'))).toBe('Add 8 = +10 − 2')
     expect(en.coaching(atom(6, 4, 'sub'))).toBe('Subtract 4 = −5 + 1')
@@ -76,11 +77,11 @@ describe('coaching', () => {
 
 describe('breakdown, via readingFeedback', () => {
   it('reads a heaven-and-earth rod without a plural in Japanese', () => {
-    expect(ja.readingFeedback(6)).toBe('ちがいます。このけたは6です：天珠と一珠が1つ、5 + 1。')
+    expect(ja.readingFeedback(6)).toBe('ちがいます。このけたは6です。五珠と一珠1つで 5 + 1。')
   })
 
   it('reads a bare heaven bead', () => {
-    expect(ja.readingFeedback(5)).toContain('天珠だけ')
+    expect(ja.readingFeedback(5)).toContain('五珠だけ')
   })
 
   it('reads an empty rod', () => {

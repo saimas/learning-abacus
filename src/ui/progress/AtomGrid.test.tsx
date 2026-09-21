@@ -38,7 +38,7 @@ describe('AtomGrid', () => {
 
   it('summarises how many are mastered', () => {
     const { getByTestId } = render(<AtomGrid progress={emptyProgress()} />)
-    expect(getByTestId('atom-summary').props.children).toContain('180手中 0手')
+    expect(getByTestId('atom-summary').props.children).toContain('180問中 0問')
   })
 
   it('labels each cell in the active language for screen readers', () => {

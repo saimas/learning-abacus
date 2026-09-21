@@ -9,6 +9,9 @@ const FORBIDDEN = [
   'expo',
   '../storage',
   '../ui',
+  '@/ui',
+  '@/storage',
+  '@/i18n',
 ]
 
 function sourceFiles(dir: string): string[] {

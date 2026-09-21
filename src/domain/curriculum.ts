@@ -2,17 +2,17 @@ import { ATOMS, classify, type Atom, type AtomClass } from './atoms'
 import { isReflex, type AtomRecord } from './fluency'
 
 export type StageIndex = 0 | 1 | 2 | 3 | 4
-export type Stage = { index: StageIndex; name: string; classes: AtomClass[] }
+export type Stage = { index: StageIndex; classes: AtomClass[] }
 
 export const UNLOCK_REFLEX_RATIO = 0.85
 export const UNLOCK_MIN_FADE = 3
 
 export const STAGES: readonly Stage[] = Object.freeze([
-  { index: 0, name: 'Reading the soroban', classes: [] },
-  { index: 1, name: 'Direct moves', classes: ['direct'] },
-  { index: 2, name: "5's complements", classes: ['five'] },
-  { index: 3, name: "10's complements", classes: ['ten'] },
-  { index: 4, name: 'Combined complements', classes: ['both'] },
+  { index: 0, classes: [] },
+  { index: 1, classes: ['direct'] },
+  { index: 2, classes: ['five'] },
+  { index: 3, classes: ['ten'] },
+  { index: 4, classes: ['both'] },
 ])
 
 export function atomsForStage(index: StageIndex): Atom[] {

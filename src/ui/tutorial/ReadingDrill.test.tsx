@@ -22,9 +22,10 @@ describe('ReadingDrill', () => {
     // way out. Nothing on screen explained what the beads were worth.
     const { getByTestId } = render(<ReadingDrill onComplete={jest.fn()} values={[7]} />)
     const instruction = getByTestId('reading-instruction').props.children as string
-    expect(instruction).toContain('天珠')
+    expect(instruction).toContain('五珠')
     expect(instruction).toContain('一珠')
     expect(instruction).toContain('5')
+    expect(instruction).toContain('梁')
   })
 
   it('shows the correct reading after a wrong answer instead of silently clearing', () => {

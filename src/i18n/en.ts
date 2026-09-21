@@ -1,5 +1,6 @@
 import type { Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+// Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
 import type { Strings } from './ja'
 
@@ -17,6 +18,7 @@ function coaching(atom: Atom): string {
   return `${verb} ${atom.operand} = ${describeSteps(atom)}`
 }
 
+// Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
 function breakdown(value: number): string {
   const earth = value % 5
   const beads = `${earth} earth bead${earth === 1 ? '' : 's'}`
@@ -36,7 +38,7 @@ export const en: Strings = {
 
   languageLabel: 'Language',
   resetAll: 'Reset all progress',
-  resetConfirm: 'Really erase everything?',
+  resetConfirm: 'Really erase all progress?',
 
   sessionComplete: 'Session complete',
   sessionResult: (answered, correct) => `${answered} answered, ${correct} correct`,

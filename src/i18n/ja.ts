@@ -1,5 +1,6 @@
 import { classify, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+// Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
@@ -16,7 +17,7 @@ const TECHNIQUE: Record<AtomClass, { add: string; sub: string }> = {
 const CELL_STATE: Record<CellState, string> = {
   unseen: '未学習',
   learning: '学習中',
-  reflex: '反射',
+  reflex: '即答',
   mental: '暗算',
 }
 
@@ -24,7 +25,7 @@ const CELL_STATE: Record<CellState, string> = {
 // it, and a member referencing `ja` from inside the initialiser of `ja` makes
 // `typeof ja` circular, which TypeScript rejects.
 function coaching(atom: Atom): string {
-  const name = TECHNIQUE[classify(atom)][atom.direction === 'add' ? 'add' : 'sub']
+  const name = TECHNIQUE[classify(atom)][atom.direction]
   const verb = atom.direction === 'add' ? 'たす' : 'ひく'
   const move = `${atom.operand}を${verb} = ${describeSteps(atom)}`
   return name === '' ? move : `${name}：${move}`
@@ -35,39 +36,41 @@ function breakdown(value: number): string {
   const earth = value % 5
   if (value === 0) return '珠がひとつも入っていません'
   if (value < 5) return `一珠が${earth}つ`
-  if (earth === 0) return '天珠だけ'
-  return `天珠と一珠が${earth}つ、5 + ${earth}`
+  if (earth === 0) return '五珠だけ'
+  return `五珠と一珠${earth}つで 5 + ${earth}`
 }
 
 export const ja = {
   loading: '読み込み中…',
-  loadingProgress: '進捗を読み込んでいます…',
-  daysPracticed: (days: number) => `練習 ${days}日`,
+  loadingProgress: '進捗を読み込み中…',
+  daysPracticed: (days: number) => `練習 ${days}日間`,
   navProgress: '進捗',
   navSettings: '設定',
   navToday: '今日にもどる',
 
   languageLabel: '言語',
   resetAll: 'すべての進捗を消す',
-  resetConfirm: '本当にすべて消しますか？',
+  resetConfirm: '本当にすべての進捗を消しますか？',
 
-  sessionComplete: 'セッション完了',
+  sessionComplete: '今日の練習おわり',
   sessionResult: (answered: number, correct: number) => `${answered}問中 ${correct}問正解`,
   done: 'おわる',
   answer: 'こたえる',
   prompt: (atom: Atom) =>
-    `けたは${atom.rodValue}。${atom.operand}を${atom.direction === 'add' ? 'たす' : 'ひく'}。`,
+    atom.direction === 'add'
+      ? `${atom.rodValue}に${atom.operand}をたす。`
+      : `${atom.rodValue}から${atom.operand}をひく。`,
   coaching,
   correction: (expected: number, atom: Atom) => `こたえは${expected}。${coaching(atom)}`,
 
-  atomSummary: (mental: number, total: number) => `${total}手中 ${mental}手が暗算`,
+  atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
   cellLabel: (atomId: string, state: CellState) => `${atomId} ${CELL_STATE[state]}`,
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',
   check: 'たしかめる',
-  readingInstruction: '天珠（上の珠）は5、一珠（下の珠）は1です。けたの数はその合計です。',
-  readingFeedback: (target: number) => `ちがいます。このけたは${target}です：${breakdown(target)}。`,
+  readingInstruction: '梁（はり）につけた珠だけを数えます。上の五珠は5、下の一珠は1つにつき1です。けたの数はその合計です。',
+  readingFeedback: (target: number) => `ちがいます。このけたは${target}です。${breakdown(target)}。`,
 }
 
 // The contract every catalog satisfies, derived from the catalog that ships

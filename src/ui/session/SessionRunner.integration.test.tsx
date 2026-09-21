@@ -19,7 +19,7 @@ function manualClock(start: number) {
 }
 
 function expectedFor(prompt: string): number {
-  const match = /^けたは(\d)。(\d)を(たす|ひく)。$/.exec(prompt)
+  const match = /^(\d)(?:に|から)(\d)を(たす|ひく)。$/.exec(prompt)
   if (match === null) throw new Error(`unexpected prompt: ${prompt}`)
   const [, rod, operand, verb] = match
   if (rod === undefined || operand === undefined || verb === undefined) {

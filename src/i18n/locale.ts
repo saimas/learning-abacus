@@ -1,3 +1,4 @@
+// React-free on purpose: src/storage/localeStore.ts imports this file, and pulling React in here would drag it into the storage layer.
 export type Locale = 'ja' | 'en'
 
 // Japanese first: it is the default, and the toggle renders in this order.
