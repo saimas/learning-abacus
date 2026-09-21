@@ -28,7 +28,11 @@ function DigitKey({ digit, onPress }: { digit: string; onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [styles.key, pressed && styles.pressed]}
     >
-      <Text style={styles.digit}>{digit}</Text>
+      {/* The key is a fixed-size shape; Dynamic Type must not push the digit
+          out of it. */}
+      <Text style={styles.digit} maxFontSizeMultiplier={1.3}>
+        {digit}
+      </Text>
     </Pressable>
   )
 }
@@ -95,7 +99,9 @@ export function AnswerPad({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.submitLabel}>{submitLabel}</Text>
+          <Text style={styles.submitLabel} maxFontSizeMultiplier={1.3}>
+            {submitLabel}
+          </Text>
         </Pressable>
       </View>
     </View>

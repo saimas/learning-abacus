@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native'
+import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { Atom } from '@/domain/atoms'
 import type { FadeLevel } from '@/domain/fade'
 import {
@@ -292,23 +292,30 @@ export function SessionRunner({
         quitLabel={strings.quitLabel}
         onQuit={onQuit}
       />
-      <View style={styles.soroban}>
-        <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
-      </View>
-      <Text testID="prompt" style={styles.prompt}>
-        {strings.prompt(atom)}
-      </Text>
-      {/* Spec §4: F0 is where the app demonstrates the move, so the
-          substitution is shown *before* the answer, not after a miss. */}
-      {current.coaching === 'demo' ? (
-        <Text testID="demonstration" style={styles.demonstration}>
-          {strings.coaching(atom)}
+      {/* R9: the keypad below is always fully visible, pinned at the bottom.
+          Everything here that can grow — the demonstration and the
+          correction card, on top of the soroban and prompt — scrolls
+          instead of pushing the keypad off a short screen. On a screen tall
+          enough to show it all, this scrolls nowhere and looks the same as
+          a plain View. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.soroban}>
+          <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
+        </View>
+        <Text testID="prompt" style={styles.prompt}>
+          {strings.prompt(atom)}
         </Text>
-      ) : null}
-      {correction !== null ? (
-        <CorrectionCard atom={correction.atom} expected={correction.expected} />
-      ) : null}
-      <View style={styles.spacer} />
+        {/* Spec §4: F0 is where the app demonstrates the move, so the
+            substitution is shown *before* the answer, not after a miss. */}
+        {current.coaching === 'demo' ? (
+          <Text testID="demonstration" style={styles.demonstration}>
+            {strings.coaching(atom)}
+          </Text>
+        ) : null}
+        {correction !== null ? (
+          <CorrectionCard atom={correction.atom} expected={correction.expected} />
+        ) : null}
+      </ScrollView>
       <AnswerPad
         value={answer}
         onChange={setAnswer}
@@ -343,7 +350,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: fontSizes.small,
   },
-  spacer: { flex: 1, minHeight: space.sm },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: space.sm },
   summary: { flex: 1 },
   summaryBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   summaryTitle: {

@@ -57,6 +57,9 @@ export function Seal({
     >
       {text === '' ? null : (
         <Text
+          // The seal is a fixed-size circle; Dynamic Type must not push the
+          // text out of it.
+          maxFontSizeMultiplier={1.3}
           style={[
             styles.text,
             {

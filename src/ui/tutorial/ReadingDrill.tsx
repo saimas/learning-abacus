@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
@@ -58,21 +58,27 @@ export function ReadingDrill({
           ))}
         </View>
       </View>
-      <Text testID="reading-instruction" style={styles.instruction}>
-        {strings.readingInstruction}
-      </Text>
-      <View style={styles.soroban}>
-        <Abacus soroban={setValue(emptySoroban(1), target)} fade={0} />
-      </View>
-      <Text style={styles.prompt}>{strings.readingPrompt}</Text>
-      {feedback !== null ? (
-        <Card accent style={styles.feedback}>
-          <Text testID="reading-feedback" style={styles.feedbackText}>
-            {feedback}
-          </Text>
-        </Card>
-      ) : null}
-      <View style={styles.spacer} />
+      {/* R9: the keypad below is always fully visible, pinned at the bottom.
+          The instruction, soroban, prompt and feedback — everything that can
+          grow — scroll instead of pushing the keypad off a short screen. On
+          a screen tall enough to show it all, this scrolls nowhere and looks
+          the same as a plain View. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <Text testID="reading-instruction" style={styles.instruction}>
+          {strings.readingInstruction}
+        </Text>
+        <View style={styles.soroban}>
+          <Abacus soroban={setValue(emptySoroban(1), target)} fade={0} />
+        </View>
+        <Text style={styles.prompt}>{strings.readingPrompt}</Text>
+        {feedback !== null ? (
+          <Card accent style={styles.feedback}>
+            <Text testID="reading-feedback" style={styles.feedbackText}>
+              {feedback}
+            </Text>
+          </Card>
+        ) : null}
+      </ScrollView>
       <AnswerPad
         value={answer}
         onChange={setAnswer}
@@ -116,5 +122,6 @@ const styles = StyleSheet.create({
   },
   feedback: { marginTop: space.sm, paddingVertical: space.sm },
   feedbackText: { fontSize: fontSizes.small, lineHeight: 19, color: colors.ink },
-  spacer: { flex: 1, minHeight: space.sm },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: space.sm },
 })
