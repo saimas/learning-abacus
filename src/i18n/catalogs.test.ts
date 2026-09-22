@@ -182,7 +182,7 @@ describe('the review step', () => {
     expect(ja.watchAgain).toBe('もう一度見る')
     expect(ja.next).toBe('つぎへ')
     expect(ja.wrong).toBe('ちがいます')
-    expect(en.showAnswer).toBe('Show the answer')
+    expect(en.showAnswer).toBe('See answer')
     expect(en.watchAgain).toBe('Watch again')
     expect(en.next).toBe('Next')
     expect(en.wrong).toBe('Not quite')

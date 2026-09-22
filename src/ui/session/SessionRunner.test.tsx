@@ -460,6 +460,7 @@ describe('SessionRunner', () => {
     answerCorrectly(getByTestId)
     clock.set(2_000)
     answer(getByTestId, '99')
+    clock.set(2_500)
     moveOn()
     clock.set(3_000)
     answerCorrectly(getByTestId)
@@ -531,8 +532,9 @@ describe('SessionRunner', () => {
 
     // Wrong answers to both atoms, three times each, drains the block.
     for (let i = 0; i < 6; i++) {
-      clock.set((i + 1) * 100)
+      clock.set((i + 1) * 1_000)
       answer(getByTestId, '0')
+      clock.set((i + 1) * 1_000 + 500)
       moveOn()
     }
 
@@ -769,7 +771,7 @@ describe('SessionRunner bringing in reserve atoms', () => {
 // The TestFlight repeat bug: a block with only one live move used to refill
 // its queue from that same move for the rest of its time slice, so the
 // learner saw the identical question over and over. These tests pin down
-// the fix's exact rules (see submit() in SessionRunner.tsx).
+// the fix's exact rules (see advance() in SessionRunner.tsx).
 describe('SessionRunner never repeating one question to fill time', () => {
   it('ends warm-up after its one move instead of asking it again', () => {
     const plan: SessionPlan = {
@@ -1098,5 +1100,40 @@ describe('SessionRunner reviewing a miss', () => {
     expect(queryByTestId('batsu')).toBeNull()
     expect(queryByTestId('review-next')).toBeNull()
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+  })
+
+  it('ignores つぎへ in the moment after a miss, so a double tap on こたえる cannot skip the review', () => {
+    const clock = manualClock(0)
+    const { getByTestId, queryByTestId } = renderRunner(beadPlan, clock.now)
+    clock.set(1_000)
+    answer(getByTestId, '9')
+    clock.set(1_200)
+    moveOn()
+    expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
+    expect(queryByTestId('review-next')).not.toBeNull()
+    clock.set(1_500)
+    moveOn()
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+  })
+
+  it('replays the move on the beads themselves in bead mode, from the start', () => {
+    const { getByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    expect(rods()).toBe('09')
+    fireEvent.press(getByTestId('review-show'))
+    expect(rods()).toBe('03')
+    act(() => jest.advanceTimersByTime(900))
+    expect(rods()).toBe('08')
+    act(() => jest.advanceTimersByTime(900))
+    expect(rods()).toBe('07')
+  })
+
+  it('tells VoiceOver the answer when こたえを見る is pressed', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const { getByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    fireEvent.press(getByTestId('review-show'))
+    expect(announce).toHaveBeenLastCalledWith('こたえは 7')
+    announce.mockRestore()
   })
 })

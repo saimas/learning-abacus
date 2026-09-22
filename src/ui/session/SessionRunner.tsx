@@ -34,6 +34,11 @@ type RunnerState = { blockIndex: number; queue: SessionItem[] }
 // coaching still speaks (F0–F1), and after こたえを見る at silent levels.
 type Review = { cardShown: boolean }
 
+// A tap on つぎへ this soon after a miss is the second half of a double tap
+// on こたえる, which sits in the same place. It must not skip a review the
+// learner has not seen yet.
+const NEXT_GUARD_MS = 450
+
 function parseAtomId(atomId: string): { rodValue: number; operand: number; sign: 1 | -1 } {
   const match = /^(\d)([+-])(\d)$/.exec(atomId)
   if (match === null) throw new Error(`malformed atom id: ${atomId}`)
@@ -166,6 +171,8 @@ export function SessionRunner({
   // untouched by it.
   const [joined, setJoined] = useState<SessionItem[]>([])
   const shownAt = useRef<number>(sessionStartedAt)
+  // When the question now under review was missed, for NEXT_GUARD_MS.
+  const missedAt = useRef<number | null>(null)
   const finished = useRef(false)
 
   const deadlines = useMemo(
@@ -283,6 +290,7 @@ export function SessionRunner({
     }
 
     failures.current[current.atomId] = (failures.current[current.atomId] ?? 0) + 1
+    missedAt.current = t
     setMaru(0)
     AccessibilityInfo.announceForAccessibility(strings.wrong)
     // The number alone teaches nothing. Where coaching still speaks, the
@@ -315,7 +323,7 @@ export function SessionRunner({
     // Bring in the next reserve atom once every atom currently in the focus
     // block — including this one, just answered — has a full streak. One at
     // a time: the item after this one only becomes "in play" once this one
-    // has joined, so it cannot join in the same submit.
+    // has joined, so it cannot join on the same answer.
     let joinedNow = joined
     if (correct && block.kind === 'focus') {
       const inPlay = dedupeByAtomId(liveItems([...block.items, ...joined], failures.current))
@@ -385,12 +393,15 @@ export function SessionRunner({
   }
 
   function showAnswer() {
+    AccessibilityInfo.announceForAccessibility(strings.correctionAnswer(expected))
     setReview({ cardShown: true })
     replay.play(moveStates(atom))
   }
 
   function moveOn() {
-    advance(false, now())
+    const t = now()
+    if (missedAt.current !== null && t - missedAt.current < NEXT_GUARD_MS) return
+    advance(false, t)
   }
 
   const demonstration =
@@ -418,7 +429,11 @@ export function SessionRunner({
   // whole time, so the soroban does not jump as the hint gives way to it or
   // the count appears.
   const replayStep = (
-    <Text testID={played !== null ? 'replay-step' : undefined} style={styles.hint}>
+    <Text
+      testID={played !== null ? 'replay-step' : undefined}
+      accessible={played !== null}
+      style={styles.hint}
+    >
       {played !== null ? strings.replayStep(played, decompose(atom).length) : ' '}
     </Text>
   )

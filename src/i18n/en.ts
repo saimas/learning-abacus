@@ -83,7 +83,7 @@ export const en: Strings = {
   deleteKey: 'Delete',
   beadHint: 'Tap the beads to move them',
   resetBeads: 'Reset',
-  showAnswer: 'Show the answer',
+  showAnswer: 'See answer',
   watchAgain: 'Watch again',
   next: 'Next',
   replayStep: (step, total) => `${step} / ${total}`,
