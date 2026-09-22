@@ -37,3 +37,38 @@ export function applyStep(s: Soroban, step: RodStep, workingIndex: number): Soro
   rods[index] = rodFor(next)
   return { rods }
 }
+
+const EARTH_BEADS = 4
+
+// Which bead a tap lands on. Earth bead 0 is the one nearest the beam.
+export type BeadRef = { kind: 'heaven' } | { kind: 'earth'; index: number }
+
+// A tap moves beads the way a finger does on a real soroban: pushing a bead
+// toward the beam pushes every bead between it and the beam along with it,
+// and pulling a counted bead away takes every bead beyond it too.
+export function tapBead(rod: Rod, bead: BeadRef): Rod {
+  if (bead.kind === 'heaven') return { ...rod, heaven: !rod.heaven }
+  if (!Number.isInteger(bead.index) || bead.index < 0 || bead.index >= EARTH_BEADS) {
+    throw new Error(`no earth bead at index ${bead.index}`)
+  }
+  if (bead.index < rod.earth) return { ...rod, earth: bead.index }
+  return { ...rod, earth: bead.index + 1 }
+}
+
+function replaceRod(s: Soroban, rodIndex: number, change: (rod: Rod) => Rod): Soroban {
+  const target = s.rods[rodIndex]
+  if (target === undefined) throw new Error(`no rod at index ${rodIndex}`)
+  const rods = [...s.rods]
+  rods[rodIndex] = change(target)
+  return { rods }
+}
+
+export function tapSoroban(s: Soroban, rodIndex: number, bead: BeadRef): Soroban {
+  return replaceRod(s, rodIndex, (rod) => tapBead(rod, bead))
+}
+
+// VoiceOver treats each rod as an adjustable value: one swipe moves it by
+// one, staying within 0–9.
+export function adjustRod(s: Soroban, rodIndex: number, delta: number): Soroban {
+  return replaceRod(s, rodIndex, (rod) => rodFor(Math.min(ROD_MAX, Math.max(0, readRod(rod) + delta))))
+}
