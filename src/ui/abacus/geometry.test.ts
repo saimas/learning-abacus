@@ -1,11 +1,14 @@
 import { rodFor } from '@/domain/soroban'
 import {
   BEAD_HEIGHT,
+  BEAD_MODE_SCALE,
   BEAM_TOP,
   COLUMN_HEIGHT,
   EARTH_TOP,
   EDGE_GAP,
+  beadAt,
   beadTops,
+  geometryFor,
 } from './geometry'
 
 describe('beadTops', () => {
@@ -35,5 +38,58 @@ describe('beadTops', () => {
     const counted = (earth[1] ?? 0) + BEAD_HEIGHT
     const resting = earth[2] ?? 0
     expect(resting - counted).toBeGreaterThan(BEAD_HEIGHT / 2)
+  })
+})
+
+describe('geometryFor', () => {
+  it('reproduces the base sizes at scale 1', () => {
+    const g = geometryFor(1)
+    expect(g.beadHeight).toBe(BEAD_HEIGHT)
+    expect(g.beamTop).toBe(BEAM_TOP)
+    expect(g.earthTop).toBe(EARTH_TOP)
+    expect(g.columnHeight).toBe(COLUMN_HEIGHT)
+  })
+
+  it('makes bead-mode beads big enough to tap', () => {
+    const g = geometryFor(BEAD_MODE_SCALE)
+    expect(g.beadWidth).toBeCloseTo(69)
+    expect(g.beadHeight).toBeCloseTo(28.98, 1)
+    expect(g.rodWidth).toBeCloseTo(88.32, 1)
+  })
+})
+
+describe('beadTops at a scale', () => {
+  it('scales every position', () => {
+    const base = beadTops(rodFor(7))
+    const big = beadTops(rodFor(7), 2)
+    expect(big.heaven).toBe(base.heaven * 2)
+    expect(big.earth).toEqual(base.earth.map((top) => top * 2))
+  })
+})
+
+describe('beadAt', () => {
+  it('reads a tap above the beam as the heaven bead', () => {
+    expect(beadAt(rodFor(0), 5)).toEqual({ kind: 'heaven' })
+  })
+
+  it('reads a tap on a counted earth bead as that bead', () => {
+    const top = beadTops(rodFor(3)).earth[1] ?? 0
+    expect(beadAt(rodFor(3), top + BEAD_HEIGHT / 2)).toEqual({ kind: 'earth', index: 1 })
+  })
+
+  it('reads a tap on a resting earth bead as that bead', () => {
+    const top = beadTops(rodFor(1)).earth[3] ?? 0
+    expect(beadAt(rodFor(1), top + 2)).toEqual({ kind: 'earth', index: 3 })
+  })
+
+  it('picks the nearest bead for a tap in the gap', () => {
+    const tops = beadTops(rodFor(2)).earth
+    const justBelowBead1 = (tops[1] ?? 0) + BEAD_HEIGHT + 2
+    expect(beadAt(rodFor(2), justBelowBead1)).toEqual({ kind: 'earth', index: 1 })
+  })
+
+  it('works at bead-mode scale', () => {
+    const top = beadTops(rodFor(0), BEAD_MODE_SCALE).earth[0] ?? 0
+    expect(beadAt(rodFor(0), top + 5, BEAD_MODE_SCALE)).toEqual({ kind: 'earth', index: 0 })
   })
 })

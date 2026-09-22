@@ -1,31 +1,58 @@
 import { StyleSheet, View } from 'react-native'
 import { visualForFade, type FadeLevel } from '@/domain/fade'
-import type { Soroban } from '@/domain/soroban'
+import type { BeadRef, Soroban } from '@/domain/soroban'
+import { useStrings } from '@/i18n'
 import { colors } from '@/ui/theme'
 import { FadeLayer, showsFrame } from './FadeLayer'
 import { DeckLines, FrameBackground } from './Frame'
-import { DECK_PADDING, FRAME_PADDING, FRAME_RADIUS } from './geometry'
+import { geometryFor } from './geometry'
 import { Rod } from './Rod'
 
-export function Abacus({ soroban, fade }: { soroban: Soroban; fade: FadeLevel }) {
+// Controlled: the parent owns the soroban. With onTapBead and onAdjustRod the
+// rods take taps and VoiceOver adjustments. Without them it is the static
+// soroban the keypad levels show.
+export function Abacus({
+  soroban,
+  fade,
+  scale = 1,
+  onTapBead,
+  onAdjustRod,
+}: {
+  soroban: Soroban
+  fade: FadeLevel
+  scale?: number
+  onTapBead?: (rodIndex: number, bead: BeadRef) => void
+  onAdjustRod?: (rodIndex: number, delta: number) => void
+}) {
+  const strings = useStrings()
+  const g = geometryFor(scale)
   // Visibility resolves here and nowhere else. Bead and Rod never see a FadeLevel.
   const visual = visualForFade(fade)
   const framed = showsFrame(visual)
+  const count = soroban.rods.length
 
   return (
     <View
       testID={framed ? 'abacus-frame' : 'abacus-blank'}
-      style={[styles.frame, framed && styles.framed]}
+      style={[styles.frame, { padding: g.framePadding, borderRadius: g.frameRadius }, framed && styles.framed]}
     >
-      {framed ? <FrameBackground /> : null}
-      <View style={[styles.deck, framed && styles.deckFilled]}>
-        {framed ? <DeckLines rodCount={soroban.rods.length} /> : null}
+      {framed ? <FrameBackground scale={scale} /> : null}
+      <View style={[styles.deck, { paddingHorizontal: g.deckPadding }, framed && styles.deckFilled]}>
+        {framed ? <DeckLines rodCount={count} scale={scale} /> : null}
         {/* Only the beads fade. At F6 nothing above is drawn, but the bead
             columns still take their space, so the screen does not jump. */}
         <FadeLayer level={fade}>
           <View style={styles.rods}>
             {soroban.rods.map((rod, index) => (
-              <Rod key={index} rod={rod} index={index} />
+              <Rod
+                key={index}
+                rod={rod}
+                index={index}
+                scale={scale}
+                label={strings.rodName(count - 1 - index)}
+                onTapBead={onTapBead === undefined ? undefined : (bead) => onTapBead(index, bead)}
+                onAdjust={onAdjustRod === undefined ? undefined : (delta) => onAdjustRod(index, delta)}
+              />
             ))}
           </View>
         </FadeLayer>
@@ -35,7 +62,7 @@ export function Abacus({ soroban, fade }: { soroban: Soroban; fade: FadeLevel })
 }
 
 const styles = StyleSheet.create({
-  frame: { alignSelf: 'center', padding: FRAME_PADDING, borderRadius: FRAME_RADIUS },
+  frame: { alignSelf: 'center' },
   framed: {
     backgroundColor: colors.frameBottom,
     shadowColor: colors.shadow,
@@ -43,7 +70,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 6 },
   },
-  deck: { paddingHorizontal: DECK_PADDING, borderRadius: 8 },
+  deck: { borderRadius: 8 },
   deckFilled: { backgroundColor: colors.deck },
   rods: { flexDirection: 'row' },
 })

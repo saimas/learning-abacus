@@ -1,23 +1,16 @@
 import { StyleSheet, View } from 'react-native'
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 import { colors } from '@/ui/theme'
-import {
-  BEAM_HEIGHT,
-  BEAM_TOP,
-  DECK_PADDING,
-  FRAME_RADIUS,
-  ROD_LINE,
-  ROD_WIDTH,
-  UNIT_DOT,
-} from './geometry'
+import { geometryFor } from './geometry'
 
 // The walnut frame, lit from above. Clipped to the frame's own bounds: an
 // absolutely-filled Svg sizes its percentage width/height against the
 // screen, not the (content-sized) frame View, so without this wrapper the
 // gradient paints past the frame's edges.
-export function FrameBackground() {
+export function FrameBackground({ scale = 1 }: { scale?: number }) {
+  const g = geometryFor(scale)
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.clip]}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: g.frameRadius, overflow: 'hidden' }]}>
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
@@ -25,7 +18,7 @@ export function FrameBackground() {
             <Stop offset="1" stopColor={colors.frameBottom} />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" rx={FRAME_RADIUS} ry={FRAME_RADIUS} fill="url(#frame)" />
+        <Rect x="0" y="0" width="100%" height="100%" rx={g.frameRadius} ry={g.frameRadius} fill="url(#frame)" />
       </Svg>
     </View>
   )
@@ -34,7 +27,8 @@ export function FrameBackground() {
 // Rods, beam, and the dot marking the ones rod (定位点). Drawn behind the
 // beads and outside the fade layer, so an F5 "empty frame" still has rods to
 // imagine beads on. The ones rod is the rightmost.
-export function DeckLines({ rodCount }: { rodCount: number }) {
+export function DeckLines({ rodCount, scale = 1 }: { rodCount: number; scale?: number }) {
+  const g = geometryFor(scale)
   const unit = rodCount - 1
   return (
     <View testID="deck-lines" pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -42,35 +36,38 @@ export function DeckLines({ rodCount }: { rodCount: number }) {
         <View
           key={index}
           testID={`frame-rod-${index}`}
-          style={[styles.rodLine, { left: DECK_PADDING + index * ROD_WIDTH + (ROD_WIDTH - ROD_LINE) / 2 }]}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: g.rodLine,
+            left: g.deckPadding + index * g.rodWidth + (g.rodWidth - g.rodLine) / 2,
+            backgroundColor: colors.rod,
+          }}
         />
       ))}
-      <View style={styles.beam} />
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: g.beamTop,
+          height: g.beamHeight,
+          backgroundColor: colors.beam,
+        }}
+      />
       <View
         testID="unit-dot"
-        style={[styles.dot, { left: DECK_PADDING + unit * ROD_WIDTH + (ROD_WIDTH - UNIT_DOT) / 2 }]}
+        style={{
+          position: 'absolute',
+          top: g.beamTop + (g.beamHeight - g.unitDot) / 2,
+          left: g.deckPadding + unit * g.rodWidth + (g.rodWidth - g.unitDot) / 2,
+          width: g.unitDot,
+          height: g.unitDot,
+          borderRadius: g.unitDot / 2,
+          backgroundColor: colors.paper,
+        }}
       />
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  clip: { borderRadius: FRAME_RADIUS, overflow: 'hidden' },
-  rodLine: { position: 'absolute', top: 0, bottom: 0, width: ROD_LINE, backgroundColor: colors.rod },
-  beam: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: BEAM_TOP,
-    height: BEAM_HEIGHT,
-    backgroundColor: colors.beam,
-  },
-  dot: {
-    position: 'absolute',
-    top: BEAM_TOP + (BEAM_HEIGHT - UNIT_DOT) / 2,
-    width: UNIT_DOT,
-    height: UNIT_DOT,
-    borderRadius: UNIT_DOT / 2,
-    backgroundColor: colors.paper,
-  },
-})
