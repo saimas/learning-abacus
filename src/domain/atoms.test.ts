@@ -1,4 +1,4 @@
-import { ATOMS, atomId, classify, decompose, expectedValue, startValue, type Atom, type Direction } from './atoms'
+import { ATOMS, atomId, classify, decompose, expectedValue, moveStates, startValue, type Atom, type Direction } from './atoms'
 import { applyStep, emptySoroban, readValue, setValue } from './soroban'
 
 describe('the alphabet', () => {
@@ -105,6 +105,38 @@ describe('startValue and expectedValue', () => {
       const value = expectedValue(atom)
       expect(value).toBeGreaterThanOrEqual(0)
       expect(value).toBeLessThanOrEqual(18)
+    }
+  })
+})
+
+// Spec (miss review) §3: what こたえを見る plays on the soroban.
+describe('moveStates', () => {
+  const values = (a: Atom) => moveStates(a).map(readValue)
+
+  it('plays a direct move in one step', () => {
+    expect(values(atomOf(1, 3, 'add'))).toEqual([1, 4])
+  })
+
+  it("plays a 5's complement as its two steps", () => {
+    expect(values(atomOf(3, 4, 'add'))).toEqual([3, 8, 7])
+  })
+
+  it('carries onto the tens rod before correcting the ones rod', () => {
+    expect(values(atomOf(7, 8, 'add'))).toEqual([7, 17, 15])
+  })
+
+  it('borrows from the tens rod of a subtraction set at 13', () => {
+    expect(values(atomOf(3, 5, 'sub'))).toEqual([13, 3, 8])
+  })
+
+  it('has the start, one state per step, and ends on the answer, for every atom', () => {
+    for (const atom of ATOMS) {
+      const states = moveStates(atom)
+      expect(states).toHaveLength(decompose(atom).length + 1)
+      const shown = states.map(readValue)
+      expect(shown[0]).toBe(startValue(atom))
+      expect(shown[shown.length - 1]).toBe(expectedValue(atom))
+      for (const state of states) expect(state.rods).toHaveLength(2)
     }
   })
 })
