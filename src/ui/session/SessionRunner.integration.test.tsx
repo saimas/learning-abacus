@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native'
 import { emptyProgress, recordAttempt, type Progress } from '@/domain/progress'
 import { BLOCK_SECONDS, SESSION_SECONDS, selectSession } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
+import { setBeads } from './testing'
 
 // Every other runner test hands the component a hand-built SessionPlan
 // literal. That is exactly why two defects survived fifteen per-task
@@ -33,7 +34,7 @@ function manualClock(start: number) {
 }
 
 function expectedFor(prompt: string): number {
-  const match = /^(\d)(?:に|から)(\d)を(たす|ひく)。$/.exec(prompt)
+  const match = /^(\d{1,2})(?:に|から)(\d)を(たす|ひく)。$/.exec(prompt)
   if (match === null) throw new Error(`unexpected prompt: ${prompt}`)
   const [, rod, operand, verb] = match
   if (rod === undefined || operand === undefined || verb === undefined) {
@@ -76,7 +77,13 @@ function playSession(stepMs: number, maxSubmits: number) {
     const prompt = getByTestId('prompt').props.children as string
     elapsedMs += stepMs
     clock.set(START + elapsedMs)
-    for (const digit of String(expectedFor(prompt))) fireEvent.press(getByTestId(`key-${digit}`))
+    const value = expectedFor(prompt)
+    if (queryByTestId('key-0') !== null) {
+      for (const digit of String(value)) fireEvent.press(getByTestId(`key-${digit}`))
+    } else {
+      // F0–F2: set the beads through each rod's VoiceOver adjust action.
+      setBeads(getByTestId, value)
+    }
     fireEvent.press(getByTestId('submit'))
     submits++
   }
@@ -127,9 +134,12 @@ describe('selectSession composed with SessionRunner', () => {
     expect(drilled.length).toBeGreaterThan(0)
     // Every submit reached the domain, not just the ones at a block boundary.
     expect(session.attempts()).toBe(session.submits)
-    expect(drilled.every((record) => record.fade > 0)).toBe(true)
-    // Beads actually gone, not merely dimmed: this is the anzan the app exists
-    // to produce, reached through the real plan and the real runner.
-    expect(drilled.some((record) => record.fade >= 4)).toBe(true)
+    // This session's two focus atoms are never due, so the plan presents them
+    // with beads (fade frozen at F0 for the whole session — see session.ts).
+    // Untimed bead answers promote on accuracy alone through F0-F2, so both
+    // climb to F3, but no further: past F2 an atom needs a timed answer to
+    // advance, and nothing here ever produces one. Every drilled atom lands
+    // on exactly F3.
+    expect(drilled.every((record) => record.fade === 3)).toBe(true)
   })
 })

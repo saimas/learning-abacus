@@ -1,7 +1,8 @@
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, screen } from '@testing-library/react-native'
 import { AccessibilityInfo } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
+import { setBeads } from './testing'
 
 function item(atomId: string, overrides: Partial<SessionItem> = {}): SessionItem {
   return { atomId, fade: 0, coaching: 'demo', ...overrides }
@@ -55,9 +56,14 @@ function renderRunner(
   return { ...utils, onAttempt, onBlockEnd, onFinish }
 }
 
-// Types the answer on the keypad, one key per digit, then submits.
+// Answers the current question the way the learner would: on the keypad at
+// F3+, or by setting the beads at F0–F2. Then submits.
 function answer(getByTestId: ReturnType<typeof render>['getByTestId'], value: string) {
-  for (const digit of value) fireEvent.press(getByTestId(`key-${digit}`))
+  if (screen.queryByTestId('key-0') !== null) {
+    for (const digit of value) fireEvent.press(getByTestId(`key-${digit}`))
+  } else {
+    setBeads(getByTestId, Number(value))
+  }
   fireEvent.press(getByTestId('submit'))
 }
 
@@ -76,8 +82,15 @@ describe('SessionRunner', () => {
   })
 
   it('reports a correct attempt with the measured latency', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4', { fade: 3, coaching: 'silent' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
     const clock = manualClock(0)
-    const { getByTestId, onAttempt } = renderRunner(basicPlan, clock.now)
+    const { getByTestId, onAttempt } = renderRunner(plan, clock.now)
     clock.set(3_000)
     answer(getByTestId, '7')
     expect(onAttempt).toHaveBeenCalledWith(
@@ -452,5 +465,109 @@ describe('SessionRunner', () => {
     expect(onBlockEnd).toHaveBeenCalledTimes(1)
     expect(onBlockEnd).toHaveBeenCalledWith('focus')
     expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('starts a borrowing subtraction at 13 and accepts 8 on the keypad', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3-5', { fade: 3, coaching: 'silent' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    expect(getByTestId('prompt').props.children).toBe('13から5をひく。')
+    expect(getByTestId('rod-0').props.accessibilityValue.text).toBe('1')
+    answer(getByTestId, '8')
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ atomId: '3-5', correct: true }))
+  })
+})
+
+describe('SessionRunner answering with beads', () => {
+  const twoItems: SessionPlan = {
+    blocks: [
+      { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+  }
+
+  it('shows a soroban to answer on, and no keypad, while the beads are solid', () => {
+    const { getByTestId, queryByTestId } = renderRunner(basicPlan, autoClock())
+    expect(queryByTestId('key-0')).toBeNull()
+    expect(getByTestId('rod-1').props.accessibilityRole).toBe('adjustable')
+    expect(getByTestId('reset-beads')).toBeTruthy()
+  })
+
+  it('answers on the keypad once the beads fade', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4', { fade: 3, coaching: 'silent' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, queryByTestId } = renderRunner(plan, autoClock())
+    expect(getByTestId('key-0')).toBeTruthy()
+    expect(queryByTestId('reset-beads')).toBeNull()
+  })
+
+  it('moves the beads under a tap', () => {
+    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    // 3 on the ones rod; a tap above the beam brings the heaven bead down.
+    fireEvent.press(getByTestId('rod-1'), { nativeEvent: { locationY: 5 } })
+    expect(getByTestId('rod-1').props.accessibilityValue.text).toBe('8')
+  })
+
+  it('keeps こたえる disabled until a bead moves', () => {
+    const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
+    expect(getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: true })
+    fireEvent.press(getByTestId('submit'))
+    expect(onAttempt).not.toHaveBeenCalled()
+
+    fireEvent.press(getByTestId('rod-1'), { nativeEvent: { locationY: 5 } })
+    expect(getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: false })
+  })
+
+  it('puts the beads back with もどす', () => {
+    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    fireEvent.press(getByTestId('rod-1'), { nativeEvent: { locationY: 5 } })
+    fireEvent.press(getByTestId('reset-beads'))
+    expect(getByTestId('rod-1').props.accessibilityValue.text).toBe('3')
+    expect(getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: true })
+  })
+
+  it('scores the value on the beads, untimed', () => {
+    const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
+    answer(getByTestId, '7')
+    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: true, latencyMs: null })
+  })
+
+  it('sets the beads back to the start for the next question', () => {
+    const { getByTestId } = renderRunner(twoItems, autoClock())
+    answer(getByTestId, '7')
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    expect(getByTestId('rod-1').props.accessibilityValue.text).toBe('2')
+    expect(getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: true })
+  })
+
+  it('starts a borrowing subtraction at 13 and accepts 8 on the beads', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3-5')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    expect(getByTestId('rod-0').props.accessibilityValue.text).toBe('1')
+    answer(getByTestId, '8')
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ atomId: '3-5', correct: true }))
+  })
+
+  it('still names the previous problem after a wrong bead answer', () => {
+    const { getByTestId } = renderRunner(twoItems, autoClock())
+    answer(getByTestId, '9')
+    expect(getByTestId('correction-problem').props.children).toBe('3に4をたす。')
   })
 })

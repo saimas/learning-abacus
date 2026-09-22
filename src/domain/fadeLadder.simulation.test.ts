@@ -1,4 +1,5 @@
 import { atomsForStage, highestUnlockedStage, isStageUnlocked } from './curriculum'
+import { answerModeForFade } from './fade'
 import { applyAttempt, newRecord, type AtomRecord } from './fluency'
 import { currentStage, emptyProgress, recordAttempt, type Progress } from './progress'
 import { selectSession } from './session'
@@ -86,7 +87,11 @@ function practise(medianMs: number, days: number, seed: number) {
         const latencyMs = learner.latency()
         now += latencyMs
         spentMs += latencyMs
-        progress = recordAttempt(progress, item.atomId, learner.correct(), latencyMs, now)
+        // Bead presentations (F0-F2) are answered untimed, same as the real
+        // runner: passing a real latency here would exercise a path no
+        // learner's bead answer ever takes.
+        const reportedLatencyMs = answerModeForFade(item.fade) === 'beads' ? null : latencyMs
+        progress = recordAttempt(progress, item.atomId, learner.correct(), reportedLatencyMs, now)
         index++
       }
     }

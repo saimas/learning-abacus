@@ -129,3 +129,65 @@ describe('applyAttempt', () => {
     expect(record.box).toBe(2)
   })
 })
+
+describe('untimed attempts', () => {
+  it('counts an untimed correct answer toward the streak with no speed check', () => {
+    const next = applyAttempt(newRecord('3+4', NOW), 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.consecutiveCorrect).toBe(1)
+  })
+
+  it('promotes the fade level after five untimed correct answers', () => {
+    let record: AtomRecord = newRecord('3+4', NOW)
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(1)
+  })
+
+  it('records no latency for an untimed attempt', () => {
+    const before: AtomRecord = { ...newRecord('3+4', NOW), recentLatencyMs: [800, 900] }
+    const next = applyAttempt(before, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.recentLatencyMs).toEqual([800, 900])
+  })
+
+  it('still resets the box and counts the miss when an untimed answer is wrong', () => {
+    const strong: AtomRecord = { ...newRecord('3+4', NOW), box: 4, consecutiveCorrect: 3 }
+    const next = applyAttempt(strong, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.box).toBe(1)
+    expect(next.consecutiveCorrect).toBe(0)
+    expect(next.consecutiveWrong).toBe(1)
+  })
+
+  it('demotes after two untimed misses in a row', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 2 }
+    record = applyAttempt(record, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    record = applyAttempt(record, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    expect(record.fade).toBe(1)
+  })
+
+  // A session plan freezes each item's fade at plan time, so an atom
+  // promoted past F2 mid-session can still be *presented* with beads and
+  // answered untimed. Its own level has left the bead range, though, so
+  // those untimed answers must not keep climbing it through the timed
+  // levels on accuracy alone.
+  it('does not advance the fade streak for an untimed answer once the atom is past F2', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 3 }
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+    expect(record.consecutiveCorrect).toBe(0)
+  })
+
+  it('promotes an untimed atom through F0-F2 but not past it', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 2 }
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+  })
+})

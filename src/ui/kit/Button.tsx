@@ -11,12 +11,14 @@ export function Button({
   variant = 'primary',
   onPress,
   testID,
+  disabled = false,
 }: {
   label: string
   detail?: string
   variant?: ButtonVariant
   onPress?: () => void
   testID?: string
+  disabled?: boolean
 }) {
   const primary = variant === 'primary'
   const tone = primary ? styles.onPrimary : styles.onOutline
@@ -24,11 +26,14 @@ export function Button({
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         primary ? styles.primary : styles.outline,
         pressed && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
       <View style={styles.content}>
@@ -54,6 +59,7 @@ const styles = StyleSheet.create({
   },
   outline: { borderWidth: 1.5, borderColor: colors.accent },
   pressed: { opacity: 0.85 },
+  disabled: { opacity: 0.45 },
   content: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   label: { fontSize: 16, fontWeight: '600', letterSpacing: 1.5 },
   detail: { fontSize: 12, opacity: 0.8 },

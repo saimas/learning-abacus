@@ -81,7 +81,7 @@ export function recordAttempt(
   progress: Progress,
   atomId: string,
   correct: boolean,
-  latencyMs: number,
+  latencyMs: number | null,
   now: number,
 ): Progress {
   const existing = progress.atoms[atomId] ?? newRecord(atomId, now)

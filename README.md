@@ -57,8 +57,9 @@ but never requires one — a negotiable habit is a dead habit.
 
 - **Home** — days practised, today's five-minute plan, a preview of the atom map, and the button
   that starts the session.
-- **Session** — the daily session, full-screen, answered on a built-in keypad. ✕ asks before
-  leaving and keeps what was answered.
+- **Session** — the daily session, full-screen. While the beads are solid (F0-F2) the learner
+  answers by tapping beads on the soroban, untimed; from F3 on they type the answer on a built-in
+  keypad. ✕ asks before leaving and keeps what was answered.
 - **Progress** — the 180-atom map, as an addition grid and a subtraction grid (rows: the rod's
   value, columns: the operand).
 - **Settings** — days practised, the language toggle, and a guarded reset (two presses; the first
@@ -71,7 +72,9 @@ complements, 10's complements, and combined complements — the full fade ladder
 engine, and the 180-atom progress map. iOS only, fully offline.
 
 **Out:** multiplication, division, multi-rod operation, 見取算 strings, 暗算検定 mock exams, 読上算
-audio, bead-drag interaction (Phase 1 accepts typed answers only), and any backend or sync.
+audio, drag or swipe bead gestures (bead answers are tapped, not dragged; while the beads are
+solid — F0-F2 — the learner answers by tapping them, untimed, and from F3 on by typing on the
+keypad), and any backend or sync.
 
 Stages 0-4 sit entirely below the official 珠算能力検定 10級 syllabus — the 検定 ladder grades by
 problem size, not by complement technique — so Phase 1 earns no official grade. The progress map

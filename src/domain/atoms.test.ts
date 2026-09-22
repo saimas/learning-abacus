@@ -1,4 +1,4 @@
-import { ATOMS, atomId, classify, decompose } from './atoms'
+import { ATOMS, atomId, classify, decompose, expectedValue, startValue, type Atom, type Direction } from './atoms'
 import { applyStep, emptySoroban, readValue, setValue } from './soroban'
 
 describe('the alphabet', () => {
@@ -72,5 +72,39 @@ describe('decomposition', () => {
       { rod: 'carry', delta: 1 },
       { rod: 'working', delta: -2 },
     ])
+  })
+})
+
+function atomOf(rodValue: number, operand: number, direction: Direction): Atom {
+  return { id: atomId(rodValue, operand, direction), rodValue, operand, direction }
+}
+
+describe('startValue and expectedValue', () => {
+  it('starts where the rod is when nothing is borrowed', () => {
+    expect(startValue(atomOf(1, 3, 'add'))).toBe(1)
+    expect(expectedValue(atomOf(1, 3, 'add'))).toBe(4)
+  })
+
+  it('lets a carry land on the tens rod', () => {
+    expect(startValue(atomOf(7, 4, 'add'))).toBe(7)
+    expect(expectedValue(atomOf(7, 4, 'add'))).toBe(11)
+  })
+
+  it('puts a 1 on the tens rod when a subtraction has to borrow', () => {
+    expect(startValue(atomOf(3, 5, 'sub'))).toBe(13)
+    expect(expectedValue(atomOf(3, 5, 'sub'))).toBe(8)
+  })
+
+  it('does not borrow when the rod has enough', () => {
+    expect(startValue(atomOf(6, 4, 'sub'))).toBe(6)
+    expect(expectedValue(atomOf(6, 4, 'sub'))).toBe(2)
+  })
+
+  it('keeps every answer between 0 and 18', () => {
+    for (const atom of ATOMS) {
+      const value = expectedValue(atom)
+      expect(value).toBeGreaterThanOrEqual(0)
+      expect(value).toBeLessThanOrEqual(18)
+    }
   })
 })

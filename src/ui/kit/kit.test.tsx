@@ -58,6 +58,14 @@ describe('Button', () => {
     expect(styleOf(outline.getByTestId('o')).backgroundColor).toBeUndefined()
     expect(styleOf(outline.getByTestId('o')).borderColor).toBe(colors.accent)
   })
+
+  it('does nothing while disabled, and says so to VoiceOver', () => {
+    const onPress = jest.fn()
+    const { getByTestId } = render(<Button testID="b" label="こたえる" onPress={onPress} disabled />)
+    fireEvent.press(getByTestId('b'))
+    expect(onPress).not.toHaveBeenCalled()
+    expect(getByTestId('b').props.accessibilityState).toMatchObject({ disabled: true })
+  })
 })
 
 describe('Card', () => {

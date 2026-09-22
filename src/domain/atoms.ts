@@ -67,3 +67,17 @@ export function classify(atom: Atom): AtomClass {
   if (carries) return workingSteps > 1 ? 'both' : 'ten'
   return workingSteps > 1 ? 'five' : 'direct'
 }
+
+// A subtraction that would go below zero has to borrow from the tens rod, so
+// the problem starts with a 1 there: 3 − 5 is set as 13 − 5. Starting from 03
+// would leave nothing to borrow, and the answer would be −2, which neither
+// the keypad nor the beads can express.
+export function startValue(atom: Atom): number {
+  const borrows = atom.direction === 'sub' && atom.rodValue - atom.operand < 0
+  return borrows ? 10 + atom.rodValue : atom.rodValue
+}
+
+// What the soroban reads once the move is done: 7 + 4 → 11, 13 − 5 → 8.
+export function expectedValue(atom: Atom): number {
+  return startValue(atom) + (atom.direction === 'add' ? atom.operand : -atom.operand)
+}

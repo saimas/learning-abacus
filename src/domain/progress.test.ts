@@ -64,6 +64,16 @@ describe('recordAttempt', () => {
   })
 })
 
+describe('recordAttempt, untimed', () => {
+  it('promotes on accuracy and leaves latency and calibration untouched', () => {
+    let p = emptyProgress()
+    for (let i = 0; i < 5; i++) p = recordAttempt(p, '1+3', true, null, NOW)
+    expect(p.atoms['1+3']?.fade).toBe(1)
+    expect(p.atoms['1+3']?.recentLatencyMs).toEqual([])
+    expect(p.calibrationMs).toBe(DEFAULT_CALIBRATION_MS)
+  })
+})
+
 describe('markDayPracticed', () => {
   it('counts a new day', () => {
     const p = markDayPracticed(emptyProgress(), '2026-09-20')

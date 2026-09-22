@@ -139,3 +139,21 @@ describe('cellStateName', () => {
     expect(en.cellStateName('unseen')).toBe('unseen')
   })
 })
+
+describe('prompt', () => {
+  it('reads the start value, so a borrowing subtraction starts at 13', () => {
+    expect(ja.prompt(atom(3, 5, 'sub'))).toBe('13から5をひく。')
+    expect(ja.prompt(atom(7, 4, 'add'))).toBe('7に4をたす。')
+    expect(en.prompt(atom(3, 5, 'sub'))).toBe('The soroban shows 13. Subtract 5.')
+    expect(en.prompt(atom(7, 4, 'add'))).toBe('The soroban shows 7. Add 4.')
+  })
+})
+
+describe('rodName', () => {
+  it('names the ones and tens rods', () => {
+    expect(ja.rodName(0)).toBe('一の位')
+    expect(ja.rodName(1)).toBe('十の位')
+    expect(en.rodName(0)).toBe('ones rod')
+    expect(en.rodName(1)).toBe('tens rod')
+  })
+})

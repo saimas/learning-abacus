@@ -1,4 +1,4 @@
-import { coachingForFade, nextFadeLevel, visualForFade } from './fade'
+import { answerModeForFade, coachingForFade, nextFadeLevel, visualForFade } from './fade'
 
 describe('visualForFade', () => {
   it.each([
@@ -44,5 +44,15 @@ describe('nextFadeLevel', () => {
 
   it('never demotes below F0', () => {
     expect(nextFadeLevel(0, 0, 2)).toBe(0)
+  })
+})
+
+describe('answerModeForFade', () => {
+  it('answers with the beads while they are solid', () => {
+    for (const level of [0, 1, 2] as const) expect(answerModeForFade(level)).toBe('beads')
+  })
+
+  it('answers on the keypad once the beads fade', () => {
+    for (const level of [3, 4, 5, 6] as const) expect(answerModeForFade(level)).toBe('keypad')
   })
 })

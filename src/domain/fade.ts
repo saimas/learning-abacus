@@ -35,3 +35,12 @@ export function nextFadeLevel(
   if (consecutiveCorrect >= FADE_PROMOTE_STREAK) return Math.min(MAX_FADE, level + 1) as FadeLevel
   return level
 }
+
+export type AnswerMode = 'beads' | 'keypad'
+
+// While the beads are fully drawn (F0–F2) the learner answers by moving
+// them. Once they start to fade, the answer is typed from the image in the
+// learner's head. This is the only place that decides.
+export function answerModeForFade(level: FadeLevel): AnswerMode {
+  return visualForFade(level) === 'solid' ? 'beads' : 'keypad'
+}
