@@ -114,9 +114,19 @@ and nowhere else decides.
 
 `latencyMs` becomes `number | null` in `applyAttempt`, `recordAttempt` and
 `AttemptResult`. `null` means the attempt was untimed, which is the case for
-bead answers. For an untimed attempt:
+bead answers. The speed check is waived for an untimed attempt only while
+the atom's own level is still a bead level — `answerModeForFade(record.fade)
+=== 'beads'`, i.e. F0–F2. A session plan freezes each item's *presented*
+fade at session start (`src/domain/session.ts`; requeuing and refilling keep
+`item.fade`), so an atom that is promoted past F2 mid-session can still be
+shown with beads and answered untimed for the rest of that session; past F2
+those untimed correct answers must not keep advancing the streak, or a bead
+session could carry an atom through F3–F6 having never been timed once. So,
+for an untimed attempt:
 - a correct answer counts toward `consecutiveCorrect` without a latency
-  check, so five in a row promotes the fade level as before;
+  check only while the atom's own fade is F0–F2, so five in a row promotes
+  the fade level as before up through F3; at F3 and beyond an untimed
+  correct answer does not advance the streak;
 - `recentLatencyMs` is left unchanged, so nothing slow reaches the median or
   the calibration;
 - the box, `consecutiveWrong`, demotion and `dueAt` behave exactly as for a

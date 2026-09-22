@@ -1,5 +1,5 @@
 import type { AtomClass } from './atoms'
-import { nextFadeLevel, type FadeLevel } from './fade'
+import { answerModeForFade, nextFadeLevel, type FadeLevel } from './fade'
 
 export type AtomRecord = {
   atomId: string
@@ -84,9 +84,15 @@ export function isReflex(record: AtomRecord, cls: AtomClass, calibrationMs: numb
 }
 
 // `latencyMs` is null for an untimed attempt: one answered by moving the
-// beads (F0–F2). Speed only becomes a mastery signal once the work is mental,
-// so an untimed correct answer counts toward the promotion streak on accuracy
-// alone, and its time never reaches the median or the calibration.
+// beads (F0–F2). Speed only becomes a mastery signal once the work is
+// mental, so an untimed correct answer counts toward the promotion streak on
+// accuracy alone only while the atom's own level is still a bead level
+// (F0–F2); its time never reaches the median or the calibration either way.
+// A session plan freezes each item's presented fade at session start, so an
+// atom promoted past F2 mid-session can still be shown with beads and
+// answered untimed — at that point an untimed correct answer must not
+// advance the streak, or every bead answer would carry the atom straight
+// through the timed levels with no speed ever measured.
 export function applyAttempt(
   record: AtomRecord,
   cls: AtomClass,
@@ -96,7 +102,9 @@ export function applyAttempt(
   now: number,
 ): AtomRecord {
   const box = correct ? Math.min(LEITNER_MAX_BOX, record.box + 1) : 1
-  const fastEnough = correct && (latencyMs === null || latencyMs < latencyTargetMs(cls, calibrationMs))
+  const waived = latencyMs === null && answerModeForFade(record.fade) === 'beads'
+  const fastEnough =
+    correct && (waived || (latencyMs !== null && latencyMs < latencyTargetMs(cls, calibrationMs)))
   const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
   const consecutiveWrong = correct ? 0 : record.consecutiveWrong + 1
   const recentLatencyMs =

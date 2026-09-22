@@ -164,4 +164,30 @@ describe('untimed attempts', () => {
     record = applyAttempt(record, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
     expect(record.fade).toBe(1)
   })
+
+  // A session plan freezes each item's fade at plan time, so an atom
+  // promoted past F2 mid-session can still be *presented* with beads and
+  // answered untimed. Its own level has left the bead range, though, so
+  // those untimed answers must not keep climbing it through the timed
+  // levels on accuracy alone.
+  it('does not advance the fade streak for an untimed answer once the atom is past F2', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 3 }
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+    expect(record.consecutiveCorrect).toBe(0)
+  })
+
+  it('promotes an untimed atom through F0-F2 but not past it', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 2 }
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(3)
+  })
 })
