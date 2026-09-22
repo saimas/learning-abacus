@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native'
 import { emptyProgress, recordAttempt, type Progress } from '@/domain/progress'
 import { BLOCK_SECONDS, SESSION_SECONDS, selectSession } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
+import { setBeads } from './testing'
 
 // Every other runner test hands the component a hand-built SessionPlan
 // literal. That is exactly why two defects survived fifteen per-task
@@ -76,7 +77,13 @@ function playSession(stepMs: number, maxSubmits: number) {
     const prompt = getByTestId('prompt').props.children as string
     elapsedMs += stepMs
     clock.set(START + elapsedMs)
-    for (const digit of String(expectedFor(prompt))) fireEvent.press(getByTestId(`key-${digit}`))
+    const value = expectedFor(prompt)
+    if (queryByTestId('key-0') !== null) {
+      for (const digit of String(value)) fireEvent.press(getByTestId(`key-${digit}`))
+    } else {
+      // F0–F2: set the beads through each rod's VoiceOver adjust action.
+      setBeads(getByTestId, value)
+    }
     fireEvent.press(getByTestId('submit'))
     submits++
   }

@@ -67,7 +67,8 @@ describe('Session screen', () => {
   it('runs a session once hydrated', async () => {
     const { getByTestId } = renderSession()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
-    fireEvent.press(getByTestId('key-1'))
+    // A first-day question is at F0, so it is answered on the beads.
+    fireEvent.press(getByTestId('rod-1'), { nativeEvent: { locationY: 5 } })
     fireEvent.press(getByTestId('submit'))
     expect(getByTestId('prompt')).toBeTruthy()
   })

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { expectedValue, startValue, type Atom } from '@/domain/atoms'
-import type { FadeLevel } from '@/domain/fade'
+import { answerModeForFade, type FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
   type BlockKind,
@@ -9,9 +9,10 @@ import {
   type SessionItem,
   type SessionPlan,
 } from '@/domain/session'
-import { emptySoroban, setValue } from '@/domain/soroban'
+import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
+import { BEAD_MODE_SCALE } from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
 import { Button } from '@/ui/kit/Button'
 import { Seal } from '@/ui/kit/Seal'
@@ -134,6 +135,9 @@ export function SessionRunner({
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
   const [maru, setMaru] = useState(0)
+  // The soroban as the learner has moved it in bead mode. null means
+  // untouched: it shows the question's starting value.
+  const [beads, setBeads] = useState<Soroban | null>(null)
   const failures = useRef<Record<string, number>>({})
   const shownAt = useRef<number>(sessionStartedAt)
   const finished = useRef(false)
@@ -211,6 +215,12 @@ export function SessionRunner({
     direction: sign === 1 ? 'add' : 'sub',
   }
   const expected = expectedValue(atom)
+  const mode = answerModeForFade(current.fade)
+  const start = setValue(emptySoroban(2), startValue(atom))
+  const shownBeads = beads ?? start
+  // An untouched soroban is not an answer, the same rule as a blank keypad:
+  // a stray tap on こたえる must not burn one of the atom's attempts.
+  const moved = readValue(shownBeads) !== startValue(atom)
 
   function submit() {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
@@ -220,11 +230,12 @@ export function SessionRunner({
     // A blank or unparseable field is not an answer. Scoring it would mark
     // every n−n atom correct, and scoring it wrong would burn an attempt for
     // a mistap, so nothing happens at all.
-    const given = parseAnswer(answer)
+    const given = mode === 'beads' ? (moved ? readValue(shownBeads) : null) : parseAnswer(answer)
     if (given === null) return
 
     const t = now()
-    const latencyMs = Math.max(0, t - shownAt.current)
+    // Bead answers are untimed: speed only counts once the work is mental.
+    const latencyMs = mode === 'beads' ? null : Math.max(0, t - shownAt.current)
     const correct = given === expected
 
     onAttempt({ atomId: current.atomId, correct, latencyMs })
@@ -270,6 +281,7 @@ export function SessionRunner({
     }
 
     setAnswer('')
+    setBeads(null)
 
     if (timeUp || queue.length === 0) {
       // Either the deadline passed, or every item in the block has now
@@ -285,37 +297,88 @@ export function SessionRunner({
     shownAt.current = t
   }
 
+  const demonstration =
+    current.coaching === 'demo' ? (
+      // Spec §4: F0 is where the app demonstrates the move, so the
+      // substitution is shown *before* the answer, not after a miss.
+      <Text testID="demonstration" style={styles.demonstration}>
+        {strings.coaching(atom)}
+      </Text>
+    ) : null
+  const correctionCard =
+    correction !== null ? (
+      <CorrectionCard atom={correction.atom} expected={correction.expected} />
+    ) : null
+  const track = (
+    <SessionTrack
+      segments={segments}
+      label={strings.blockLabel(block.kind)}
+      quitLabel={strings.quitLabel}
+      onQuit={onQuit}
+    />
+  )
+
+  if (mode === 'beads') {
+    // Layout A: the soroban takes the keypad's place, enlarged and within
+    // thumb reach. Only the text above it scrolls, so the soroban and both
+    // buttons stay on screen even on a 375 × 667 phone.
+    return (
+      <View style={styles.practice}>
+        {track}
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          <Text testID="prompt" style={styles.prompt}>
+            {strings.prompt(atom)}
+          </Text>
+          {demonstration}
+          {correctionCard}
+        </ScrollView>
+        <View style={styles.sorobanWrap}>
+          <Abacus
+            soroban={shownBeads}
+            fade={current.fade}
+            scale={BEAD_MODE_SCALE}
+            onTapBead={(rodIndex, bead) => setBeads((previous) => tapSoroban(previous ?? start, rodIndex, bead))}
+            onAdjustRod={(rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))}
+          />
+          {maru > 0 ? (
+            <View style={styles.beadMaru}>
+              <Maru key={maru} />
+            </View>
+          ) : null}
+        </View>
+        <Text style={styles.hint}>{strings.beadHint}</Text>
+        <View style={styles.beadButtons}>
+          <View style={styles.resetSlot}>
+            <Button
+              testID="reset-beads"
+              variant="outline"
+              label={strings.resetBeads}
+              onPress={() => setBeads(null)}
+            />
+          </View>
+          <View style={styles.submitSlot}>
+            <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
+          </View>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.practice}>
-      <SessionTrack
-        segments={segments}
-        label={strings.blockLabel(block.kind)}
-        quitLabel={strings.quitLabel}
-        onQuit={onQuit}
-      />
+      {track}
       {/* R9: the keypad below is always fully visible, pinned at the bottom.
-          Everything here that can grow — the demonstration and the
-          correction card, on top of the soroban and prompt — scrolls
-          instead of pushing the keypad off a short screen. On a screen tall
-          enough to show it all, this scrolls nowhere and looks the same as
-          a plain View. */}
+          Everything here that can grow scrolls instead of pushing the keypad
+          off a short screen. */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
-          <Abacus soroban={setValue(emptySoroban(2), startValue(atom))} fade={current.fade} />
+          <Abacus soroban={start} fade={current.fade} />
         </View>
         <Text testID="prompt" style={styles.prompt}>
           {strings.prompt(atom)}
         </Text>
-        {/* Spec §4: F0 is where the app demonstrates the move, so the
-            substitution is shown *before* the answer, not after a miss. */}
-        {current.coaching === 'demo' ? (
-          <Text testID="demonstration" style={styles.demonstration}>
-            {strings.coaching(atom)}
-          </Text>
-        ) : null}
-        {correction !== null ? (
-          <CorrectionCard atom={correction.atom} expected={correction.expected} />
-        ) : null}
+        {demonstration}
+        {correctionCard}
       </ScrollView>
       <AnswerPad
         value={answer}
@@ -363,4 +426,10 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   summaryResult: { marginTop: space.sm, fontSize: fontSizes.body, color: colors.muted },
+  sorobanWrap: { alignSelf: 'center', marginTop: space.sm },
+  beadMaru: { position: 'absolute', top: -space.sm, right: -space.md },
+  hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
+  beadButtons: { flexDirection: 'row', gap: space.md, marginTop: space.md },
+  resetSlot: { flex: 1 },
+  submitSlot: { flex: 2 },
 })
