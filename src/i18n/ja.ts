@@ -33,11 +33,17 @@ const BLOCK_LABEL: Record<BlockKind, string> = {
 // Declared as a function rather than inline on the object: a member
 // referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
 // circular, which TypeScript rejects.
-function coaching(atom: Atom): string {
+// Everything in the coaching sentence before the steps themselves, so the
+// answer card can set each step apart and highlight the one being replayed.
+function coachingLead(atom: Atom): string {
   const name = TECHNIQUE[classify(atom)][atom.direction]
   const verb = atom.direction === 'add' ? 'たす' : 'ひく'
-  const move = `${atom.operand}を${verb} = ${describeSteps(atom)}`
+  const move = `${atom.operand}を${verb} = `
   return name === '' ? move : `${name}：${move}`
+}
+
+function coaching(atom: Atom): string {
+  return `${coachingLead(atom)}${describeSteps(atom)}`
 }
 
 // No plural branch — Japanese has none. The English catalog needs one.
@@ -80,10 +86,12 @@ export const ja = {
       ? `${startValue(atom)}に${atom.operand}をたす。`
       : `${startValue(atom)}から${atom.operand}をひく。`,
   coaching,
+  coachingLead,
   blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
   previousProblem: 'さっきの問題',
   correctionAnswer: (expected: number) => `こたえは ${expected}`,
   correct: '正解',
+  wrong: 'ちがいます',
   quitLabel: '練習をやめる',
   quitTitle: '練習をやめますか？',
   quitBody: 'ここまでの答えは記録されています。',
@@ -93,6 +101,10 @@ export const ja = {
   deleteKey: '1文字消す',
   beadHint: '珠をタップして動かします',
   resetBeads: 'もどす',
+  showAnswer: 'こたえを見る',
+  watchAgain: 'もう一度見る',
+  next: 'つぎへ',
+  replayStep: (step: number, total: number) => `${step} / ${total}`,
   rodName: (place: number): string => (place === 0 ? '一の位' : '十の位'),
 
   atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
