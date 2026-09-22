@@ -413,12 +413,15 @@ export function SessionRunner({
         activeStep={played === null ? undefined : played - 1}
       />
     ) : null
-  const replayStep =
-    played !== null ? (
-      <Text testID="replay-step" style={styles.hint}>
-        {strings.replayStep(played, decompose(atom).length)}
-      </Text>
-    ) : null
+  // The line under the soroban while a miss is reviewed: the replay's step
+  // count once a step has played, blank before that. It keeps its height the
+  // whole time, so the soroban does not jump as the hint gives way to it or
+  // the count appears.
+  const replayStep = (
+    <Text testID={played !== null ? 'replay-step' : undefined} style={styles.hint}>
+      {played !== null ? strings.replayStep(played, decompose(atom).length) : ' '}
+    </Text>
+  )
   // A replay takes the soroban over, drawn solid whatever the fade level, so
   // there is something to watch at F3+.
   const replayFade = replay.soroban !== null ? 0 : current.fade
@@ -543,7 +546,7 @@ export function SessionRunner({
           <Abacus soroban={replay.soroban ?? start} fade={replayFade} />
           {stamp(110)}
         </View>
-        {replayStep}
+        {review !== null ? replayStep : null}
         <Text testID="prompt" style={styles.prompt}>
           {strings.prompt(atom)}
         </Text>
