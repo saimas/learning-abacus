@@ -1,0 +1,76 @@
+<style>
+  .row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start; }
+  .frame-box { background: #e5e5e7; border-radius: 12px; padding: 1.25rem 0; display: flex; justify-content: center; }
+  .cap { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: #555; }
+  .cap b { color: #111; }
+  .phone { --bg:#F4EEE2; --ink:#2A2320; --muted:#7A6D61; --accent:#B5412C; --card:#FBF7EF; --line:#E4D8C3; --disp:"Hiragino Mincho ProN","Yu Mincho",serif;
+    width: 280px; height: 600px; border-radius: 42px; overflow: hidden; position: relative; box-shadow: 0 0 0 9px #111;
+    background: var(--bg); color: var(--ink); font-family: "Hiragino Sans", sans-serif; display: flex; flex-direction: column; }
+  .status { height: 46px; flex: none; }
+  .island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; background: #000; border-radius: 20px; z-index: 3; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 2px 18px 16px; }
+  .icons { display: flex; justify-content: flex-end; gap: 14px; font-size: 15px; }
+  .title { font-family: var(--disp); font-weight: 600; font-size: 25px; margin-top: 4px; }
+  .who { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .seal { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #FFF8F0; font-family: var(--disp); font-size: 12px; display: grid; place-items: center; line-height: 1.1; text-align: center; }
+  .who b { font-size: 13px; } .who span { display: block; font-size: 11px; color: var(--muted); }
+  .bar { display: flex; gap: 3px; margin-top: 14px; } .bar i { height: 4px; border-radius: 2px; background: #D9CDB8; }
+  .barlab { display: flex; font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .map { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; }
+  .map .h { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
+  .map .h b { font-family: var(--disp); font-size: 14px; color: var(--ink); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 2px; margin-top: 7px; }
+  .grid i { aspect-ratio: 1; border-radius: 2px; background: #E6DCCB; } .grid i.l { background: #E0BE7E; }
+  .spacer { flex: 1; }
+  .btn { height: 48px; border-radius: 14px; display: grid; place-items: center; font-weight: 600; font-size: 14px; letter-spacing: .06em; border: 1.5px solid var(--accent); color: var(--accent); }
+  .dim { position: absolute; inset: 0; background: rgba(42,35,32,.38); z-index: 1; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg); border-radius: 22px 22px 0 0; padding: 10px 16px 22px; z-index: 2; }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: #CFC3AE; margin: 0 auto 10px; }
+  .sheet h4 { font-family: var(--disp); font-size: 17px; margin: 0 0 6px; font-weight: 600; }
+  .choice { display: flex; justify-content: space-between; align-items: center; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-top: 7px; font-size: 16px; color: var(--muted); }
+  .choice b { font-size: 14px; color: var(--ink); } .choice span { display: block; font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+  .choice.main { background: var(--accent); border-color: var(--accent); color: #FFE7DF; box-shadow: 0 2px 0 #8E3322; } .choice.main b { color: #FFF8F0; } .choice.main span { color: #FFE7DF; }
+  .choice.off { opacity: .45; }
+</style>
+
+<h2>Choosing what to practise — the chooser sheet</h2>
+<p class="subtitle">Approved direction: C. Day-2 example — 3 moves are due, 集中 has today's new moves, 暗算 has nothing yet.</p>
+
+<div class="row3">
+  <div>
+    <div class="frame-box"><div class="phone"><div class="island"></div><div class="status"></div><div class="screen">
+      <div class="icons">▦ ⚙︎</div>
+      <div class="title">今日の五分</div>
+      <div class="who"><div class="seal">2<br>日</div><div><b>練習 2日間</b><span>今日は練習しました</span></div></div>
+      <div class="bar"><i style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i></div>
+      <div class="barlab"><span style="flex:45">準備</span><span style="flex:120">集中</span><span style="flex:90">暗算</span></div>
+      <div class="map"><div class="h"><span>暗算できる動き</span><b>0 / 180</b></div><div class="grid">
+        <i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i class="l"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div></div>
+      <div class="spacer"></div>
+      <div class="btn">もう一度練習する</div>
+    </div></div></div>
+    <p class="cap"><b>1 · Home, unchanged.</b> The start button keeps its label (はじめる 5分 before today's session, もう一度練習する after). Tapping it opens the chooser instead of starting straight away.</p>
+  </div>
+
+  <div>
+    <div class="frame-box"><div class="phone"><div class="island"></div><div class="status"></div><div class="screen">
+      <div class="icons">▦ ⚙︎</div>
+      <div class="title">今日の五分</div>
+      <div class="who"><div class="seal">2<br>日</div><div><b>練習 2日間</b><span>今日は練習しました</span></div></div>
+      <div class="bar"><i style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i></div>
+      <div class="barlab"><span style="flex:45">準備</span><span style="flex:120">集中</span><span style="flex:90">暗算</span></div>
+      <div class="spacer"></div>
+      <div class="dim"></div>
+      <div class="sheet"><div class="grab"></div><h4>なにを練習しますか</h4>
+        <div class="choice main"><div><b>ぜんぶ</b><span>準備 → 集中 → 暗算・5分</span></div>›</div>
+        <div class="choice"><div><b>準備だけ</b><span>おさらい・3つの動き</span></div>›</div>
+        <div class="choice"><div><b>集中だけ</b><span>新しい動きと苦手な動き</span></div>›</div>
+        <div class="choice off"><div><b>暗算だけ</b><span>今はありません</span></div></div>
+      </div>
+    </div></div></div>
+    <p class="cap"><b>2 · The chooser.</b> A sheet slides up over a dimmed Home. ぜんぶ — the full session exactly as today — leads. Each part below practises only that part for the whole practice time, then まとめ. A part with nothing in it reads 今はありません and cannot be tapped. Tapping the dimmed area closes the sheet.</p>
+  </div>
+</div>
