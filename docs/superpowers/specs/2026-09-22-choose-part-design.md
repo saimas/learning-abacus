@@ -1,7 +1,7 @@
 # learning-abacus — Choosing what to practise
 
 Date: 2026-09-22
-Status: Approved design, pre-implementation
+Status: Implemented on feature/choose-part (TestFlight build 8)
 
 ## 1. Goal and decisions
 
