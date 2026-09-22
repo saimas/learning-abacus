@@ -50,7 +50,9 @@ describe('useMoveReplay', () => {
   it('stays on the last state, with nothing left pending', () => {
     const { result, shown } = render()
     act(() => result.current.play(states))
-    act(() => jest.advanceTimersByTime(10 * 900))
+    // Each step is scheduled by the render that shows the one before it, so
+    // time passes a step at a time, with a render in between, as on a device.
+    for (let i = 0; i < 10; i++) act(() => jest.advanceTimersByTime(900))
     expect(shown()).toBe(15)
     expect(result.current.step).toBe(2)
     expect(jest.getTimerCount()).toBe(0)
