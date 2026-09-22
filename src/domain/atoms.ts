@@ -1,4 +1,4 @@
-import type { RodStep } from './soroban'
+import { applyStep, emptySoroban, setValue, type RodStep, type Soroban } from './soroban'
 
 export type Direction = 'add' | 'sub'
 export type AtomClass = 'direct' | 'five' | 'ten' | 'both'
@@ -80,4 +80,18 @@ export function startValue(atom: Atom): number {
 // What the soroban reads once the move is done: 7 + 4 → 11, 13 − 5 → 8.
 export function expectedValue(atom: Atom): number {
   return startValue(atom) + (atom.direction === 'add' ? atom.operand : -atom.operand)
+}
+
+// The soroban at each point of the move, for replaying it: the start, then
+// the state after each step of decompose(). 7 + 8 → 07, 17, 15. The session
+// soroban has two rods; the ones rod (index 1) is the one worked, and a
+// carry or borrow lands on the tens rod to its left.
+export function moveStates(atom: Atom): Soroban[] {
+  let current = setValue(emptySoroban(2), startValue(atom))
+  const states = [current]
+  for (const step of decompose(atom)) {
+    current = applyStep(current, step, 1)
+    states.push(current)
+  }
+  return states
 }

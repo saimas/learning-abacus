@@ -1,4 +1,5 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
+import { describeSteps } from '@/domain/explain'
 import { en } from './en'
 import { ja } from './ja'
 import { LOCALES } from './locale'
@@ -155,5 +156,40 @@ describe('rodName', () => {
     expect(ja.rodName(1)).toBe('十の位')
     expect(en.rodName(0)).toBe('ones rod')
     expect(en.rodName(1)).toBe('tens rod')
+  })
+})
+
+// Spec (miss review) §5: the answer card prints the lead, then each step as
+// its own span, and has to read exactly as the coaching sentence does.
+describe('coachingLead', () => {
+  it('is the coaching sentence up to its steps, for all 180 atoms in both locales', () => {
+    for (const a of ATOMS) {
+      expect(`${ja.coachingLead(a)}${describeSteps(a)}`).toBe(ja.coaching(a))
+      expect(`${en.coachingLead(a)}${describeSteps(a)}`).toBe(en.coaching(a))
+    }
+  })
+
+  it('names the technique and the move', () => {
+    expect(ja.coachingLead(atom(7, 8, 'add'))).toBe('十の繰上：8をたす = ')
+    expect(ja.coachingLead(atom(1, 3, 'add'))).toBe('3をたす = ')
+    expect(en.coachingLead(atom(7, 8, 'add'))).toBe('Add 8 = ')
+  })
+})
+
+describe('the review step', () => {
+  it('labels its buttons and announces a miss', () => {
+    expect(ja.showAnswer).toBe('こたえを見る')
+    expect(ja.watchAgain).toBe('もう一度見る')
+    expect(ja.next).toBe('つぎへ')
+    expect(ja.wrong).toBe('ちがいます')
+    expect(en.showAnswer).toBe('See answer')
+    expect(en.watchAgain).toBe('Watch again')
+    expect(en.next).toBe('Next')
+    expect(en.wrong).toBe('Not quite')
+  })
+
+  it('counts the steps of a replay', () => {
+    expect(ja.replayStep(1, 2)).toBe('1 / 2')
+    expect(en.replayStep(1, 2)).toBe('1 / 2')
   })
 })

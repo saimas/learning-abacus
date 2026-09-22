@@ -1,26 +1,44 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Fragment } from 'react'
+import { StyleSheet, Text } from 'react-native'
 import type { Atom } from '@/domain/atoms'
+import { describeStepParts } from '@/domain/explain'
 import { useStrings } from '@/i18n'
 import { Card } from '@/ui/kit/Card'
-import { colors, fonts, fontSizes, space } from '@/ui/theme'
+import { colors, fonts, space } from '@/ui/theme'
 
-// The runner re-queues a miss at the back of the block, so this card is on
-// screen under a *different* question. It has to say which one it corrects.
-export function CorrectionCard({ atom, expected }: { atom: Atom; expected: number }) {
+// The answer card for the missed question still on screen: the answer, and
+// the substitution that reaches it. `activeStep` indexes
+// describeStepParts(atom): the step a replay has just played.
+export function CorrectionCard({
+  atom,
+  expected,
+  activeStep,
+}: {
+  atom: Atom
+  expected: number
+  activeStep?: number
+}) {
   const strings = useStrings()
   return (
     <Card accent testID="correction" style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.tag}>{strings.previousProblem}</Text>
-        <Text testID="correction-problem" style={styles.problem}>
-          {strings.prompt(atom)}
-        </Text>
-      </View>
       <Text testID="correction-answer" style={styles.answer}>
         {strings.correctionAnswer(expected)}
       </Text>
+      {/* Reads exactly as strings.coaching(atom); each step is its own span
+          so a replay can point at the one it has just played. */}
       <Text testID="correction-coaching" style={styles.coaching}>
-        {strings.coaching(atom)}
+        {strings.coachingLead(atom)}
+        {describeStepParts(atom).map((part, index) => (
+          <Fragment key={index}>
+            {index > 0 ? ' ' : null}
+            <Text
+              testID={`correction-step-${index}`}
+              style={index === activeStep ? styles.activeStep : undefined}
+            >
+              {part}
+            </Text>
+          </Fragment>
+        ))}
       </Text>
     </Card>
   )
@@ -28,9 +46,7 @@ export function CorrectionCard({ atom, expected }: { atom: Atom; expected: numbe
 
 const styles = StyleSheet.create({
   card: { marginTop: space.md, paddingVertical: space.sm },
-  header: { flexDirection: 'row', gap: space.sm, alignItems: 'baseline' },
-  tag: { fontSize: fontSizes.caption, color: colors.accent, fontWeight: '600' },
-  problem: { fontSize: fontSizes.caption, color: colors.muted },
-  answer: { marginTop: 2, fontFamily: fonts.display, fontSize: 17, color: colors.ink },
+  answer: { fontFamily: fonts.display, fontSize: 17, color: colors.ink },
   coaching: { marginTop: 2, fontSize: 12, color: colors.muted },
+  activeStep: { color: colors.accent, fontWeight: '700', backgroundColor: colors.accentSoft },
 })

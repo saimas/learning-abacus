@@ -21,9 +21,13 @@ const BLOCK_LABEL: Record<BlockKind, string> = {
 
 // English names no technique: this is the wording `explainMove` has today,
 // moved rather than rewritten. Only `ja.coaching` consults `classify`.
-function coaching(atom: Atom): string {
+function coachingLead(atom: Atom): string {
   const verb = atom.direction === 'add' ? 'Add' : 'Subtract'
-  return `${verb} ${atom.operand} = ${describeSteps(atom)}`
+  return `${verb} ${atom.operand} = `
+}
+
+function coaching(atom: Atom): string {
+  return `${coachingLead(atom)}${describeSteps(atom)}`
 }
 
 // Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
@@ -65,10 +69,11 @@ export const en: Strings = {
   prompt: (atom) =>
     `The soroban shows ${startValue(atom)}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
   coaching,
+  coachingLead,
   blockLabel: (kind) => BLOCK_LABEL[kind],
-  previousProblem: 'Previous problem',
   correctionAnswer: (expected) => `The answer is ${expected}`,
   correct: 'Correct',
+  wrong: 'Not quite',
   quitLabel: 'Stop practice',
   quitTitle: 'Stop practising?',
   quitBody: 'Your answers so far are saved.',
@@ -78,6 +83,10 @@ export const en: Strings = {
   deleteKey: 'Delete',
   beadHint: 'Tap the beads to move them',
   resetBeads: 'Reset',
+  showAnswer: 'See answer',
+  watchAgain: 'Watch again',
+  next: 'Next',
+  replayStep: (step, total) => `${step} / ${total}`,
   rodName: (place): string => (place === 0 ? 'ones rod' : 'tens rod'),
 
   atomSummary: (mental, total) => `${mental} of ${total} moves are mental`,

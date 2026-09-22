@@ -1,5 +1,5 @@
-import { atomId, classify, type Atom, type Direction } from './atoms'
-import { describeSteps } from './explain'
+import { ATOMS, atomId, classify, decompose, type Atom, type Direction } from './atoms'
+import { describeStepParts, describeSteps } from './explain'
 
 function atom(rodValue: number, operand: number, direction: Direction): Atom {
   return { id: atomId(rodValue, operand, direction), rodValue, operand, direction }
@@ -40,5 +40,19 @@ describe('describeSteps', () => {
     const a = atom(2, 6, 'sub')
     expect(classify(a)).toBe('both')
     expect(describeSteps(a)).toBe('−10 + 5 − 1')
+  })
+})
+
+describe('describeStepParts', () => {
+  it('gives each step its own part, signed as describeSteps reads it', () => {
+    expect(describeStepParts(atom(1, 3, 'add'))).toEqual(['+3'])
+    expect(describeStepParts(atom(7, 8, 'add'))).toEqual(['+10', '− 2'])
+    expect(describeStepParts(atom(2, 6, 'sub'))).toEqual(['−10', '+ 5', '− 1'])
+  })
+
+  it('has one part per step of the move, for every atom', () => {
+    for (const a of ATOMS) {
+      expect(describeStepParts(a)).toHaveLength(decompose(a).length)
+    }
   })
 })
