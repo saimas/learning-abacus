@@ -7,7 +7,16 @@ import { currentStage, type Progress } from './progress'
 export type BlockKind = 'warmup' | 'focus' | 'faderep' | 'close'
 export type SessionItem = { atomId: string; fade: FadeLevel; coaching: Coaching }
 export type SessionBlock = { kind: BlockKind; seconds: number; items: SessionItem[] }
-export type SessionPlan = { blocks: SessionBlock[]; totalSeconds: number }
+export type SessionPlan = {
+  blocks: SessionBlock[]
+  totalSeconds: number
+  // The next up-to-EXTRA_NEW_ATOMS unseen atoms after today's fresh ones, in
+  // curriculum order. Optional so the many hand-built plan literals across
+  // the test suite need no change — selectSession always sets it. The runner
+  // brings these in one at a time once every atom currently in the focus
+  // block is secure (SessionRunner.submit).
+  reserve?: SessionItem[]
+}
 
 export const BLOCK_SECONDS: Record<BlockKind, number> = {
   warmup: 45,
@@ -18,6 +27,12 @@ export const BLOCK_SECONDS: Record<BlockKind, number> = {
 
 export const SESSION_SECONDS = 285
 export const NEW_ATOMS_PER_DAY = 2
+// A first-day (or any-day) plan whose warm-up and fade-rep blocks are empty
+// leaves the focus block cycling just NEW_ATOMS_PER_DAY atoms for the whole
+// block's time. This reserve of not-yet-introduced atoms gives the runner
+// somewhere to go once those are secure, so the session keeps moving instead
+// of just repeating them. See SessionRunner's join logic in submit().
+export const EXTRA_NEW_ATOMS = 4
 export const MAX_ATTEMPTS_PER_ATOM = 3
 
 const WARMUP_ITEMS = 10
@@ -55,6 +70,14 @@ export function selectSession(progress: Progress, now: number): SessionPlan {
   const focusAtoms = [...fresh, ...shaky].slice(0, Math.max(FOCUS_ITEMS, fresh.length))
   const focus = focusAtoms.map((atom) => item(atom.id, progress.atoms[atom.id]?.fade ?? 0))
 
+  // Held back rather than added to the plan up front: each one only enters
+  // play once the runner decides the ones already in the focus block are
+  // secure. Always at fade 0 — an atom that has not been introduced yet has
+  // nothing else it could be.
+  const reserve = unseen
+    .slice(NEW_ATOMS_PER_DAY, NEW_ATOMS_PER_DAY + EXTRA_NEW_ATOMS)
+    .map((atom) => item(atom.id, 0))
+
   const faderep = seen
     .filter((atom) => {
       const record = progress.atoms[atom.id]
@@ -75,5 +98,6 @@ export function selectSession(progress: Progress, now: number): SessionPlan {
       { kind: 'close', seconds: BLOCK_SECONDS.close, items: [] },
     ],
     totalSeconds: SESSION_SECONDS,
+    reserve,
   }
 }

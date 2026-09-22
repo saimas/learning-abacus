@@ -67,6 +67,24 @@ function answer(getByTestId: ReturnType<typeof render>['getByTestId'], value: st
   fireEvent.press(getByTestId('submit'))
 }
 
+// Reads the expected value straight off the prompt text, so a reserve test
+// can answer whichever atom happens to be current without hard-coding a
+// submit order the runner's cycling only happens to produce today.
+function expectedFor(prompt: string): number {
+  const match = /^(\d{1,2})(?:に|から)(\d)を(たす|ひく)。$/.exec(prompt)
+  if (match === null) throw new Error(`unexpected prompt: ${prompt}`)
+  const [, rod, operand, verb] = match
+  if (rod === undefined || operand === undefined || verb === undefined) {
+    throw new Error(`unexpected prompt: ${prompt}`)
+  }
+  return Number(rod) + (verb === 'たす' ? 1 : -1) * Number(operand)
+}
+
+function answerCorrectly(getByTestId: ReturnType<typeof render>['getByTestId']) {
+  const prompt = getByTestId('prompt').props.children as string
+  answer(getByTestId, String(expectedFor(prompt)))
+}
+
 const basicPlan: SessionPlan = {
   blocks: [
     { kind: 'focus', seconds: 120, items: [item('3+4')] },
@@ -569,5 +587,118 @@ describe('SessionRunner answering with beads', () => {
     const { getByTestId } = renderRunner(twoItems, autoClock())
     answer(getByTestId, '9')
     expect(getByTestId('correction-problem').props.children).toBe('3に4をたす。')
+  })
+})
+
+describe('SessionRunner bringing in reserve atoms', () => {
+  const focusPlan = (reserve?: SessionItem[]): SessionPlan => ({
+    blocks: [
+      { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+    reserve,
+  })
+
+  it('makes the first reserve atom the very next prompt once every focus atom has five right in a row', () => {
+    const plan = focusPlan([item('5+3')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    while (correctCount('3+4') < 5 || correctCount('2+3') < 5) answerCorrectly(getByTestId)
+
+    expect(getByTestId('prompt').props.children).toBe('5に3をたす。')
+    answerCorrectly(getByTestId)
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ atomId: '5+3', correct: true }))
+  })
+
+  it('resets a reserve atom on a wrong answer, delaying it joining', () => {
+    const plan = focusPlan([item('5+3')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    // Run until one focus atom reaches a streak of five. The other is not
+    // yet due for its own fifth — joining needs both.
+    while (correctCount('3+4') < 5 && correctCount('2+3') < 5) answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
+
+    // Whichever atom is now current is due for its own fifth in a row.
+    // Answering it wrong (99 cannot be right for either atom) resets that
+    // streak instead, so the reserve atom must not join here.
+    answer(getByTestId, '99')
+    expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
+
+    // Rebuilding the reset streak takes real work — if a wrong answer failed
+    // to reset it, one more correct answer would be enough to join.
+    let guard = 0
+    while (getByTestId('prompt').props.children !== '5に3をたす。') {
+      answerCorrectly(getByTestId)
+      guard++
+      if (guard > 40) throw new Error('reserve atom never joined')
+    }
+    expect(guard).toBeGreaterThanOrEqual(5)
+  })
+
+  it('joins the reserve one atom at a time', () => {
+    const plan = focusPlan([item('5+3'), item('6+2')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    while (correctCount('3+4') < 5 || correctCount('2+3') < 5) answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).toBe('5に3をたす。')
+
+    // The second reserve atom must not join until the first also has five in
+    // a row, even though the original two are already well past five.
+    let guard = 0
+    while (getByTestId('prompt').props.children !== '6に2をたす。') {
+      answerCorrectly(getByTestId)
+      guard++
+      if (guard > 60) throw new Error('second reserve atom never joined')
+    }
+    expect(correctCount('5+3')).toBeGreaterThanOrEqual(5)
+  })
+
+  it('never joins a reserve atom into a warm-up block', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'warmup', seconds: 120, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+      reserve: [item('5+3')],
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    for (let i = 0; i < 20; i++) {
+      answerCorrectly(getByTestId)
+      expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
+    }
+    expect(correctCount('3+4')).toBeGreaterThanOrEqual(5)
+    expect(correctCount('2+3')).toBeGreaterThanOrEqual(5)
+  })
+
+  it('joins no more atoms than the reserve holds', () => {
+    const plan = focusPlan([item('5+3')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+
+    for (let i = 0; i < 40; i++) answerCorrectly(getByTestId)
+
+    const seenAtoms = new Set(onAttempt.mock.calls.map((call) => call[0].atomId))
+    expect(seenAtoms).toEqual(new Set(['3+4', '2+3', '5+3']))
+  })
+
+  it('behaves exactly as before when the plan has no reserve', () => {
+    const plan = focusPlan(undefined)
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+
+    for (let i = 0; i < 20; i++) answerCorrectly(getByTestId)
+
+    const seenAtoms = new Set(onAttempt.mock.calls.map((call) => call[0].atomId))
+    expect(seenAtoms).toEqual(new Set(['3+4', '2+3']))
   })
 })

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { expectedValue, startValue, type Atom } from '@/domain/atoms'
-import { answerModeForFade, type FadeLevel } from '@/domain/fade'
+import { answerModeForFade, FADE_PROMOTE_STREAK, type FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
   type BlockKind,
@@ -46,6 +46,18 @@ function parseAtomId(atomId: string): { rodValue: number; operand: number; sign:
 // session are gone for good — they must not come back on the next cycle.
 function liveItems(items: SessionItem[], failures: Record<string, number>): SessionItem[] {
   return items.filter((item) => (failures[item.atomId] ?? 0) < MAX_ATTEMPTS_PER_ATOM)
+}
+
+// A joined reserve atom's id is never one already in block.items, but this
+// keeps the "is everything in play secure" check honest even if that
+// invariant ever slips.
+function dedupeByAtomId(items: SessionItem[]): SessionItem[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    if (seen.has(item.atomId)) return false
+    seen.add(item.atomId)
+    return true
+  })
 }
 
 // Block k's deadline is the session start plus the running total of every
@@ -139,6 +151,14 @@ export function SessionRunner({
   // untouched: it shows the question's starting value.
   const [beads, setBeads] = useState<Soroban | null>(null)
   const failures = useRef<Record<string, number>>({})
+  // Consecutive-correct streak per atom this session, independent of the
+  // Leitner box and fade ladder — it only gates when the next reserve atom
+  // is secure enough to join. A wrong answer resets its atom's streak.
+  const streaks = useRef<Record<string, number>>({})
+  // Reserve atoms that have joined the focus block so far, in join order.
+  // Only the focus block's refill ever reads this; warm-up and fade rep are
+  // untouched by it.
+  const [joined, setJoined] = useState<SessionItem[]>([])
   const shownAt = useRef<number>(sessionStartedAt)
   const finished = useRef(false)
 
@@ -251,6 +271,9 @@ export function SessionRunner({
       setMaru(0)
     }
 
+    // Extends the atom's streak on a right answer, breaks it on a wrong one.
+    streaks.current[current.atomId] = correct ? (streaks.current[current.atomId] ?? 0) + 1 : 0
+
     let queue = state.queue.slice(1)
     let nextCorrection: Correction | null = null
 
@@ -271,13 +294,35 @@ export function SessionRunner({
       // At MAX_ATTEMPTS_PER_ATOM the item is simply not requeued — dropped.
     }
 
+    // Bring in the next reserve atom once every atom currently in the focus
+    // block — including this one, just answered — has a full streak. One at
+    // a time: the item after this one only becomes "in play" once this one
+    // has joined, so it cannot join in the same submit.
+    let joinedNow = joined
+    if (correct && block.kind === 'focus') {
+      const inPlay = dedupeByAtomId(liveItems([...block.items, ...joined], failures.current))
+      const secure = inPlay.length > 0 && inPlay.every((it) => (streaks.current[it.atomId] ?? 0) >= FADE_PROMOTE_STREAK)
+      const newcomer = plan.reserve?.[joined.length]
+      if (secure && newcomer !== undefined) {
+        joinedNow = [...joined, newcomer]
+        // The learner meets it with its demonstration right away, not
+        // somewhere later in the cycle.
+        queue = [newcomer, ...queue]
+      }
+    }
+    if (joinedNow !== joined) setJoined(joinedNow)
+
     const deadline = effectiveDeadline(plan.blocks, deadlines, state.blockIndex, failures.current)
     const timeUp = deadline !== undefined && t >= deadline
 
     if (!timeUp && queue.length === 0) {
       // The block's queue drained mid-cycle with time still on the clock:
       // start it again. Repeated presentation within a block is deliberate.
-      queue = liveItems(block.items, failures.current)
+      // The focus block's cycle also includes whatever has joined from the
+      // reserve so far; other blocks never gain items, so they still cycle
+      // from their own items exactly as before.
+      const items = block.kind === 'focus' ? [...block.items, ...joinedNow] : block.items
+      queue = liveItems(items, failures.current)
     }
 
     setAnswer('')

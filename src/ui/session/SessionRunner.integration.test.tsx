@@ -134,12 +134,29 @@ describe('selectSession composed with SessionRunner', () => {
     expect(drilled.length).toBeGreaterThan(0)
     // Every submit reached the domain, not just the ones at a block boundary.
     expect(session.attempts()).toBe(session.submits)
-    // This session's two focus atoms are never due, so the plan presents them
-    // with beads (fade frozen at F0 for the whole session — see session.ts).
-    // Untimed bead answers promote on accuracy alone through F0-F2, so both
-    // climb to F3, but no further: past F2 an atom needs a timed answer to
-    // advance, and nothing here ever produces one. Every drilled atom lands
-    // on exactly F3.
-    expect(drilled.every((record) => record.fade === 3)).toBe(true)
+    // The two starting focus atoms are drilled from the very first answer,
+    // so an accurate learner always carries them all the way to F3 (see
+    // below for why F3 is the ceiling this session can reach).
+    const startingAtomIds = session.plan.blocks.find((b) => b.kind === 'focus')?.items.map((i) => i.atomId) ?? []
+    expect(startingAtomIds.length).toBeGreaterThan(0)
+    for (const atomId of startingAtomIds) {
+      expect(progress.atoms[atomId]?.fade).toBe(3)
+    }
+    // A first-day session no longer just cycles those two starting atoms for
+    // the whole five minutes: once they are secure, the reserve brings in
+    // more (see session.ts's reserve and SessionRunner's join logic), so a
+    // brisk learner drills at least a third atom too.
+    expect(drilled.length).toBeGreaterThan(startingAtomIds.length)
+    // This session's atoms are never due, so the plan presents them all with
+    // beads (fade frozen at F0 until promoted — see session.ts). Untimed bead
+    // answers promote on accuracy alone through F0-F2, so every one climbs to
+    // F3, but no further: past F2 an atom needs a timed answer to advance,
+    // and nothing here ever produces one. A late joiner may not have had time
+    // to reach F3 before the session ends, so every drilled atom lands
+    // somewhere between F0 (just joined) and F3 (the ceiling), never beyond.
+    for (const record of drilled) {
+      expect(record.fade).toBeGreaterThanOrEqual(0)
+      expect(record.fade).toBeLessThanOrEqual(3)
+    }
   })
 })
