@@ -2,7 +2,7 @@ import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
-import type { BlockKind } from '@/domain/session'
+import type { BlockKind, PracticePart } from '@/domain/session'
 import type { Strings } from './ja'
 
 const CELL_STATE: Record<CellState, string> = {
@@ -17,6 +17,17 @@ const BLOCK_LABEL: Record<BlockKind, string> = {
   focus: 'Focus',
   faderep: 'Fade',
   close: 'Close',
+}
+
+function moves(count: number): string {
+  return `${count} ${count === 1 ? 'move' : 'moves'}`
+}
+
+// What each part holds, as the chooser's detail line.
+const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
+  warmup: (count) => `Review · ${moves(count)}`,
+  focus: () => 'New and shaky moves',
+  faderep: (count) => `Fading the beads · ${moves(count)}`,
 }
 
 // English names no technique: this is the wording `explainMove` has today,
@@ -54,6 +65,12 @@ export const en: Strings = {
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
   practiseAgain: 'Practise again',
+  chooseTitle: 'What would you like to practise?',
+  chooseAll: 'Everything',
+  chooseAllDetail: `${BLOCK_LABEL.warmup} → ${BLOCK_LABEL.focus} → ${BLOCK_LABEL.faderep} · 5 min`,
+  chooseOnly: (part) => `${BLOCK_LABEL[part]} only`,
+  chooseDetail: (part, count) => CHOOSE_DETAIL[part](count),
+  chooseEmpty: 'Nothing right now',
   mapPreviewTitle: 'Moves you can do mentally',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
