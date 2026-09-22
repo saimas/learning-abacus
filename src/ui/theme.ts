@@ -24,6 +24,8 @@ export const colors = {
   bead: '#3A2014',
   beadShade: '#24130B',
   shadow: '#3C2314',
+  // Dims Home behind the practice chooser: ink at a little over a third.
+  scrim: 'rgba(42, 35, 32, 0.38)',
 } as const
 
 // Lightness only, darkening as a move is learned, so the map reads under
