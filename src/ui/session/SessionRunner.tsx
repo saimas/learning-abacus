@@ -21,7 +21,8 @@ import { CorrectionCard } from './CorrectionCard'
 import { Maru } from './Maru'
 import { SessionTrack } from './SessionTrack'
 
-export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number }
+// latencyMs is null for an untimed attempt (answered with the beads).
+export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number | null }
 
 type RunnerState = { blockIndex: number; queue: SessionItem[] }
 

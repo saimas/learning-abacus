@@ -129,3 +129,39 @@ describe('applyAttempt', () => {
     expect(record.box).toBe(2)
   })
 })
+
+describe('untimed attempts', () => {
+  it('counts an untimed correct answer toward the streak with no speed check', () => {
+    const next = applyAttempt(newRecord('3+4', NOW), 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.consecutiveCorrect).toBe(1)
+  })
+
+  it('promotes the fade level after five untimed correct answers', () => {
+    let record: AtomRecord = newRecord('3+4', NOW)
+    for (let i = 0; i < 5; i++) {
+      record = applyAttempt(record, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    }
+    expect(record.fade).toBe(1)
+  })
+
+  it('records no latency for an untimed attempt', () => {
+    const before: AtomRecord = { ...newRecord('3+4', NOW), recentLatencyMs: [800, 900] }
+    const next = applyAttempt(before, 'direct', true, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.recentLatencyMs).toEqual([800, 900])
+  })
+
+  it('still resets the box and counts the miss when an untimed answer is wrong', () => {
+    const strong: AtomRecord = { ...newRecord('3+4', NOW), box: 4, consecutiveCorrect: 3 }
+    const next = applyAttempt(strong, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    expect(next.box).toBe(1)
+    expect(next.consecutiveCorrect).toBe(0)
+    expect(next.consecutiveWrong).toBe(1)
+  })
+
+  it('demotes after two untimed misses in a row', () => {
+    let record: AtomRecord = { ...newRecord('3+4', NOW), fade: 2 }
+    record = applyAttempt(record, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    record = applyAttempt(record, 'direct', false, null, CLASS_TARGET_MS.direct, NOW)
+    expect(record.fade).toBe(1)
+  })
+})

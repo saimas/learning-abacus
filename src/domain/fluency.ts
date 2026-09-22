@@ -83,19 +83,26 @@ export function isReflex(record: AtomRecord, cls: AtomClass, calibrationMs: numb
   return median < latencyTargetMs(cls, calibrationMs)
 }
 
+// `latencyMs` is null for an untimed attempt: one answered by moving the
+// beads (F0–F2). Speed only becomes a mastery signal once the work is mental,
+// so an untimed correct answer counts toward the promotion streak on accuracy
+// alone, and its time never reaches the median or the calibration.
 export function applyAttempt(
   record: AtomRecord,
   cls: AtomClass,
   correct: boolean,
-  latencyMs: number,
+  latencyMs: number | null,
   calibrationMs: number,
   now: number,
 ): AtomRecord {
   const box = correct ? Math.min(LEITNER_MAX_BOX, record.box + 1) : 1
-  const fastEnough = correct && latencyMs < latencyTargetMs(cls, calibrationMs)
+  const fastEnough = correct && (latencyMs === null || latencyMs < latencyTargetMs(cls, calibrationMs))
   const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
   const consecutiveWrong = correct ? 0 : record.consecutiveWrong + 1
-  const recentLatencyMs = [...record.recentLatencyMs, latencyMs].slice(-LATENCY_WINDOW)
+  const recentLatencyMs =
+    latencyMs === null
+      ? record.recentLatencyMs
+      : [...record.recentLatencyMs, latencyMs].slice(-LATENCY_WINDOW)
   const fade = nextFadeLevel(record.fade, consecutiveCorrect, consecutiveWrong)
   const fadeChanged = fade !== record.fade
 
