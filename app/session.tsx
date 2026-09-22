@@ -1,7 +1,7 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Alert, Text } from 'react-native'
-import { selectSession } from '@/domain/session'
+import { isPracticePart, planForPart, selectSession } from '@/domain/session'
 import { useStrings } from '@/i18n'
 import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
@@ -21,12 +21,21 @@ export default function Session() {
   // from Date.now() during render, which react-hooks/purity forbids.
   const [startedAt] = useState(() => Date.now())
 
+  // Spec (choosing what to practise) §5: ?part=focus practises that part alone.
+  // No part, or one this app does not know (or a repeated ?part=), is the full
+  // session: isPracticePart narrows string | string[] | undefined.
+  const { part } = useLocalSearchParams()
+
   // Planned once per mount: re-planning mid-session would reshuffle the queue
   // under the learner as their own answers change the schedule.
   const plan = useMemo(
-    () => (hydrated ? selectSession(progress, startedAt) : null),
+    () => {
+      if (!hydrated) return null
+      const today = selectSession(progress, startedAt)
+      return isPracticePart(part) ? planForPart(today, part) : today
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hydrated, startedAt],
+    [hydrated, startedAt, part],
   )
 
   if (plan === null) {

@@ -1,9 +1,11 @@
-import { Link, Redirect, useFocusEffect } from 'expo-router'
+import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { ATOMS } from '@/domain/atoms'
 import { dayKey } from '@/domain/progress'
+import { selectSession, type SessionPlan } from '@/domain/session'
 import { useStrings } from '@/i18n'
+import { PartChooser, type PartChoice } from '@/ui/home/PartChooser'
 import { PlanBar } from '@/ui/home/PlanBar'
 import { Button } from '@/ui/kit/Button'
 import { Card } from '@/ui/kit/Card'
@@ -24,6 +26,10 @@ export default function Home() {
   // say yesterday the next morning. Instead it is refreshed from effects: on
   // focus, and whenever the app comes back to the foreground.
   const [today, setToday] = useState(() => dayKey(Date.now()))
+
+  // The plan the chooser describes while it is open; null while it is shut.
+  // Built when the start button is pressed, never during render.
+  const [chooserPlan, setChooserPlan] = useState<SessionPlan | null>(null)
 
   const refreshToday = useCallback(() => {
     setToday(dayKey(Date.now()))
@@ -57,6 +63,12 @@ export default function Home() {
   const seal: SealState =
     progress.daysPracticed === 0 ? 'empty' : practisedToday ? 'stamped' : 'outline'
   const mental = mentalCount(atomStates(progress))
+
+  const openChooser = () => setChooserPlan(selectSession(progress, Date.now()))
+  const choose = (choice: PartChoice) => {
+    setChooserPlan(null)
+    router.push(choice === 'all' ? '/session' : { pathname: '/session', params: { part: choice } })
+  }
 
   return (
     <Screen>
@@ -105,14 +117,14 @@ export default function Home() {
       <View style={styles.spacer} />
 
       {/* Practising again is offered, never pushed: after today's session the
-          main button steps down to an outline. */}
-      <Link href="/session" asChild testID="start">
-        {practisedToday ? (
-          <Button variant="outline" label={strings.practiseAgain} />
-        ) : (
-          <Button label={strings.start} detail={strings.startMinutes} />
-        )}
-      </Link>
+          main button steps down to an outline. Either way it first asks what
+          to practise. */}
+      {practisedToday ? (
+        <Button testID="start" variant="outline" label={strings.practiseAgain} onPress={openChooser} />
+      ) : (
+        <Button testID="start" label={strings.start} detail={strings.startMinutes} onPress={openChooser} />
+      )}
+      <PartChooser plan={chooserPlan} onChoose={choose} onClose={() => setChooserPlan(null)} />
     </Screen>
   )
 }

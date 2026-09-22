@@ -10,12 +10,15 @@ jest.mock('@/storage/progressStore')
 
 const mockBack = jest.fn()
 const mockReplace = jest.fn()
+// The route's search parameters, set per test.
+const mockParams: { current: Record<string, string> } = { current: {} }
 jest.mock('expo-router', () => ({
   router: {
     back: () => mockBack(),
     replace: (href: string) => mockReplace(href),
     canGoBack: () => true,
   },
+  useLocalSearchParams: () => mockParams.current,
 }))
 
 // Lets one test hand the screen a close-only plan, so the finish path can be
@@ -42,6 +45,7 @@ beforeEach(() => {
   jest.useFakeTimers()
   jest.clearAllMocks()
   mockPlan.current = null
+  mockParams.current = {}
   mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true })
   mockSave.mockResolvedValue()
 })
@@ -109,5 +113,31 @@ describe('Session screen', () => {
     })
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockSave).toHaveBeenCalled()
+  })
+})
+
+// Spec (choosing what to practise) §5: ?part= practises one part.
+describe('Session screen practising one part', () => {
+  it('plays only the part it is given, for the whole practice time', async () => {
+    mockParams.current = { part: 'focus' }
+    const { getByTestId, getAllByTestId } = renderSession()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('block-label').props.children).toBe('集中')
+    expect(getAllByTestId(/^track-segment-/)).toHaveLength(1)
+  })
+
+  it('goes straight to the summary when the chosen part has nothing in it', async () => {
+    // A new learner has nothing due, so 準備 is empty.
+    mockParams.current = { part: 'warmup' }
+    const { getByTestId } = renderSession()
+    await waitFor(() => expect(getByTestId('session-summary')).toBeTruthy())
+    expect(getByTestId('summary-result').props.children).toContain('0問中')
+  })
+
+  it('plays the full session for a part it does not know', async () => {
+    mockParams.current = { part: 'close' }
+    const { getByTestId, getAllByTestId } = renderSession()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getAllByTestId(/^track-segment-/)).toHaveLength(3)
   })
 })
