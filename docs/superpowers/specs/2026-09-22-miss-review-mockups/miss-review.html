@@ -1,0 +1,87 @@
+<style>
+  .row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start; }
+  .frame-box { background: #e5e5e7; border-radius: 12px; padding: 1.25rem 0; display: flex; justify-content: center; }
+  .cap { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: #555; }
+  .cap b { color: #111; }
+  .phone { --bg:#F4EEE2; --ink:#2A2320; --muted:#7A6D61; --accent:#B5412C; --disp:"Hiragino Mincho ProN","Yu Mincho",serif;
+    width: 290px; height: 620px; border-radius: 44px; overflow: hidden; position: relative; box-shadow: 0 0 0 9px #111;
+    background: var(--bg); color: var(--ink); font-family: "Hiragino Sans", sans-serif; display: flex; flex-direction: column; }
+  .status { height: 50px; flex: none; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 96px; height: 28px; background: #000; border-radius: 20px; }
+  .screen { flex: 1; display: flex; flex-direction: column; padding: 4px 20px 18px; }
+  .spacer { flex: 1; }
+  .topbar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .track { flex: 1; display: flex; gap: 3px; height: 4px; } .track i { border-radius: 2px; background: #E2D8C6; } .track i.on { background: var(--accent); }
+  .prompt { margin-top: 14px; text-align: center; font-family: var(--disp); font-weight: 600; font-size: 26px; }
+  .card { margin-top: 10px; background: #FBF7EF; border: 1px solid #E4D8C3; border-left: 3px solid var(--accent); border-radius: 10px; padding: 8px 12px; }
+  .card .ans { font-family: var(--disp); font-weight: 600; font-size: 17px; }
+  .card .how { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card .how b { color: var(--accent); font-weight: 700; background: #F6DDD6; border-radius: 4px; padding: 0 3px; }
+  .wrap { position: relative; align-self: center; margin-top: 12px; }
+  .soroban { padding: 10px 13px; border-radius: 16px; background: linear-gradient(180deg,#6E4A2F,#4E3220); }
+  .deck { display: flex; background: #EFE3CC; border-radius: 9px; padding: 0 7px; }
+  .rod { width: 72px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(90deg, transparent calc(50% - 1.5px), #9C7A55 calc(50% - 1.5px), #9C7A55 calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .heaven { height: 50px; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 3px; } .heaven.on { justify-content: flex-end; padding: 0; }
+  .beam { height: 10px; width: 100%; background: #4A2F1C; position: relative; } .beam.unit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: #F4EEE2; }
+  .earth { height: 120px; display: flex; flex-direction: column; padding-bottom: 3px; } .earth .gap { flex: 1; }
+  .bead { width: 56px; height: 23px; flex: none; clip-path: polygon(0 50%, 19% 0, 81% 0, 100% 50%, 81% 100%, 19% 100%); background: linear-gradient(180deg,#6B4028,#3A2014 55%,#24130B); }
+  .bead.moving { outline: none; filter: drop-shadow(0 0 0 #B5412C); background: linear-gradient(180deg,#8a4b2e,#5a2a18 55%,#3a180c); }
+  .batsu { position: absolute; left: 50%; top: 50%; width: 130px; height: 130px; margin: -65px 0 0 -65px; opacity: .92; transform: rotate(-6deg); }
+  .batsu::before, .batsu::after { content: ""; position: absolute; left: 50%; top: 0; width: 12px; height: 130px; margin-left: -6px; background: var(--accent); border-radius: 6px; }
+  .batsu::before { transform: rotate(45deg); } .batsu::after { transform: rotate(-45deg); }
+  .step { text-align: center; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .btns { display: flex; gap: 10px; }
+  .btn { height: 52px; border-radius: 14px; display: grid; place-items: center; font-weight: 600; font-size: 15px; letter-spacing: .06em; }
+  .btn.ghost { flex: 1; border: 1.5px solid var(--accent); color: var(--accent); }
+  .btn.go { flex: 1; background: var(--accent); color: #FFF8F0; box-shadow: 0 2px 0 #8E3322; }
+</style>
+
+<h2>After a wrong answer — the review step</h2>
+<p class="subtitle">Example 7に8をたす (answer 15 = <b>+10 − 2</b>). The learner entered 5.</p>
+
+<div class="row3">
+  <div>
+    <div class="frame-box"><div class="phone"><div class="island"></div><div class="status"></div><div class="screen">
+      <div class="topbar"><span>✕</span><div class="track"><i class="on" style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i></div><span>集中</span></div>
+      <div class="prompt">7に8をたす。</div>
+      <div class="card"><div class="ans">こたえは 15</div><div class="how">十の繰上：8をたす = +10 − 2</div></div>
+      <div class="wrap"><div class="soroban"><div class="deck">
+        <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+        <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+      </div></div><div class="batsu"></div></div>
+      <div class="spacer"></div>
+      <div class="btns"><div class="btn ghost">こたえを見る</div><div class="btn go">つぎへ</div></div>
+    </div></div></div>
+    <p class="cap"><b>1 · Right after the miss (F0–F1).</b> A big ✕ stamps over the soroban and fades (same size and timing as the 〇). The beads still show what the learner entered (5). The answer card for <em>this</em> problem is already showing. The bottom row is now こたえを見る and つぎへ.</p>
+  </div>
+
+  <div>
+    <div class="frame-box"><div class="phone"><div class="island"></div><div class="status"></div><div class="screen">
+      <div class="topbar"><span>✕</span><div class="track"><i class="on" style="flex:45"></i><i style="flex:120"></i><i style="flex:90"></i></div><span>集中</span></div>
+      <div class="prompt">7に8をたす。</div>
+      <div class="card"><div class="ans">こたえは 15</div><div class="how">十の繰上：8をたす = <b>+10</b> − 2</div></div>
+      <div class="wrap"><div class="soroban"><div class="deck">
+        <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="bead moving"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+        <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+      </div></div></div>
+      <div class="step">1 / 2</div>
+      <div class="spacer"></div>
+      <div class="btns"><div class="btn ghost">もう一度見る</div><div class="btn go">つぎへ</div></div>
+    </div></div></div>
+    <p class="cap"><b>2 · こたえを見る, playing.</b> The beads first go back to the starting number (7), then move one step at a time, about 0.9 s apart. Here the first step (<b>+10</b>, one bead up on the tens rod) is done and highlighted in the card. Next, two earth beads come off the ones rod (− 2), ending on 15. When it finishes, the left button becomes もう一度見る (watch again).</p>
+  </div>
+
+  <div>
+    <div class="frame-box"><div class="phone"><div class="island"></div><div class="status"></div><div class="screen">
+      <div class="topbar"><span>✕</span><div class="track"><i class="on" style="flex:45"></i><i class="on" style="flex:120"></i><i style="flex:90"></i></div><span>暗算</span></div>
+      <div class="prompt">7に8をたす。</div>
+      <div class="wrap"><div class="soroban" style="opacity:.35"><div class="deck">
+        <div class="rod"><div class="heaven"><div class="bead"></div></div><div class="beam"></div><div class="earth"><div class="gap"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div><div class="bead"></div></div></div>
+        <div class="rod"><div class="heaven on"><div class="bead"></div></div><div class="beam unit"></div><div class="earth"><div class="bead"></div><div class="bead"></div><div class="gap"></div><div class="bead"></div><div class="bead"></div></div></div>
+      </div></div><div class="batsu"></div></div>
+      <div class="spacer"></div>
+      <div class="btns"><div class="btn ghost">こたえを見る</div><div class="btn go">つぎへ</div></div>
+    </div></div></div>
+    <p class="cap"><b>3 · A miss at a silent level (F2+).</b> Only the ✕ appears; no card comes up by itself. こたえを見る brings up the card and plays the moves. At F3+ the beads are drawn solid for the replay, so there is something to watch. つぎへ just moves on.</p>
+  </div>
+</div>
