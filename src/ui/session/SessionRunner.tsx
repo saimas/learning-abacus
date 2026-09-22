@@ -401,7 +401,7 @@ export function SessionRunner({
           {demonstration}
           {correctionCard}
         </ScrollView>
-        <View style={styles.sorobanWrap}>
+        <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
               presented question: submit is the only path that changes the
               question, and it resets `beads` to null first. */}
@@ -413,7 +413,7 @@ export function SessionRunner({
             onAdjustRod={(rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))}
           />
           {maru > 0 ? (
-            <View style={styles.beadMaru}>
+            <View style={styles.maruOverlay} pointerEvents="none">
               <Maru key={maru} />
             </View>
           ) : null}
@@ -453,6 +453,11 @@ export function SessionRunner({
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
           <Abacus soroban={start} fade={current.fade} />
+          {maru > 0 ? (
+            <View style={styles.maruOverlay} pointerEvents="none">
+              <Maru key={maru} size={110} />
+            </View>
+          ) : null}
         </View>
         <Text testID="prompt" style={styles.prompt}>
           {strings.prompt(atom)}
@@ -466,7 +471,6 @@ export function SessionRunner({
         onSubmit={submit}
         submitLabel={strings.answer}
         submitTestID="submit"
-        adornment={maru > 0 ? <Maru key={maru} /> : null}
       />
     </View>
   )
@@ -474,7 +478,7 @@ export function SessionRunner({
 
 const styles = StyleSheet.create({
   practice: { flex: 1 },
-  soroban: { marginTop: space.md },
+  soroban: { marginTop: space.md, position: 'relative' },
   prompt: {
     marginTop: space.lg,
     textAlign: 'center',
@@ -506,8 +510,19 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   summaryResult: { marginTop: space.sm, fontSize: fontSizes.body, color: colors.muted },
-  sorobanWrap: { alignSelf: 'center', marginTop: space.sm },
-  beadMaru: { position: 'absolute', top: -space.sm, right: -space.md },
+  sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
+  // Centred over whichever soroban it is placed inside (bead mode's
+  // sorobanWrap, or keypad mode's soroban view) — that view must itself be
+  // position:'relative' for this to fill and centre over it.
+  maruOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
   beadSpacer: { flex: 1 },
   beadButtons: { flexDirection: 'row', gap: space.md, marginTop: space.md },

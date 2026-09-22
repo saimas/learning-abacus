@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react-native'
-import { AccessibilityInfo } from 'react-native'
+import { fireEvent, render, screen, within } from '@testing-library/react-native'
+import { AccessibilityInfo, StyleSheet } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
 import { setBeads } from './testing'
@@ -864,5 +864,23 @@ describe('SessionRunner never repeating one question to fill time', () => {
     expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
     answerCorrectly(getByTestId) // 3+4 retry right -> queue drains and refills
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+  })
+})
+
+describe('SessionRunner and the correct-answer stamp', () => {
+  it('stamps a big 〇 centred over the soroban in bead mode', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    answer(getByTestId, '7')
+    const wrap = getByTestId('soroban-wrap')
+    const maru = within(wrap).getByTestId('maru')
+    const flat = StyleSheet.flatten(maru.props.style)
+    expect(flat.width).toBe(140)
   })
 })
