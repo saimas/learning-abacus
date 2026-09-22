@@ -50,8 +50,10 @@ Fixed at five minutes, because predictability is what makes the habit survive a 
 | Fade rep | 90s | Fluent atoms pushed one fade level up |
 | Close | 30s | Result, atoms mastered, tomorrow's preview |
 
-New atoms are capped at two per day. The app offers a further block when there's time to spare,
-but never requires one — a negotiable habit is a dead habit.
+Each session starts with at most two new atoms; up to four more join during the session, one at a
+time, once every atom in play has been answered right five times in a row. The app offers a
+further block when there's time to spare, but never requires one — a negotiable habit is a dead
+habit.
 
 ## Screens
 
