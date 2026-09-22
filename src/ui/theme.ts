@@ -12,6 +12,8 @@ export const colors = {
   muted: '#7A6D61',
   accent: '#B5412C',
   accentShadow: '#8E3322',
+  // Behind the step of a correction that a replay has just played.
+  accentSoft: '#F6DDD6',
   onAccent: '#FFF8F0',
   frameTop: '#6E4A2F',
   frameBottom: '#4E3220',

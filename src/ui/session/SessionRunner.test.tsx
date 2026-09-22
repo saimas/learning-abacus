@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 import { AccessibilityInfo, StyleSheet } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
-import { setBeads } from './testing'
+import { setBeads, textOf } from './testing'
 
 function item(atomId: string, overrides: Partial<SessionItem> = {}): SessionItem {
   return { atomId, fade: 0, coaching: 'demo', ...overrides }
@@ -214,7 +214,7 @@ describe('SessionRunner', () => {
     const { getByTestId } = renderRunner(plan, autoClock())
     answer(getByTestId, '9')
     expect(getByTestId('correction-answer').props.children).toContain('7')
-    expect(getByTestId('correction-coaching').props.children).toContain('+5 − 1')
+    expect(textOf(getByTestId('correction-coaching'))).toContain('+5 − 1')
   })
 
   it('does not show a correction for a wrong answer at silent coaching', () => {
