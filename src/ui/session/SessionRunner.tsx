@@ -350,6 +350,14 @@ export function SessionRunner({
           ) : null}
         </View>
         <Text style={styles.hint}>{strings.beadHint}</Text>
+        {/* Layout A puts a flexible gap on both sides of the soroban+hint
+            block (mockup: a flex spacer before it, another after). The
+            scroll above already absorbs the top gap; this one balances it
+            below so spare height on a tall phone doesn't all pile up above
+            the soroban. Both share `scroll`'s flexShrink:1, so on a short
+            screen this collapses to 0 first and the scroll area is what
+            gives way, keeping the soroban, hint and buttons on screen. */}
+        <View style={styles.beadSpacer} />
         <View style={styles.beadButtons}>
           <View style={styles.resetSlot}>
             <Button
@@ -432,6 +440,7 @@ const styles = StyleSheet.create({
   sorobanWrap: { alignSelf: 'center', marginTop: space.sm },
   beadMaru: { position: 'absolute', top: -space.sm, right: -space.md },
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
+  beadSpacer: { flex: 1 },
   beadButtons: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   resetSlot: { flex: 1 },
   submitSlot: { flex: 2 },
