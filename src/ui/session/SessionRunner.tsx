@@ -310,20 +310,44 @@ export function SessionRunner({
         queue = [newcomer, ...queue]
       }
     }
-    if (joinedNow !== joined) setJoined(joinedNow)
-
     const deadline = effectiveDeadline(plan.blocks, deadlines, state.blockIndex, failures.current)
     const timeUp = deadline !== undefined && t >= deadline
 
-    if (!timeUp && queue.length === 0) {
-      // The block's queue drained mid-cycle with time still on the clock:
-      // start it again. Repeated presentation within a block is deliberate.
-      // The focus block's cycle also includes whatever has joined from the
-      // reserve so far; other blocks never gain items, so they still cycle
+    // Warm-up makes a single pass and is never refilled: once its queue
+    // drains the block simply ends below, and its remaining time rolls into
+    // whatever comes next (the cumulative deadlines already do that). Focus
+    // and fade rep refill from their live items as before, but never into a
+    // cycle that would put the move just answered straight back in front of
+    // the learner — that is filler, not practice, and it is the TestFlight
+    // repeat bug.
+    if (!timeUp && queue.length === 0 && block.kind !== 'warmup') {
+      // The focus block's candidates include whatever has joined from the
+      // reserve so far; other blocks never gain items, so they still draw
       // from their own items exactly as before.
-      const items = block.kind === 'focus' ? [...block.items, ...joinedNow] : block.items
-      queue = liveItems(items, failures.current)
+      const candidates =
+        block.kind === 'focus'
+          ? liveItems([...block.items, ...joinedNow], failures.current)
+          : liveItems(block.items, failures.current)
+      if (candidates.length === 1 && candidates[0]?.atomId === current.atomId) {
+        // Refilling here would only ever hand back the move just answered —
+        // a repeat, not a refill. A focus block still has somewhere to go if
+        // the reserve has a newcomer left; fade rep, and focus with nothing
+        // left in reserve, end the block instead (below).
+        const newcomer = block.kind === 'focus' ? plan.reserve?.[joinedNow.length] : undefined
+        if (newcomer !== undefined) {
+          joinedNow = [...joinedNow, newcomer]
+          queue = [newcomer, ...candidates]
+        }
+      } else {
+        // Rotate a leading repeat to the end. This only bites right after a
+        // missed item's retry lands last in the drained queue: without it,
+        // a plain refill would put that same item straight back in front.
+        const [first, ...rest] = candidates
+        queue = first !== undefined && first.atomId === current.atomId ? [...rest, first] : candidates
+      }
     }
+
+    if (joinedNow !== joined) setJoined(joinedNow)
 
     setAnswer('')
     setBeads(null)
@@ -377,7 +401,7 @@ export function SessionRunner({
           {demonstration}
           {correctionCard}
         </ScrollView>
-        <View style={styles.sorobanWrap}>
+        <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
               presented question: submit is the only path that changes the
               question, and it resets `beads` to null first. */}
@@ -389,7 +413,7 @@ export function SessionRunner({
             onAdjustRod={(rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))}
           />
           {maru > 0 ? (
-            <View style={styles.beadMaru}>
+            <View style={styles.maruOverlay} pointerEvents="none">
               <Maru key={maru} />
             </View>
           ) : null}
@@ -429,6 +453,11 @@ export function SessionRunner({
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
           <Abacus soroban={start} fade={current.fade} />
+          {maru > 0 ? (
+            <View style={styles.maruOverlay} pointerEvents="none">
+              <Maru key={maru} size={110} />
+            </View>
+          ) : null}
         </View>
         <Text testID="prompt" style={styles.prompt}>
           {strings.prompt(atom)}
@@ -442,7 +471,6 @@ export function SessionRunner({
         onSubmit={submit}
         submitLabel={strings.answer}
         submitTestID="submit"
-        adornment={maru > 0 ? <Maru key={maru} /> : null}
       />
     </View>
   )
@@ -450,7 +478,7 @@ export function SessionRunner({
 
 const styles = StyleSheet.create({
   practice: { flex: 1 },
-  soroban: { marginTop: space.md },
+  soroban: { marginTop: space.md, position: 'relative' },
   prompt: {
     marginTop: space.lg,
     textAlign: 'center',
@@ -482,8 +510,19 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   summaryResult: { marginTop: space.sm, fontSize: fontSizes.body, color: colors.muted },
-  sorobanWrap: { alignSelf: 'center', marginTop: space.sm },
-  beadMaru: { position: 'absolute', top: -space.sm, right: -space.md },
+  sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
+  // Centred over whichever soroban it is placed inside (bead mode's
+  // sorobanWrap, or keypad mode's soroban view) — that view must itself be
+  // position:'relative' for this to fill and centre over it.
+  maruOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
   beadSpacer: { flex: 1 },
   beadButtons: { flexDirection: 'row', gap: space.md, marginTop: space.md },
