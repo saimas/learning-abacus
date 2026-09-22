@@ -97,6 +97,25 @@ describe('interactive Abacus', () => {
     expect(onAdjustRod).toHaveBeenLastCalledWith(1, -1)
   })
 
+  it('makes VoiceOver activation a no-op on an adjustable rod', () => {
+    // With no activation handling, iOS VoiceOver's double-tap falls back, at
+    // the native layer, to a synthetic tap at the rod's centre and moves an
+    // earth bead by accident. RNTL/react-test-renderer has no way to
+    // reproduce that native fallback (firing the synthetic 'accessibilityTap'
+    // event only calls a handler that is already present; it never exercises
+    // the no-handler fallback), so this test guards the contract instead:
+    // the adjustable rod wires an onAccessibilityTap handler and that
+    // handler does nothing, rather than falling through to onPress.
+    const onTapBead = jest.fn()
+    const { getByTestId } = render(
+      <Abacus soroban={setValue(emptySoroban(2), 7)} fade={0} onTapBead={onTapBead} onAdjustRod={jest.fn()} />,
+    )
+    const rod = getByTestId('rod-1')
+    expect(typeof rod.props.onAccessibilityTap).toBe('function')
+    rod.props.onAccessibilityTap()
+    expect(onTapBead).not.toHaveBeenCalled()
+  })
+
   it('has no adjustable rods without handlers', () => {
     const { getByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={0} />)
     expect(getByTestId('rod-1').props.accessibilityRole).toBeUndefined()

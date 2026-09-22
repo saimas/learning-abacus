@@ -52,6 +52,10 @@ export function Rod({
       accessibilityValue={value}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(event) => onAdjust?.(event.nativeEvent.actionName === 'increment' ? 1 : -1)}
+      // An adjustable rod is moved by the increment/decrement actions above,
+      // never by activation. Without this, VoiceOver's double-tap falls back
+      // to a synthetic tap at the rod's centre and moves a bead by accident.
+      onAccessibilityTap={() => {}}
       onPress={(event: GestureResponderEvent) => onTapBead(beadAt(rod, event.nativeEvent.locationY, scale))}
       style={size}
     >
