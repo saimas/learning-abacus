@@ -1,7 +1,7 @@
 # learning-abacus — Answering with the beads
 
 Date: 2026-09-22
-Status: Approved design, pre-implementation
+Status: Implemented on feature/bead-interaction (TestFlight build 4)
 
 ## 1. Goal and constraints
 
