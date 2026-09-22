@@ -2,6 +2,7 @@ import { atomsForStage } from './curriculum'
 import { emptyProgress, recordAttempt, type Progress } from './progress'
 import {
   BLOCK_SECONDS,
+  EXTRA_NEW_ATOMS,
   NEW_ATOMS_PER_DAY,
   selectSession,
   SESSION_SECONDS,
@@ -76,5 +77,53 @@ describe('selectSession', () => {
       const ids = block.items.map((i) => i.atomId)
       expect(new Set(ids).size).toBe(ids.length)
     }
+  })
+
+  describe('reserve', () => {
+    // The stage-1 curriculum order, as atomsForStage produces it: the atoms
+    // classified 'direct'. A fresh learner's fresh two (0+1, 0+2) come off the
+    // front of this same list, so the reserve is whatever comes right after.
+    const stage1Order = atomsForStage(1).map((a) => a.id)
+
+    it('gives a fresh learner the next up-to-four unseen atoms, at fade 0 with demo coaching', () => {
+      const plan = selectSession(emptyProgress(), NOW)
+      const expectedIds = stage1Order.slice(NEW_ATOMS_PER_DAY, NEW_ATOMS_PER_DAY + EXTRA_NEW_ATOMS)
+      expect(plan.reserve?.map((i) => i.atomId)).toEqual(expectedIds)
+      for (const reserveItem of plan.reserve ?? []) {
+        expect(reserveItem.fade).toBe(0)
+        expect(reserveItem.coaching).toBe('demo')
+      }
+    })
+
+    it('never contains a fresh (focus) atom', () => {
+      const plan = selectSession(emptyProgress(), NOW)
+      const focusIds = new Set(plan.blocks.find((b) => b.kind === 'focus')?.items.map((i) => i.atomId))
+      for (const reserveItem of plan.reserve ?? []) {
+        expect(focusIds.has(reserveItem.atomId)).toBe(false)
+      }
+    })
+
+    it('is shorter when fewer unseen atoms remain', () => {
+      // Mark every stage-1 atom but the last three as seen, without making
+      // any of them fluent (so stage 2 stays locked and the available pool
+      // does not change shape out from under the slice below).
+      let progress: Progress = emptyProgress()
+      const toMark = stage1Order.slice(0, stage1Order.length - 3)
+      for (const atomId of toMark) {
+        progress = recordAttempt(progress, atomId, true, null, NOW)
+      }
+
+      const plan = selectSession(progress, NOW)
+      const remainingUnseen = stage1Order.slice(stage1Order.length - 3)
+      // The first two of the three remaining unseen atoms are today's fresh
+      // ones, and land in the focus block; only the last one is left over
+      // for the reserve.
+      const focusIds = plan.blocks.find((b) => b.kind === 'focus')?.items.map((i) => i.atomId) ?? []
+      for (const freshId of remainingUnseen.slice(0, NEW_ATOMS_PER_DAY)) {
+        expect(focusIds).toContain(freshId)
+      }
+      expect(plan.reserve?.map((i) => i.atomId)).toEqual(remainingUnseen.slice(NEW_ATOMS_PER_DAY))
+      expect(plan.reserve).toHaveLength(1)
+    })
   })
 })
