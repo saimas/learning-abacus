@@ -333,6 +333,9 @@ export function SessionRunner({
           {correctionCard}
         </ScrollView>
         <View style={styles.sorobanWrap}>
+          {/* `previous ?? start` relies on `start` staying constant for the
+              presented question: submit is the only path that changes the
+              question, and it resets `beads` to null first. */}
           <Abacus
             soroban={shownBeads}
             fade={current.fade}
