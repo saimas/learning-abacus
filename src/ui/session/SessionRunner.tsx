@@ -166,6 +166,12 @@ export function SessionRunner({
   // Leitner box and fade ladder — it only gates when the next reserve atom
   // is secure enough to join. A wrong answer resets its atom's streak.
   const streaks = useRef<Record<string, number>>({})
+  // Fade-rep moves that have earned their one level this session. Fade rep
+  // shows a move one level above its stored fade, and the stored fade is
+  // promoted after FADE_PROMOTE_STREAK right in a row. Cycling the move on at
+  // the planned level would promote it again and again, past anything the
+  // learner was shown. So once earned, it leaves the rotation.
+  const retired = useRef<Set<string>>(new Set())
   // Reserve atoms that have joined the focus block so far, in join order.
   // Only the focus block's refill ever reads this; warm-up and fade rep are
   // untouched by it.
@@ -336,6 +342,9 @@ export function SessionRunner({
         queue = [newcomer, ...queue]
       }
     }
+    if (correct && block.kind === 'faderep' && (streaks.current[current.atomId] ?? 0) >= FADE_PROMOTE_STREAK) {
+      retired.current.add(current.atomId)
+    }
     const deadline = effectiveDeadline(plan.blocks, deadlines, state.blockIndex, failures.current)
     const timeUp = deadline !== undefined && t >= deadline
 
@@ -349,11 +358,12 @@ export function SessionRunner({
     if (!timeUp && queue.length === 0 && block.kind !== 'warmup') {
       // The focus block's candidates include whatever has joined from the
       // reserve so far; other blocks never gain items, so they still draw
-      // from their own items exactly as before.
+      // from their own items exactly as before. Fade rep leaves out the moves
+      // that have earned their level (see retired).
       const candidates =
         block.kind === 'focus'
           ? liveItems([...block.items, ...joinedNow], failures.current)
-          : liveItems(block.items, failures.current)
+          : liveItems(block.items, failures.current).filter((it) => !retired.current.has(it.atomId))
       if (candidates.length === 1 && candidates[0]?.atomId === current.atomId) {
         // Refilling here would only ever hand back the move just answered —
         // a repeat, not a refill. A focus block still has somewhere to go if

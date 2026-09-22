@@ -84,6 +84,7 @@ export const ja = {
   chooseOnly: (part: PracticePart) => `${BLOCK_LABEL[part]}だけ`,
   chooseDetail: (part: PracticePart, count: number) => CHOOSE_DETAIL[part](count),
   chooseEmpty: '今はありません',
+  chooseClose: '閉じる',
   mapPreviewTitle: '暗算できる動き',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',

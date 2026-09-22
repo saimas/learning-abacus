@@ -71,6 +71,7 @@ export const en: Strings = {
   chooseOnly: (part) => `${BLOCK_LABEL[part]} only`,
   chooseDetail: (part, count) => CHOOSE_DETAIL[part](count),
   chooseEmpty: 'Nothing right now',
+  chooseClose: 'Close',
   mapPreviewTitle: 'Moves you can do mentally',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',

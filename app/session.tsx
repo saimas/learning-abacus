@@ -17,14 +17,17 @@ function goHome() {
 export default function Session() {
   const { progress, hydrated, attempt, flush } = useProgress()
   const strings = useStrings()
-  // Captured once at mount — the moment はじめる was tapped — not read fresh
+  // Captured once at mount — the moment the session was chosen — not read fresh
   // from Date.now() during render, which react-hooks/purity forbids.
   const [startedAt] = useState(() => Date.now())
 
   // Spec (choosing what to practise) §5: ?part=focus practises that part alone.
-  // No part, or one this app does not know (or a repeated ?part=), is the full
-  // session: isPracticePart narrows string | string[] | undefined.
-  const { part } = useLocalSearchParams()
+  // No part, one this app does not know, or a repeated ?part= is the full
+  // session. It is narrowed to a primitive here, because a repeated param
+  // comes back as a new array on every render and would re-plan the session
+  // under the learner.
+  const param = useLocalSearchParams().part
+  const part = isPracticePart(param) ? param : null
 
   // Planned once per mount: re-planning mid-session would reshuffle the queue
   // under the learner as their own answers change the schedule.
@@ -32,7 +35,7 @@ export default function Session() {
     () => {
       if (!hydrated) return null
       const today = selectSession(progress, startedAt)
-      return isPracticePart(part) ? planForPart(today, part) : today
+      return part === null ? today : planForPart(today, part)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hydrated, startedAt, part],

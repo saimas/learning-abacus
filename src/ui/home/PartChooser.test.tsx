@@ -16,16 +16,16 @@ const today: SessionPlan = {
   totalSeconds: 285,
 }
 
-function renderChooser(plan: SessionPlan | null = today) {
+function renderChooser(plan: SessionPlan | null = today, visible = true) {
   const onChoose = jest.fn()
   const onClose = jest.fn()
-  render(<PartChooser plan={plan} onChoose={onChoose} onClose={onClose} />)
+  render(<PartChooser plan={plan} visible={visible} onChoose={onChoose} onClose={onClose} />)
   return { onChoose, onClose }
 }
 
 describe('PartChooser', () => {
-  it('is not shown without a plan', () => {
-    renderChooser(null)
+  it('is not shown while closed', () => {
+    renderChooser(today, false)
     expect(screen.queryByTestId('part-chooser')).toBeNull()
   })
 
@@ -70,5 +70,11 @@ describe('PartChooser', () => {
     fireEvent.press(screen.getByTestId('chooser-backdrop'))
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(onChoose).not.toHaveBeenCalled()
+  })
+
+  it('can be closed by VoiceOver users too', () => {
+    renderChooser()
+    expect(screen.getByTestId('chooser-backdrop').props.accessibilityLabel).toBe('閉じる')
+    expect(screen.getByTestId('chooser-backdrop').props.accessibilityRole).toBe('button')
   })
 })

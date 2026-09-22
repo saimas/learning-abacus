@@ -1137,3 +1137,39 @@ describe('SessionRunner reviewing a miss', () => {
     announce.mockRestore()
   })
 })
+
+// A fade-rep move leaves the rotation once it has earned its one level, so a
+// long 暗算 block cannot promote its stored fade past what the learner saw.
+describe('SessionRunner retiring fade-rep moves', () => {
+  const fadePlan: SessionPlan = {
+    blocks: [
+      {
+        kind: 'faderep',
+        seconds: 255,
+        items: [item('3+4', { fade: 3, coaching: 'silent' }), item('2+3', { fade: 3, coaching: 'silent' })],
+      },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 285,
+  }
+
+  it('ends the block once every move has five right in a row, instead of cycling on', () => {
+    const { getByTestId, queryByTestId, onAttempt, onBlockEnd } = renderRunner(fadePlan, autoClock())
+    for (let i = 0; i < 9; i++) answerCorrectly(getByTestId)
+    expect(queryByTestId('session-summary')).toBeNull()
+    answerCorrectly(getByTestId)
+    expect(onAttempt).toHaveBeenCalledTimes(10)
+    expect(onBlockEnd).toHaveBeenCalledWith('faderep')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('keeps a move in the rotation until its streak is rebuilt after a miss', () => {
+    const { getByTestId, queryByTestId, onAttempt } = renderRunner(fadePlan, autoClock())
+    answer(getByTestId, '9') // 3+4 wrong: its streak is 0, and it retries at the back
+    moveOn()
+    while (queryByTestId('session-summary') === null) answerCorrectly(getByTestId)
+    const answers = (atomId: string) => onAttempt.mock.calls.filter((call) => call[0].atomId === atomId)
+    expect(answers('3+4').filter((call) => call[0].correct)).toHaveLength(5)
+    expect(answers('2+3')).toHaveLength(5)
+  })
+})

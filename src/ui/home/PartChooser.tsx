@@ -9,13 +9,17 @@ export type PartChoice = PracticePart | 'all'
 // Spec (choosing what to practise) §4: the start button asks what to practise.
 // ぜんぶ is today's full session, unchanged; each part below practises that
 // part alone. The counts come from the plan the session would build now, so a
-// part with nothing in it is shown, but cannot be chosen.
+// part with nothing in it is shown, but cannot be chosen. The sheet is shown
+// while `visible`; `plan` is kept by Home after closing so the rows do not
+// change while the sheet fades out.
 export function PartChooser({
   plan,
+  visible,
   onChoose,
   onClose,
 }: {
   plan: SessionPlan | null
+  visible: boolean
   onChoose: (choice: PartChoice) => void
   onClose: () => void
 }) {
@@ -23,12 +27,20 @@ export function PartChooser({
   const insets = useSafeAreaInsets()
 
   return (
-    <Modal visible={plan !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.root}>
-        <Pressable testID="chooser-backdrop" style={styles.backdrop} onPress={onClose} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.root} onAccessibilityEscape={onClose}>
+        <Pressable
+          testID="chooser-backdrop"
+          accessibilityRole="button"
+          accessibilityLabel={strings.chooseClose}
+          style={styles.backdrop}
+          onPress={onClose}
+        />
         <View testID="part-chooser" style={[styles.sheet, { paddingBottom: insets.bottom + space.lg }]}>
           <View style={styles.grab} />
-          <Text style={styles.title}>{strings.chooseTitle}</Text>
+          <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={styles.title}>
+            {strings.chooseTitle}
+          </Text>
           <Row
             testID="choose-all"
             primary
@@ -86,8 +98,12 @@ function Row({
         disabled && styles.disabled,
       ]}
     >
-      <Text style={[styles.name, primary && styles.onPrimary]}>{name}</Text>
-      <Text style={[styles.detail, primary && styles.onPrimary]}>{detail}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.name, primary && styles.onPrimary]}>
+        {name}
+      </Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.detail, primary && styles.onPrimary]}>
+        {detail}
+      </Text>
     </Pressable>
   )
 }

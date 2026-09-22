@@ -186,11 +186,13 @@ describe('the part chooser', () => {
     expect(ja.chooseOnly('focus')).toBe('集中だけ')
     expect(ja.chooseOnly('faderep')).toBe('暗算だけ')
     expect(ja.chooseEmpty).toBe('今はありません')
+    expect(ja.chooseClose).toBe('閉じる')
     expect(en.chooseTitle).toBe('What would you like to practise?')
     expect(en.chooseAll).toBe('Everything')
     expect(en.chooseAllDetail).toBe('Warm-up → Focus → Fade · 5 min')
     expect(en.chooseOnly('warmup')).toBe('Warm-up only')
     expect(en.chooseEmpty).toBe('Nothing right now')
+    expect(en.chooseClose).toBe('Close')
   })
 
   it('says what each part holds', () => {

@@ -27,9 +27,10 @@ export default function Home() {
   // focus, and whenever the app comes back to the foreground.
   const [today, setToday] = useState(() => dayKey(Date.now()))
 
-  // The plan the chooser describes while it is open; null while it is shut.
+  // The chooser: the plan it describes, and whether it is open. The plan is
+  // kept after closing so the rows do not change while the sheet fades out.
   // Built when the start button is pressed, never during render.
-  const [chooserPlan, setChooserPlan] = useState<SessionPlan | null>(null)
+  const [chooser, setChooser] = useState<{ plan: SessionPlan; open: boolean } | null>(null)
 
   const refreshToday = useCallback(() => {
     setToday(dayKey(Date.now()))
@@ -39,7 +40,11 @@ export default function Home() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (status) => {
-      if (status === 'active') refreshToday()
+      if (status === 'active') {
+        refreshToday()
+        // A sheet left open in the background describes an old plan.
+        setChooser((previous) => (previous === null ? null : { ...previous, open: false }))
+      }
     })
     return () => subscription.remove()
   }, [refreshToday])
@@ -64,9 +69,12 @@ export default function Home() {
     progress.daysPracticed === 0 ? 'empty' : practisedToday ? 'stamped' : 'outline'
   const mental = mentalCount(atomStates(progress))
 
-  const openChooser = () => setChooserPlan(selectSession(progress, Date.now()))
+  const openChooser = () => setChooser({ plan: selectSession(progress, Date.now()), open: true })
+  const closeChooser = () => setChooser((previous) => (previous === null ? null : { ...previous, open: false }))
   const choose = (choice: PartChoice) => {
-    setChooserPlan(null)
+    // A second tap while the sheet fades out must not start a second session.
+    if (chooser === null || !chooser.open) return
+    closeChooser()
     router.push(choice === 'all' ? '/session' : { pathname: '/session', params: { part: choice } })
   }
 
@@ -124,7 +132,12 @@ export default function Home() {
       ) : (
         <Button testID="start" label={strings.start} detail={strings.startMinutes} onPress={openChooser} />
       )}
-      <PartChooser plan={chooserPlan} onChoose={choose} onClose={() => setChooserPlan(null)} />
+      <PartChooser
+        plan={chooser?.plan ?? null}
+        visible={chooser?.open ?? false}
+        onChoose={choose}
+        onClose={closeChooser}
+      />
     </Screen>
   )
 }
