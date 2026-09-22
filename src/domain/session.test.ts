@@ -3,9 +3,15 @@ import { emptyProgress, recordAttempt, type Progress } from './progress'
 import {
   BLOCK_SECONDS,
   EXTRA_NEW_ATOMS,
+  isPracticePart,
   NEW_ATOMS_PER_DAY,
+  planForPart,
+  PRACTICE_PARTS,
+  PRACTICE_SECONDS,
   selectSession,
   SESSION_SECONDS,
+  type SessionItem,
+  type SessionPlan,
 } from './session'
 
 const NOW = 1_700_000_000_000
@@ -125,5 +131,64 @@ describe('selectSession', () => {
       expect(plan.reserve?.map((i) => i.atomId)).toEqual(remainingUnseen.slice(NEW_ATOMS_PER_DAY))
       expect(plan.reserve).toHaveLength(1)
     })
+  })
+})
+
+// Spec (choosing what to practise) §3: one part of today's plan, for the
+// whole practice time, then the summary.
+describe('planForPart', () => {
+  const item = (atomId: string): SessionItem => ({ atomId, fade: 0, coaching: 'demo' })
+  const today: SessionPlan = {
+    blocks: [
+      { kind: 'warmup', seconds: BLOCK_SECONDS.warmup, items: [item('1+1'), item('2+1')] },
+      { kind: 'focus', seconds: BLOCK_SECONDS.focus, items: [item('0+3')] },
+      { kind: 'faderep', seconds: BLOCK_SECONDS.faderep, items: [] },
+      { kind: 'close', seconds: BLOCK_SECONDS.close, items: [] },
+    ],
+    totalSeconds: SESSION_SECONDS,
+    reserve: [item('0+4')],
+  }
+
+  it('gives a part the practice time of a whole session', () => {
+    expect(PRACTICE_SECONDS).toBe(BLOCK_SECONDS.warmup + BLOCK_SECONDS.focus + BLOCK_SECONDS.faderep)
+    expect(PRACTICE_SECONDS).toBe(255)
+  })
+
+  it.each(PRACTICE_PARTS)('keeps only %s, for the whole practice time, then the summary', (part) => {
+    const plan = planForPart(today, part)
+    expect(plan.blocks.map((block) => block.kind)).toEqual([part, 'close'])
+    expect(plan.blocks[0]?.seconds).toBe(PRACTICE_SECONDS)
+    expect(plan.blocks[0]?.items).toEqual(today.blocks.find((block) => block.kind === part)?.items)
+    expect(plan.blocks[1]).toEqual({ kind: 'close', seconds: BLOCK_SECONDS.close, items: [] })
+    expect(plan.totalSeconds).toBe(SESSION_SECONDS)
+    expect(plan.blocks.reduce((sum, block) => sum + block.seconds, 0)).toBe(SESSION_SECONDS)
+  })
+
+  it('keeps the reserve for focus, the only part that brings new moves in', () => {
+    expect(planForPart(today, 'focus').reserve).toEqual(today.reserve)
+    expect(planForPart(today, 'warmup').reserve).toBeUndefined()
+    expect(planForPart(today, 'faderep').reserve).toBeUndefined()
+  })
+
+  it('leaves a part with nothing in it empty, for the runner to skip', () => {
+    expect(planForPart(today, 'faderep').blocks[0]?.items).toEqual([])
+  })
+
+  it("narrows a real plan: a new learner's focus keeps today's new moves and the reserve", () => {
+    const plan = planForPart(selectSession(emptyProgress(), NOW), 'focus')
+    expect(plan.blocks[0]?.items).toHaveLength(NEW_ATOMS_PER_DAY)
+    expect(plan.reserve).toHaveLength(EXTRA_NEW_ATOMS)
+  })
+})
+
+describe('isPracticePart', () => {
+  it('accepts the three parts', () => {
+    for (const part of PRACTICE_PARTS) expect(isPracticePart(part)).toBe(true)
+  })
+
+  it('rejects anything else, including the close block', () => {
+    for (const value of ['close', '', 'FOCUS', 'focus ', undefined, null, 3, ['focus']]) {
+      expect(isPracticePart(value)).toBe(false)
+    }
   })
 })

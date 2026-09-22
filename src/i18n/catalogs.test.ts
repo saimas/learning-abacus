@@ -176,6 +176,40 @@ describe('coachingLead', () => {
   })
 })
 
+// Spec (choosing what to practise) §4: the chooser's rows.
+describe('the part chooser', () => {
+  it('names the full session and each part', () => {
+    expect(ja.chooseTitle).toBe('なにを練習しますか')
+    expect(ja.chooseAll).toBe('ぜんぶ')
+    expect(ja.chooseAllDetail).toBe('準備 → 集中 → 暗算・5分')
+    expect(ja.chooseOnly('warmup')).toBe('準備だけ')
+    expect(ja.chooseOnly('focus')).toBe('集中だけ')
+    expect(ja.chooseOnly('faderep')).toBe('暗算だけ')
+    expect(ja.chooseEmpty).toBe('今はありません')
+    expect(ja.chooseClose).toBe('閉じる')
+    expect(en.chooseTitle).toBe('What would you like to practise?')
+    expect(en.chooseAll).toBe('Everything')
+    expect(en.chooseAllDetail).toBe('Warm-up → Focus → Fade · 5 min')
+    expect(en.chooseOnly('warmup')).toBe('Warm-up only')
+    expect(en.chooseEmpty).toBe('Nothing right now')
+    expect(en.chooseClose).toBe('Close')
+  })
+
+  it('says what each part holds', () => {
+    expect(ja.chooseDetail('warmup', 3)).toBe('おさらい・3つの動き')
+    expect(ja.chooseDetail('focus', 2)).toBe('新しい動きと苦手な動き')
+    expect(ja.chooseDetail('faderep', 4)).toBe('珠を消す・4つの動き')
+    expect(en.chooseDetail('warmup', 3)).toBe('Review · 3 moves')
+    expect(en.chooseDetail('focus', 2)).toBe('New and shaky moves')
+    expect(en.chooseDetail('faderep', 4)).toBe('Fading the beads · 4 moves')
+  })
+
+  it('keeps the English singular', () => {
+    expect(en.chooseDetail('warmup', 1)).toBe('Review · 1 move')
+    expect(en.chooseDetail('faderep', 1)).toBe('Fading the beads · 1 move')
+  })
+})
+
 describe('the review step', () => {
   it('labels its buttons and announces a miss', () => {
     expect(ja.showAnswer).toBe('こたえを見る')

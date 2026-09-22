@@ -1,9 +1,11 @@
-import { Link, Redirect, useFocusEffect } from 'expo-router'
+import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { ATOMS } from '@/domain/atoms'
 import { dayKey } from '@/domain/progress'
+import { selectSession, type SessionPlan } from '@/domain/session'
 import { useStrings } from '@/i18n'
+import { PartChooser, type PartChoice } from '@/ui/home/PartChooser'
 import { PlanBar } from '@/ui/home/PlanBar'
 import { Button } from '@/ui/kit/Button'
 import { Card } from '@/ui/kit/Card'
@@ -25,6 +27,11 @@ export default function Home() {
   // focus, and whenever the app comes back to the foreground.
   const [today, setToday] = useState(() => dayKey(Date.now()))
 
+  // The chooser: the plan it describes, and whether it is open. The plan is
+  // kept after closing so the rows do not change while the sheet fades out.
+  // Built when the start button is pressed, never during render.
+  const [chooser, setChooser] = useState<{ plan: SessionPlan; open: boolean } | null>(null)
+
   const refreshToday = useCallback(() => {
     setToday(dayKey(Date.now()))
   }, [])
@@ -33,7 +40,11 @@ export default function Home() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (status) => {
-      if (status === 'active') refreshToday()
+      if (status === 'active') {
+        refreshToday()
+        // A sheet left open in the background describes an old plan.
+        setChooser((previous) => (previous === null ? null : { ...previous, open: false }))
+      }
     })
     return () => subscription.remove()
   }, [refreshToday])
@@ -57,6 +68,15 @@ export default function Home() {
   const seal: SealState =
     progress.daysPracticed === 0 ? 'empty' : practisedToday ? 'stamped' : 'outline'
   const mental = mentalCount(atomStates(progress))
+
+  const openChooser = () => setChooser({ plan: selectSession(progress, Date.now()), open: true })
+  const closeChooser = () => setChooser((previous) => (previous === null ? null : { ...previous, open: false }))
+  const choose = (choice: PartChoice) => {
+    // A second tap while the sheet fades out must not start a second session.
+    if (chooser === null || !chooser.open) return
+    closeChooser()
+    router.push(choice === 'all' ? '/session' : { pathname: '/session', params: { part: choice } })
+  }
 
   return (
     <Screen>
@@ -105,14 +125,19 @@ export default function Home() {
       <View style={styles.spacer} />
 
       {/* Practising again is offered, never pushed: after today's session the
-          main button steps down to an outline. */}
-      <Link href="/session" asChild testID="start">
-        {practisedToday ? (
-          <Button variant="outline" label={strings.practiseAgain} />
-        ) : (
-          <Button label={strings.start} detail={strings.startMinutes} />
-        )}
-      </Link>
+          main button steps down to an outline. Either way it first asks what
+          to practise. */}
+      {practisedToday ? (
+        <Button testID="start" variant="outline" label={strings.practiseAgain} onPress={openChooser} />
+      ) : (
+        <Button testID="start" label={strings.start} detail={strings.startMinutes} onPress={openChooser} />
+      )}
+      <PartChooser
+        plan={chooser?.plan ?? null}
+        visible={chooser?.open ?? false}
+        onChoose={choose}
+        onClose={closeChooser}
+      />
     </Screen>
   )
 }

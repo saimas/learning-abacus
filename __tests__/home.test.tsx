@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { AppState, type AppStateStatus } from 'react-native'
 import { emptyProgress, type Progress } from '@/domain/progress'
 import * as store from '@/storage/progressStore'
@@ -12,6 +12,7 @@ jest.mock('@/storage/progressStore')
 // through nativeID, a string prop every View accepts. useFocusEffect stands
 // in for expo-router's version: it just runs the (memoized) callback in an
 // effect, which is enough to exercise Home's on-focus refresh under Jest.
+const mockPush = jest.fn()
 jest.mock('expo-router', () => {
   const { useEffect } = require('react')
   const { Text, View } = require('react-native')
@@ -33,6 +34,7 @@ jest.mock('expo-router', () => {
     useFocusEffect: (effect: () => void | (() => void)) => {
       useEffect(effect, [effect])
     },
+    router: { push: (href: unknown) => mockPush(href) },
   }
 })
 
@@ -103,7 +105,6 @@ describe('Home', () => {
     await waitFor(() => expect(getByTestId('seal-outline')).toBeTruthy())
     expect(getByTestId('today-status').props.children).toBe('今日の練習はまだです')
     expect(getByTestId('days-practiced').props.children).toContain('12日')
-    expect(getByTestId('start').props.nativeID).toBe('/session')
     expect(getByText('はじめる')).toBeTruthy()
   })
 
@@ -113,7 +114,6 @@ describe('Home', () => {
     await waitFor(() => expect(getByTestId('seal-stamped')).toBeTruthy())
     expect(getByTestId('today-status').props.children).toBe('今日は練習しました')
     expect(getByText('もう一度練習する')).toBeTruthy()
-    expect(getByTestId('start').props.nativeID).toBe('/session')
   })
 
   it('leaves the seal empty before the first practised day', async () => {
@@ -155,5 +155,48 @@ describe('Home', () => {
 
     await waitFor(() => expect(getByTestId('seal-outline')).toBeTruthy())
     expect(getByTestId('today-status').props.children).toBe('今日の練習はまだです')
+  })
+})
+
+// Spec (choosing what to practise) §4: the start button asks what to practise.
+describe('Home choosing what to practise', () => {
+  async function openChooser() {
+    mockLoad.mockResolvedValue(learner({}))
+    const utils = renderHome()
+    await waitFor(() => expect(utils.getByTestId('start')).toBeTruthy())
+    fireEvent.press(utils.getByTestId('start'))
+    return utils
+  }
+
+  it('asks before starting anything', async () => {
+    const { getByTestId } = await openChooser()
+    expect(getByTestId('part-chooser')).toBeTruthy()
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('starts the full session from ぜんぶ', async () => {
+    const { getByTestId, queryByTestId } = await openChooser()
+    fireEvent.press(getByTestId('choose-all'))
+    expect(mockPush).toHaveBeenCalledWith('/session')
+    expect(queryByTestId('part-chooser')).toBeNull()
+  })
+
+  it('starts just the chosen part', async () => {
+    const { getByTestId } = await openChooser()
+    fireEvent.press(getByTestId('choose-focus'))
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/session', params: { part: 'focus' } })
+  })
+
+  it('offers 準備 only when something is due', async () => {
+    // A learner who has answered nothing has nothing due.
+    const { getByTestId } = await openChooser()
+    expect(getByTestId('choose-warmup').props.accessibilityState).toMatchObject({ disabled: true })
+  })
+
+  it('closes without starting anything', async () => {
+    const { getByTestId, queryByTestId } = await openChooser()
+    fireEvent.press(getByTestId('chooser-backdrop'))
+    expect(queryByTestId('part-chooser')).toBeNull()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })

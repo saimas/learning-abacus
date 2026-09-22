@@ -2,7 +2,7 @@ import { classify, startValue, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
-import type { BlockKind } from '@/domain/session'
+import type { BlockKind, PracticePart } from '@/domain/session'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
 // `both` names the two substitutions in the order they are performed: a
@@ -28,6 +28,15 @@ const BLOCK_LABEL: Record<BlockKind, string> = {
   focus: '集中',
   faderep: '暗算',
   close: 'まとめ',
+}
+
+// What each part holds, as the chooser's detail line. Focus's size changes as
+// new moves join during the session, so it names the kind of move instead of
+// a count.
+const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
+  warmup: (count) => `おさらい・${count}つの動き`,
+  focus: () => '新しい動きと苦手な動き',
+  faderep: (count) => `珠を消す・${count}つの動き`,
 }
 
 // Declared as a function rather than inline on the object: a member
@@ -69,6 +78,13 @@ export const ja = {
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
   practiseAgain: 'もう一度練習する',
+  chooseTitle: 'なにを練習しますか',
+  chooseAll: 'ぜんぶ',
+  chooseAllDetail: `${BLOCK_LABEL.warmup} → ${BLOCK_LABEL.focus} → ${BLOCK_LABEL.faderep}・5分`,
+  chooseOnly: (part: PracticePart) => `${BLOCK_LABEL[part]}だけ`,
+  chooseDetail: (part: PracticePart, count: number) => CHOOSE_DETAIL[part](count),
+  chooseEmpty: '今はありません',
+  chooseClose: '閉じる',
   mapPreviewTitle: '暗算できる動き',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
