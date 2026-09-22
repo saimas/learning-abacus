@@ -26,6 +26,20 @@ export const BLOCK_SECONDS: Record<BlockKind, number> = {
 }
 
 export const SESSION_SECONDS = 285
+
+// Spec (choosing what to practise) §3: the parts a learner can practise on
+// their own. Close is the summary, not something to practise.
+export type PracticePart = 'warmup' | 'focus' | 'faderep'
+export const PRACTICE_PARTS: readonly PracticePart[] = ['warmup', 'focus', 'faderep']
+
+// A part practised on its own gets all of a session's practice time.
+export const PRACTICE_SECONDS = SESSION_SECONDS - BLOCK_SECONDS.close
+
+// For values from outside the app's own code, such as a route parameter.
+export function isPracticePart(value: unknown): value is PracticePart {
+  return typeof value === 'string' && (PRACTICE_PARTS as readonly string[]).includes(value)
+}
+
 export const NEW_ATOMS_PER_DAY = 2
 // A first-day (or any-day) plan whose warm-up and fade-rep blocks are empty
 // leaves the focus block cycling just NEW_ATOMS_PER_DAY atoms for the whole
@@ -99,5 +113,21 @@ export function selectSession(progress: Progress, now: number): SessionPlan {
     ],
     totalSeconds: SESSION_SECONDS,
     reserve,
+  }
+}
+
+// Today's plan narrowed to one part: that part's moves for the whole practice
+// time, then the summary. The runner plays the block just as it would inside
+// a full session. Warm-up is still a single pass, and only focus draws on the
+// reserve, so the reserve goes with focus alone.
+export function planForPart(plan: SessionPlan, part: PracticePart): SessionPlan {
+  const items = plan.blocks.find((block) => block.kind === part)?.items ?? []
+  return {
+    blocks: [
+      { kind: part, seconds: PRACTICE_SECONDS, items },
+      { kind: 'close', seconds: BLOCK_SECONDS.close, items: [] },
+    ],
+    totalSeconds: SESSION_SECONDS,
+    reserve: part === 'focus' ? plan.reserve : undefined,
   }
 }
