@@ -143,9 +143,20 @@ describe('SessionRunner', () => {
     expect(getByTestId('correction-answer').props.children).toBe('こたえは 7')
   })
 
+  // A single-item block now ends the moment its one move is answered (see
+  // "no block cycles a single move" below), so a next question to not-hold-up
+  // needs a second item still queued behind it.
+  const twoItemFocusPlan: SessionPlan = {
+    blocks: [
+      { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+  }
+
   it('marks a correct answer without holding up the next question', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
-    const { getByTestId } = renderRunner(basicPlan, autoClock())
+    const { getByTestId } = renderRunner(twoItemFocusPlan, autoClock())
     answer(getByTestId, '7')
     expect(getByTestId('maru')).toBeTruthy()
     expect(getByTestId('prompt')).toBeTruthy()
@@ -154,7 +165,7 @@ describe('SessionRunner', () => {
   })
 
   it('shows no mark after a wrong answer', () => {
-    const { getByTestId, queryByTestId } = renderRunner(basicPlan, autoClock())
+    const { getByTestId, queryByTestId } = renderRunner(twoItemFocusPlan, autoClock())
     answer(getByTestId, '7')
     answer(getByTestId, '9')
     expect(queryByTestId('maru')).toBeNull()
@@ -278,19 +289,37 @@ describe('SessionRunner', () => {
   })
 
   it('cycles items within a block while time remains', () => {
-    const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
-    answer(getByTestId, '7')
-    answer(getByTestId, '7')
-    answer(getByTestId, '7')
-    const attempts = onAttempt.mock.calls.filter((call) => call[0].atomId === '3+4')
-    expect(attempts).toHaveLength(3)
+    // A block with more than one live move still refills once its queue
+    // drains, for as long as time is left — only a single remaining move
+    // must never be asked back-to-back (covered separately below).
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    for (let i = 0; i < 5; i++) answerCorrectly(getByTestId)
+    const attempts = onAttempt.mock.calls.filter(
+      (call) => call[0].atomId === '3+4' || call[0].atomId === '2+3',
+    )
+    expect(attempts).toHaveLength(5)
+    // More answers than there are items in the block: the queue must have
+    // drained and refilled at least once.
+    expect(attempts.filter((call) => call[0].atomId === '3+4').length).toBeGreaterThan(1)
     expect(getByTestId('prompt')).toBeTruthy()
   })
 
   it('advances to the next block once its cumulative deadline passes', () => {
+    // A single-item block would end on its very first correct answer (see
+    // "no block cycles a single move" below), which would reach the deadline
+    // this test wants to check for the wrong reason. Two items keep the
+    // block open past the first answer, so the second checkpoint is the one
+    // actually exercising the cumulative deadline.
     const plan: SessionPlan = {
       blocks: [
-        { kind: 'focus', seconds: 10, items: [item('3+4')] },
+        { kind: 'focus', seconds: 10, items: [item('3+4'), item('2+3')] },
         { kind: 'close', seconds: 30, items: [] },
       ],
       totalSeconds: 40,
@@ -299,22 +328,26 @@ describe('SessionRunner', () => {
     const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, clock.now)
 
     clock.set(5_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).not.toHaveBeenCalled()
     expect(getByTestId('prompt')).toBeTruthy()
 
     clock.set(15_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).toHaveBeenCalledWith('focus')
     expect(queryByTestId('prompt')).toBeNull()
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
 
   it('skips an empty block without firing onBlockEnd, and its time carries into the next block', () => {
+    // Two items in focus, not one: a single-item block would end on its
+    // first correct answer regardless of the deadline (see "no block cycles
+    // a single move" below), which would make the 15s checkpoint pass for
+    // the wrong reason.
     const plan: SessionPlan = {
       blocks: [
         { kind: 'warmup', seconds: 10, items: [] },
-        { kind: 'focus', seconds: 10, items: [item('3+4')] },
+        { kind: 'focus', seconds: 10, items: [item('3+4'), item('2+3')] },
         { kind: 'close', seconds: 30, items: [] },
       ],
       totalSeconds: 50,
@@ -328,13 +361,13 @@ describe('SessionRunner', () => {
     // Past what a naive per-block timer (10s counted from focus's own start)
     // would allow, but before the cumulative deadline (warmup + focus = 20s).
     clock.set(15_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).not.toHaveBeenCalled()
     expect(getByTestId('prompt')).toBeTruthy()
 
     // Past the cumulative 20s deadline.
     clock.set(25_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).toHaveBeenCalledTimes(1)
     expect(onBlockEnd).toHaveBeenCalledWith('focus')
     expect(queryByTestId('session-summary')).not.toBeNull()
@@ -345,10 +378,14 @@ describe('SessionRunner', () => {
     // *tail* are skipped by findActiveBlock — so without this their 90s is
     // simply lost and the session delivers 165s of practice instead of 255s,
     // every single day.
+    // Two items in focus: a single-item block would end on its first correct
+    // answer regardless of the deadline (see "no block cycles a single move"
+    // below), which would make the first checkpoint pass for the wrong
+    // reason.
     const plan: SessionPlan = {
       blocks: [
         { kind: 'warmup', seconds: 45, items: [] },
-        { kind: 'focus', seconds: 120, items: [item('3+4')] },
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
         { kind: 'faderep', seconds: 90, items: [] },
         { kind: 'close', seconds: 30, items: [] },
       ],
@@ -360,13 +397,13 @@ describe('SessionRunner', () => {
     // Past focus's own cumulative deadline (45 + 120 = 165s), but inside the
     // full practice budget the skipped fade-rep block hands it.
     clock.set(200_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).not.toHaveBeenCalled()
     expect(getByTestId('prompt')).toBeTruthy()
 
     // Past the whole practice budget (45 + 120 + 90 = 255s).
     clock.set(256_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     expect(onBlockEnd).toHaveBeenCalledWith('focus')
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
@@ -392,9 +429,12 @@ describe('SessionRunner', () => {
   it('reports the session result on the close screen', () => {
     // Spec §6 gives the close block "result, atoms mastered, tomorrow's
     // preview". It rendered only the words "Session complete".
+    // Two items in focus: a single-item block would end on the very first
+    // correct answer (see "no block cycles a single move" below), leaving no
+    // block alive to take the rest of this test's answers.
     const plan: SessionPlan = {
       blocks: [
-        { kind: 'focus', seconds: 10, items: [item('3+4')] },
+        { kind: 'focus', seconds: 10, items: [item('3+4'), item('2+3')] },
         { kind: 'close', seconds: 30, items: [] },
       ],
       totalSeconds: 40,
@@ -403,14 +443,14 @@ describe('SessionRunner', () => {
     const { getByTestId } = renderRunner(plan, clock.now)
 
     clock.set(1_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
     clock.set(2_000)
-    answer(getByTestId, '9')
+    answer(getByTestId, '99')
     clock.set(3_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
 
     clock.set(11_000)
-    answer(getByTestId, '7')
+    answerCorrectly(getByTestId)
 
     const result = getByTestId('summary-result').props.children as string
     expect(result).toContain('4問中')
@@ -662,6 +702,10 @@ describe('SessionRunner bringing in reserve atoms', () => {
   })
 
   it('never joins a reserve atom into a warm-up block', () => {
+    // Warm-up makes one pass (see SessionRunner.test.tsx's "no block cycles
+    // a single move" tests), so it never reaches a five-in-a-row streak to
+    // begin with — its one pass through both items, and only that, is what
+    // this test can check.
     const plan: SessionPlan = {
       blocks: [
         { kind: 'warmup', seconds: 120, items: [item('3+4'), item('2+3')] },
@@ -670,16 +714,15 @@ describe('SessionRunner bringing in reserve atoms', () => {
       totalSeconds: 150,
       reserve: [item('5+3')],
     }
-    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
-    const correctCount = (atomId: string) =>
-      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+    const { getByTestId, queryByTestId, onAttempt } = renderRunner(plan, autoClock())
 
-    for (let i = 0; i < 20; i++) {
-      answerCorrectly(getByTestId)
-      expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
-    }
-    expect(correctCount('3+4')).toBeGreaterThanOrEqual(5)
-    expect(correctCount('2+3')).toBeGreaterThanOrEqual(5)
+    answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
+    answerCorrectly(getByTestId)
+    expect(queryByTestId('session-summary')).not.toBeNull()
+
+    const seenAtoms = new Set(onAttempt.mock.calls.map((call) => call[0].atomId))
+    expect(seenAtoms).toEqual(new Set(['3+4', '2+3']))
   })
 
   it('joins no more atoms than the reserve holds', () => {
@@ -700,5 +743,126 @@ describe('SessionRunner bringing in reserve atoms', () => {
 
     const seenAtoms = new Set(onAttempt.mock.calls.map((call) => call[0].atomId))
     expect(seenAtoms).toEqual(new Set(['3+4', '2+3']))
+  })
+})
+
+// The TestFlight repeat bug: a block with only one live move used to refill
+// its queue from that same move for the rest of its time slice, so the
+// learner saw the identical question over and over. These tests pin down
+// the fix's exact rules (see submit() in SessionRunner.tsx).
+describe('SessionRunner never repeating one question to fill time', () => {
+  it('ends warm-up after its one move instead of asking it again', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'warmup', seconds: 120, items: [item('3+4')] },
+        { kind: 'focus', seconds: 120, items: [item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 270,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    answerCorrectly(getByTestId)
+    expect(getByTestId('block-label').props.children).toBe('集中')
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+  })
+
+  it('asks each warm-up move once, in a single pass, then moves on', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'warmup', seconds: 120, items: [item('3+4'), item('2+3'), item('1+4')] },
+        { kind: 'focus', seconds: 120, items: [item('6+2')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 270,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    answerCorrectly(getByTestId)
+    answerCorrectly(getByTestId)
+    answerCorrectly(getByTestId)
+    expect(getByTestId('block-label').props.children).toBe('集中')
+    const warmupAtomIds = ['3+4', '2+3', '1+4']
+    const warmupAttempts = onAttempt.mock.calls.filter((call) =>
+      warmupAtomIds.includes(call[0].atomId as string),
+    )
+    expect(warmupAttempts).toHaveLength(3)
+    expect(new Set(warmupAttempts.map((call) => call[0].atomId))).toEqual(new Set(warmupAtomIds))
+  })
+
+  it('still retries a missed warm-up move before the block ends', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'warmup', seconds: 120, items: [item('3+4')] },
+        { kind: 'focus', seconds: 120, items: [item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 270,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    answer(getByTestId, '9') // wrong: expected 7
+    expect(getByTestId('block-label').props.children).toBe('準備')
+    answerCorrectly(getByTestId)
+    expect(getByTestId('block-label').props.children).toBe('集中')
+    const warmupAttempts = onAttempt.mock.calls.filter((call) => call[0].atomId === '3+4')
+    expect(warmupAttempts).toHaveLength(2)
+  })
+
+  it('ends a single-move fade-rep block after its one pass', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'faderep', seconds: 120, items: [item('3+4')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, autoClock())
+    answerCorrectly(getByTestId)
+    expect(onBlockEnd).toHaveBeenCalledWith('faderep')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('brings in the reserve move once a single-move focus block has nothing else to offer', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+      reserve: [item('5+3')],
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).toBe('5に3をたす。')
+  })
+
+  it('ends a single-move focus block with no reserve instead of repeating it', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, autoClock())
+    answerCorrectly(getByTestId)
+    expect(onBlockEnd).toHaveBeenCalledWith('focus')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('does not ask the just-retried item again right after its retry (rotation)', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
+    answer(getByTestId, '0') // wrong: 3+4 requeued at the back -> [2+3, 3+4]
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    answerCorrectly(getByTestId) // 2+3 right -> queue is just the 3+4 retry
+    expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
+    answerCorrectly(getByTestId) // 3+4 retry right -> queue drains and refills
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
   })
 })
