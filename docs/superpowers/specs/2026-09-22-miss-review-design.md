@@ -1,7 +1,7 @@
 # learning-abacus — Reviewing a wrong answer (✕ and the correct bead moves)
 
 Date: 2026-09-22
-Status: Approved design, pre-implementation
+Status: Implemented on feature/miss-review (TestFlight build 7)
 
 ## 1. Goal and decisions
 
