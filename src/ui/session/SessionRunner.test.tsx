@@ -453,4 +453,19 @@ describe('SessionRunner', () => {
     expect(onBlockEnd).toHaveBeenCalledWith('focus')
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
+
+  it('starts a borrowing subtraction at 13 and accepts 8 on the keypad', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3-5', { fade: 3, coaching: 'silent' })] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    expect(getByTestId('prompt').props.children).toBe('13から5をひく。')
+    expect(getByTestId('rod-0').props.accessibilityValue.text).toBe('1')
+    answer(getByTestId, '8')
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ atomId: '3-5', correct: true }))
+  })
 })

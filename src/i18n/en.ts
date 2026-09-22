@@ -1,4 +1,4 @@
-import type { Atom } from '@/domain/atoms'
+import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
@@ -63,7 +63,7 @@ export const en: Strings = {
   done: 'Done',
   answer: 'Answer',
   prompt: (atom) =>
-    `Rod shows ${atom.rodValue}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
+    `The soroban shows ${startValue(atom)}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
   coaching,
   blockLabel: (kind) => BLOCK_LABEL[kind],
   previousProblem: 'Previous problem',
@@ -76,6 +76,9 @@ export const en: Strings = {
   quitContinue: 'Keep going',
   sealDone: 'Done',
   deleteKey: 'Delete',
+  beadHint: 'Tap the beads to move them',
+  resetBeads: 'Reset',
+  rodName: (place): string => (place === 0 ? 'ones rod' : 'tens rod'),
 
   atomSummary: (mental, total) => `${mental} of ${total} moves are mental`,
   cellLabel: (atomId, state) => `${atomId} ${CELL_STATE[state]}`,

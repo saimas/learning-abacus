@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
-import type { Atom } from '@/domain/atoms'
+import { expectedValue, startValue, type Atom } from '@/domain/atoms'
 import type { FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
@@ -204,13 +204,13 @@ export function SessionRunner({
   }
 
   const { rodValue, operand, sign } = parseAtomId(current.atomId)
-  const expected = rodValue + sign * operand
   const atom: Atom = {
     id: current.atomId,
     rodValue,
     operand,
     direction: sign === 1 ? 'add' : 'sub',
   }
+  const expected = expectedValue(atom)
 
   function submit() {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
@@ -301,7 +301,7 @@ export function SessionRunner({
           a plain View. */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
-          <Abacus soroban={setValue(emptySoroban(2), rodValue)} fade={current.fade} />
+          <Abacus soroban={setValue(emptySoroban(2), startValue(atom))} fade={current.fade} />
         </View>
         <Text testID="prompt" style={styles.prompt}>
           {strings.prompt(atom)}

@@ -1,4 +1,4 @@
-import { classify, type Atom, type AtomClass } from '@/domain/atoms'
+import { classify, startValue, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
@@ -77,8 +77,8 @@ export const ja = {
   answer: 'こたえる',
   prompt: (atom: Atom) =>
     atom.direction === 'add'
-      ? `${atom.rodValue}に${atom.operand}をたす。`
-      : `${atom.rodValue}から${atom.operand}をひく。`,
+      ? `${startValue(atom)}に${atom.operand}をたす。`
+      : `${startValue(atom)}から${atom.operand}をひく。`,
   coaching,
   blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
   previousProblem: 'さっきの問題',
@@ -91,6 +91,9 @@ export const ja = {
   quitContinue: 'つづける',
   sealDone: '済',
   deleteKey: '1文字消す',
+  beadHint: '珠をタップして動かします',
+  resetBeads: 'もどす',
+  rodName: (place: number): string => (place === 0 ? '一の位' : '十の位'),
 
   atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
   cellLabel: (atomId: string, state: CellState) => `${atomId} ${CELL_STATE[state]}`,
