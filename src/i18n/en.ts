@@ -71,7 +71,6 @@ export const en: Strings = {
   coaching,
   coachingLead,
   blockLabel: (kind) => BLOCK_LABEL[kind],
-  previousProblem: 'Previous problem',
   correctionAnswer: (expected) => `The answer is ${expected}`,
   correct: 'Correct',
   wrong: 'Not quite',

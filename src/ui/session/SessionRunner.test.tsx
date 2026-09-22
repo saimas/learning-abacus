@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, StyleSheet } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
+import { colors } from '@/ui/theme'
 import { setBeads, textOf } from './testing'
 
 function item(atomId: string, overrides: Partial<SessionItem> = {}): SessionItem {
@@ -85,6 +86,12 @@ function answerCorrectly(getByTestId: ReturnType<typeof render>['getByTestId']) 
   answer(getByTestId, String(expectedFor(prompt)))
 }
 
+// After a miss the question stays on screen for review until つぎへ. Tests
+// about what comes after a wrong answer press it, as the learner would.
+function moveOn() {
+  fireEvent.press(screen.getByTestId('review-next'))
+}
+
 const basicPlan: SessionPlan = {
   blocks: [
     { kind: 'focus', seconds: 120, items: [item('3+4')] },
@@ -128,7 +135,7 @@ describe('SessionRunner', () => {
     expect(queryByTestId('correction')).not.toBeNull()
   })
 
-  it('names the problem a correction belongs to, since it shows under the next one', () => {
+  it('keeps a missed question on screen, with its answer card, until つぎへ', () => {
     const plan: SessionPlan = {
       blocks: [
         { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
@@ -136,11 +143,16 @@ describe('SessionRunner', () => {
       ],
       totalSeconds: 150,
     }
-    const { getByTestId } = renderRunner(plan, autoClock())
+    const { getByTestId, queryByTestId } = renderRunner(plan, autoClock())
     answer(getByTestId, '9')
-    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
-    expect(getByTestId('correction-problem').props.children).toBe('3に4をたす。')
+    expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
     expect(getByTestId('correction-answer').props.children).toBe('こたえは 7')
+    // The card is about the question on screen, so it names no other one.
+    expect(queryByTestId('correction-problem')).toBeNull()
+
+    moveOn()
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    expect(queryByTestId('correction')).toBeNull()
   })
 
   // A single-item block now ends the moment its one move is answered (see
@@ -241,6 +253,7 @@ describe('SessionRunner', () => {
     const { getByTestId } = renderRunner(plan, autoClock())
     const before = getByTestId('fade-layer').props.style.opacity as number
     answer(getByTestId, '9')
+    moveOn()
     const after = getByTestId('fade-layer').props.style.opacity as number
     // fade 4 is 'ghost' (more transparent); dropping to fade 3 is 'dim' (more opaque).
     expect(after).toBeGreaterThan(before)
@@ -261,6 +274,7 @@ describe('SessionRunner', () => {
       if (prompt === null) break
       const showsDroppedAtom = (prompt.props.children as string).includes('shows 3')
       answer(getByTestId, showsDroppedAtom ? '0' : '5')
+      if (queryByTestId('review-next') !== null) moveOn()
     }
 
     const droppedAttempts = onAttempt.mock.calls.filter((call) => call[0].atomId === '3+4')
@@ -446,6 +460,7 @@ describe('SessionRunner', () => {
     answerCorrectly(getByTestId)
     clock.set(2_000)
     answer(getByTestId, '99')
+    moveOn()
     clock.set(3_000)
     answerCorrectly(getByTestId)
 
@@ -518,6 +533,7 @@ describe('SessionRunner', () => {
     for (let i = 0; i < 6; i++) {
       clock.set((i + 1) * 100)
       answer(getByTestId, '0')
+      moveOn()
     }
 
     expect(onBlockEnd).toHaveBeenCalledTimes(1)
@@ -623,10 +639,13 @@ describe('SessionRunner answering with beads', () => {
     expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ atomId: '3-5', correct: true }))
   })
 
-  it('still names the previous problem after a wrong bead answer', () => {
-    const { getByTestId } = renderRunner(twoItems, autoClock())
+  it('keeps the beads as the learner set them, and locks them, while a miss is reviewed', () => {
+    const { getByTestId, queryByTestId } = renderRunner(twoItems, autoClock())
     answer(getByTestId, '9')
-    expect(getByTestId('correction-problem').props.children).toBe('3に4をたす。')
+    expect(getByTestId('rod-1').props.accessibilityValue.text).toBe('9')
+    expect(getByTestId('rod-1').props.accessibilityRole).toBeUndefined()
+    expect(queryByTestId('reset-beads')).toBeNull()
+    expect(queryByTestId('submit')).toBeNull()
   })
 })
 
@@ -668,6 +687,7 @@ describe('SessionRunner bringing in reserve atoms', () => {
     // Answering it wrong (99 cannot be right for either atom) resets that
     // streak instead, so the reserve atom must not join here.
     answer(getByTestId, '99')
+    moveOn()
     expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
 
     // Rebuilding the reset streak takes real work — if a wrong answer failed
@@ -799,6 +819,7 @@ describe('SessionRunner never repeating one question to fill time', () => {
     }
     const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
     answer(getByTestId, '9') // wrong: expected 7
+    moveOn()
     expect(getByTestId('block-label').props.children).toBe('準備')
     answerCorrectly(getByTestId)
     expect(getByTestId('block-label').props.children).toBe('集中')
@@ -859,6 +880,7 @@ describe('SessionRunner never repeating one question to fill time', () => {
     const { getByTestId } = renderRunner(plan, autoClock())
     expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
     answer(getByTestId, '0') // wrong: 3+4 requeued at the back -> [2+3, 3+4]
+    moveOn()
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
     answerCorrectly(getByTestId) // 2+3 right -> queue is just the 3+4 retry
     expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
@@ -882,5 +904,199 @@ describe('SessionRunner and the correct-answer stamp', () => {
     const maru = within(wrap).getByTestId('maru')
     const flat = StyleSheet.flatten(maru.props.style)
     expect(flat.width).toBe(140)
+  })
+})
+
+// Spec (miss review) §4: a miss holds its question for review. The ✕ stamps
+// over it, こたえを見る plays the move on the soroban, and つぎへ moves on.
+describe('SessionRunner reviewing a miss', () => {
+  const beadPlan: SessionPlan = {
+    blocks: [
+      { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+  }
+  // F3: keypad answers, a dimmed soroban, silent coaching.
+  const keypadPlan: SessionPlan = {
+    blocks: [
+      {
+        kind: 'focus',
+        seconds: 120,
+        items: [item('7+8', { fade: 3, coaching: 'silent' }), item('2+3', { fade: 3, coaching: 'silent' })],
+      },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+  }
+
+  // Tens then ones, as the soroban reads.
+  const rods = () => [0, 1].map((index) => screen.getByTestId(`rod-${index}`).props.accessibilityValue.text).join('')
+  const opacity = () => screen.getByTestId('fade-layer').props.style.opacity as number
+  const highlighted = () =>
+    [0, 1].filter(
+      (index) => StyleSheet.flatten(screen.getByTestId(`correction-step-${index}`).props.style)?.color === colors.accent,
+    )
+
+  it('stamps a big ✕ over the soroban and offers こたえを見る and つぎへ', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    const batsu = within(getByTestId('soroban-wrap')).getByTestId('batsu')
+    expect(StyleSheet.flatten(batsu.props.style).width).toBe(140)
+    expect(queryByTestId('maru')).toBeNull()
+    expect(within(getByTestId('review-show')).getByText('こたえを見る')).toBeTruthy()
+    expect(within(getByTestId('review-next')).getByText('つぎへ')).toBeTruthy()
+    expect(announce).toHaveBeenCalledWith('ちがいます')
+    announce.mockRestore()
+  })
+
+  it('hides the keypad while a keypad answer is reviewed', () => {
+    const { getByTestId, queryByTestId } = renderRunner(keypadPlan, autoClock())
+    answer(getByTestId, '9')
+    expect(getByTestId('prompt').props.children).toBe('7に8をたす。')
+    expect(queryByTestId('key-0')).toBeNull()
+    expect(queryByTestId('submit')).toBeNull()
+    expect(StyleSheet.flatten(getByTestId('batsu').props.style).width).toBe(110)
+  })
+
+  it('shows the answer card at once where coaching still speaks, in place of the demonstration', () => {
+    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+    expect(getByTestId('demonstration')).toBeTruthy()
+    answer(getByTestId, '9')
+    expect(getByTestId('correction')).toBeTruthy()
+    expect(queryByTestId('demonstration')).toBeNull()
+  })
+
+  it('holds the card back at a silent level until こたえを見る', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        {
+          kind: 'focus',
+          seconds: 120,
+          items: [item('3+4', { fade: 2, coaching: 'silent' }), item('2+3', { fade: 2, coaching: 'silent' })],
+        },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId, queryByTestId } = renderRunner(plan, autoClock())
+    answer(getByTestId, '9')
+    expect(queryByTestId('correction')).toBeNull()
+    fireEvent.press(getByTestId('review-show'))
+    expect(getByTestId('correction-answer').props.children).toBe('こたえは 7')
+  })
+
+  it('replays the move on the soroban, drawn solid, one step every 900 ms', () => {
+    const { getByTestId, queryByTestId } = renderRunner(keypadPlan, autoClock())
+    answer(getByTestId, '9')
+    expect(opacity()).toBe(0.35)
+
+    fireEvent.press(getByTestId('review-show'))
+    expect(rods()).toBe('07')
+    expect(opacity()).toBe(1)
+    expect(queryByTestId('replay-step')).toBeNull()
+
+    act(() => jest.advanceTimersByTime(899))
+    expect(rods()).toBe('07')
+    act(() => jest.advanceTimersByTime(1))
+    expect(rods()).toBe('17')
+    expect(getByTestId('replay-step').props.children).toBe('1 / 2')
+
+    act(() => jest.advanceTimersByTime(900))
+    expect(rods()).toBe('15')
+    expect(getByTestId('replay-step').props.children).toBe('2 / 2')
+
+    act(() => jest.advanceTimersByTime(5_000))
+    expect(rods()).toBe('15')
+  })
+
+  it('highlights the step just played, then offers もう一度見る', () => {
+    const { getByTestId } = renderRunner(keypadPlan, autoClock())
+    answer(getByTestId, '9')
+    fireEvent.press(getByTestId('review-show'))
+    expect(highlighted()).toEqual([])
+    act(() => jest.advanceTimersByTime(900))
+    expect(highlighted()).toEqual([0])
+    act(() => jest.advanceTimersByTime(900))
+    expect(highlighted()).toEqual([1])
+    expect(within(getByTestId('review-show')).getByText('もう一度見る')).toBeTruthy()
+
+    fireEvent.press(getByTestId('review-show'))
+    expect(rods()).toBe('07')
+    expect(highlighted()).toEqual([])
+  })
+
+  it('moves on with つぎへ and brings the missed move back later in the block', () => {
+    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    moveOn()
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    expect(queryByTestId('batsu')).toBeNull()
+    expect(queryByTestId('review-next')).toBeNull()
+    expect(getByTestId('rod-1').props.accessibilityRole).toBe('adjustable')
+    answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).toBe('3に4をたす。')
+  })
+
+  it('scores a miss once, at the answer, and not again at つぎへ', () => {
+    const { getByTestId, onAttempt } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: false, latencyMs: null })
+    moveOn()
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+  })
+
+  it("leaves the time spent reviewing out of the next answer's latency", () => {
+    const clock = manualClock(0)
+    const { getByTestId, onAttempt } = renderRunner(keypadPlan, clock.now)
+    clock.set(1_000)
+    answer(getByTestId, '9')
+    clock.set(61_000)
+    moveOn()
+    clock.set(64_000)
+    answer(getByTestId, '5')
+    expect(onAttempt).toHaveBeenLastCalledWith({ atomId: '2+3', correct: true, latencyMs: 3_000 })
+  })
+
+  it('ends the block at つぎへ when its time ran out during the review', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 10, items: [item('3+4'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 40,
+    }
+    const clock = manualClock(0)
+    const { getByTestId, queryByTestId, onBlockEnd } = renderRunner(plan, clock.now)
+    clock.set(5_000)
+    answer(getByTestId, '9')
+    clock.set(15_000)
+    expect(onBlockEnd).not.toHaveBeenCalled()
+    moveOn()
+    expect(onBlockEnd).toHaveBeenCalledWith('focus')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  it('cuts a replay short at つぎへ', () => {
+    const { getByTestId } = renderRunner(keypadPlan, autoClock())
+    answer(getByTestId, '9')
+    fireEvent.press(getByTestId('review-show'))
+    moveOn()
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
+    expect(rods()).toBe('02')
+    expect(opacity()).toBe(0.35)
+    act(() => jest.advanceTimersByTime(3_000))
+    expect(rods()).toBe('02')
+  })
+
+  it('leaves a correct answer as it was: 〇 and the next question at once', () => {
+    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '7')
+    expect(getByTestId('maru')).toBeTruthy()
+    expect(queryByTestId('batsu')).toBeNull()
+    expect(queryByTestId('review-next')).toBeNull()
+    expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
   })
 })

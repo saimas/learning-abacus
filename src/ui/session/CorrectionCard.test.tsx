@@ -36,4 +36,9 @@ describe('CorrectionCard', () => {
     expect(colorOf('correction-step-0')).not.toBe(colors.accent)
     expect(colorOf('correction-step-1')).not.toBe(colors.accent)
   })
+
+  it('names no other problem: it sits under the question it corrects', () => {
+    render(<CorrectionCard atom={atom(7, 8, 'add')} expected={15} />)
+    expect(screen.queryByTestId('correction-problem')).toBeNull()
+  })
 })

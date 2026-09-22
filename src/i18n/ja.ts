@@ -88,7 +88,6 @@ export const ja = {
   coaching,
   coachingLead,
   blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
-  previousProblem: 'さっきの問題',
   correctionAnswer: (expected: number) => `こたえは ${expected}`,
   correct: '正解',
   wrong: 'ちがいます',
