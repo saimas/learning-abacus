@@ -59,6 +59,10 @@ export async function loadProgress(): Promise<Progress> {
       highestStage: asStageIndex(candidate.highestStage, base.highestStage),
       // Added without a schema bump, like highestStage.
       practices: asPractices(candidate.practices),
+      // Added without a schema bump, like highestStage: a document written
+      // before it existed has not seen the walkthrough.
+      multiplyIntroDone:
+        typeof candidate.multiplyIntroDone === 'boolean' ? candidate.multiplyIntroDone : base.multiplyIntroDone,
     }
   } catch {
     return emptyProgress()

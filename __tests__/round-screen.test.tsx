@@ -84,6 +84,24 @@ describe('Round screen', () => {
     expect(queryByTestId('soroban-wrap')).toBeNull()
   })
 
+  it('shows how multiplication works before the first × round', async () => {
+    mockParams.current = { kind: 'mul:2' }
+    const { queryByTestId } = renderRound()
+    await waitFor(() =>
+      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/multiply-intro', params: { kind: 'mul:2' } }),
+    )
+    expect(queryByTestId('prompt')).toBeNull()
+  })
+
+  it('plays a × round once the walkthrough has been seen', async () => {
+    mockParams.current = { kind: 'mul:2' }
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
+    const { getByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('prompt').props.children).toMatch(/^\d{2}に\d{2}をかける。$/)
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
   it('starts a kind with no record in bead mode', async () => {
     mockParams.current = { kind: 'add:2' }
     const { getByTestId, queryByTestId } = renderRound()

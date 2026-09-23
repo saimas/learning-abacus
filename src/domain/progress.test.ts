@@ -39,6 +39,10 @@ describe('emptyProgress', () => {
     expect(p.calibrationMs).toBe(DEFAULT_CALIBRATION_MS)
     expect(p.daysPracticed).toBe(0)
   })
+
+  it('has not yet shown how multiplication works', () => {
+    expect(emptyProgress().multiplyIntroDone).toBe(false)
+  })
 })
 
 describe('recordAttempt', () => {

@@ -268,4 +268,14 @@ describe('multiplication strings', () => {
     expect([4, 5].map(ja.rodName)).toEqual(['万の位', '十万の位'])
     expect([4, 5].map(en.rodName)).toEqual(['ten-thousands rod', 'hundred-thousands rod'])
   })
+
+  it('gives the walkthrough its title, its explanations and its result', () => {
+    expect(ja.introTitle).toBe('かけ算のやりかた')
+    expect(ja.introMethod).toContain('両落とし')
+    expect(ja.introPlacement).toContain('百の位')
+    expect(ja.introResult(47, 36, 1692)).toBe('47×36 = 1692')
+    expect(en.introResult(47, 36, 1692)).toBe('47 × 36 = 1692')
+    expect(ja.chooseHowTo).toBe('やりかた')
+    expect(en.chooseHowTo).toBe('How it works')
+  })
 })

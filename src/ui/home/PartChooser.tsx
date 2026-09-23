@@ -23,12 +23,14 @@ export function PartChooser({
   visible,
   onChoose,
   onChooseRound,
+  onHowTo,
   onClose,
 }: {
   plan: SessionPlan | null
   visible: boolean
   onChoose: (choice: PartChoice) => void
   onChooseRound: (kind: PracticeKind) => void
+  onHowTo: () => void
   onClose: () => void
 }) {
   const strings = useStrings()
@@ -99,6 +101,15 @@ export function PartChooser({
               testIDFor={(option) => `round-digits-${option}`}
             />
           </View>
+          {/* Spec (multiplication) §5: the walkthrough is shown once, before
+              the first × round, so this is how to see it again. */}
+          {op === 'mul' ? (
+            <Pressable testID="choose-howto" accessibilityRole="link" onPress={onHowTo} hitSlop={8} style={styles.howTo}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.howToText}>
+                {strings.chooseHowTo}
+              </Text>
+            </Pressable>
+          ) : null}
           <Row
             testID="choose-round"
             name={strings.roundName(kind)}
@@ -201,4 +212,6 @@ const styles = StyleSheet.create({
   rule: { flex: 1, height: 1, backgroundColor: colors.cardLine },
   sectionTitle: { fontSize: fontSizes.caption, color: colors.muted },
   pickers: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.sm },
+  howTo: { alignSelf: 'flex-end' },
+  howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
 })

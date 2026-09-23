@@ -126,6 +126,27 @@ describe('ProgressProvider', () => {
     expect(call?.[0]?.tutorialDone).toBe(true)
   })
 
+  it('completeMultiplyIntro sets multiplyIntroDone, persists immediately, and changes nothing else', async () => {
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    await act(async () => {
+      await api?.completeMultiplyIntro()
+    })
+    await waitFor(() => expect(api?.progress?.multiplyIntroDone).toBe(true))
+    expect(mockSave).toHaveBeenCalledTimes(1)
+    expect(mockSave.mock.calls[0]?.[0]).toEqual({ ...emptyProgress(), daysPracticed: 3, multiplyIntroDone: true })
+  })
+
   it('flushes when the app is backgrounded mid-block', async () => {
     // Backgrounding is the normal way a commute habit ends, and block
     // boundaries are the only other flush — without this the block is lost.

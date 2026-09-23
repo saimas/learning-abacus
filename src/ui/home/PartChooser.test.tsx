@@ -21,10 +21,12 @@ function renderChooser({
   plan = today,
   visible = true,
   onChooseRound = jest.fn(),
+  onHowTo = jest.fn(),
 }: {
   plan?: SessionPlan | null
   visible?: boolean
   onChooseRound?: jest.Mock
+  onHowTo?: jest.Mock
 } = {}) {
   const onChoose = jest.fn()
   const onClose = jest.fn()
@@ -34,10 +36,11 @@ function renderChooser({
       visible={visible}
       onChoose={onChoose}
       onChooseRound={onChooseRound}
+      onHowTo={onHowTo}
       onClose={onClose}
     />,
   )
-  return { onChoose, onClose, onChooseRound }
+  return { onChoose, onClose, onChooseRound, onHowTo }
 }
 
 describe('PartChooser', () => {
@@ -114,5 +117,18 @@ describe('けたの練習', () => {
     expect(textOf(screen.getByTestId('choose-round'))).toContain('634 − 258 など・10問')
     fireEvent.press(screen.getByTestId('choose-round'))
     expect(onChooseRound).toHaveBeenCalledWith({ op: 'sub', digits: 3 })
+  })
+
+  // Spec (multiplication) §5: the やりかた link replays the walkthrough.
+  it('offers how multiplication works only while × is chosen', () => {
+    const onHowTo = jest.fn()
+    renderChooser({ onHowTo })
+    expect(screen.queryByTestId('choose-howto')).toBeNull()
+    fireEvent.press(screen.getByTestId('round-op-mul'))
+    expect(within(screen.getByTestId('choose-howto')).getByText('やりかた')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('choose-howto'))
+    expect(onHowTo).toHaveBeenCalledTimes(1)
+    fireEvent.press(screen.getByTestId('round-op-sub'))
+    expect(screen.queryByTestId('choose-howto')).toBeNull()
   })
 })

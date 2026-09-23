@@ -121,6 +121,28 @@ describe('practices', () => {
   })
 })
 
+describe('multiplyIntroDone', () => {
+  it('loads a document written before the flag existed as not yet seen', async () => {
+    // Added without a SCHEMA_VERSION bump, like highestStage: a document
+    // already on a learner's phone arrives without it and must load intact.
+    const { multiplyIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5 }
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    const result = await loadProgress()
+    expect(result.multiplyIntroDone).toBe(false)
+    expect(result.daysPracticed).toBe(5)
+  })
+
+  it('keeps a stored true', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone: true }))
+    expect((await loadProgress()).multiplyIntroDone).toBe(true)
+  })
+
+  it.each([['yes'], [1], [null]])('discards a multiplyIntroDone of %p in favour of false', async (multiplyIntroDone) => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone }))
+    expect((await loadProgress()).multiplyIntroDone).toBe(false)
+  })
+})
+
 describe('saveProgress', () => {
   it('writes under the versioned key', async () => {
     const progress = emptyProgress()

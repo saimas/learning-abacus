@@ -200,4 +200,12 @@ export const en: Strings = {
     'The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total.',
   readingFeedback: (target) => `Not quite. This rod shows ${target}: ${breakdown(target)}.`,
   readingTitle: 'Reading the soroban',
+
+  introTitle: 'How to multiply',
+  introMethod:
+    'Only the answer goes on the soroban (両落とし). Take the first number’s digits from the highest, times the second number’s digits from the highest, and add each times-table answer onto the rods.',
+  introPlacement:
+    'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
+  introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  chooseHowTo: 'How it works',
 }

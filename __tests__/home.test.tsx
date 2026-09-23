@@ -205,4 +205,12 @@ describe('Home choosing what to practise', () => {
     fireEvent.press(getByTestId('choose-round'))
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'add:1' } })
   })
+
+  it('opens the multiplication walkthrough from the やりかた link', async () => {
+    const { getByTestId, queryByTestId } = await openChooser()
+    fireEvent.press(getByTestId('round-op-mul'))
+    fireEvent.press(getByTestId('choose-howto'))
+    expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
+    expect(queryByTestId('part-chooser')).toBeNull()
+  })
 })

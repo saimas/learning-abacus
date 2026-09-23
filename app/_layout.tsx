@@ -15,6 +15,9 @@ export default function RootLayout() {
               and saves) or おわる. A stray edge swipe must not skip either. */}
           <Stack.Screen name="session" options={{ gestureEnabled: false }} />
           <Stack.Screen name="round" options={{ gestureEnabled: false }} />
+          {/* Spec (multiplication) §4: the walkthrough is left through its
+              last button, which marks it seen, as a round is. */}
+          <Stack.Screen name="multiply-intro" options={{ gestureEnabled: false }} />
         </Stack>
       </ProgressProvider>
     </LocaleProvider>

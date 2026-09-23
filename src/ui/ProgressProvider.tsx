@@ -20,6 +20,7 @@ type ProgressApi = {
   flush: () => Promise<void>
   reset: () => Promise<void>
   completeTutorial: () => Promise<void>
+  completeMultiplyIntro: () => Promise<void>
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null)
@@ -108,9 +109,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     await saveProgress(next)
   }, [])
 
+  // Saved at once, as completeTutorial is: the walkthrough is shown only
+  // until it has been seen, so a crash before the next flush must not bring
+  // it back.
+  const completeMultiplyIntro = useCallback(async () => {
+    const next = { ...latest.current, multiplyIntroDone: true }
+    latest.current = next
+    setProgress(next)
+    await saveProgress(next)
+  }, [])
+
   return (
     <ProgressContext.Provider
-      value={{ progress, hydrated, attempt, practise, flush, reset, completeTutorial }}
+      value={{ progress, hydrated, attempt, practise, flush, reset, completeTutorial, completeMultiplyIntro }}
     >
       {children}
     </ProgressContext.Provider>
