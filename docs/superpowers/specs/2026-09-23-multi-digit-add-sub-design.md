@@ -14,7 +14,7 @@ Decisions made with the owner:
 - **A round is 10 problems,** then the summary.
 - **Fade is speed-aware,** as for single moves: 5 correct in a row, each within a time target, promotes one level; 2 wrong in a row demotes one. The target comes from the per-move targets the app already calibrates.
 - **Progress appears on the progress screen** as a small table below the 180-move map. Home is unchanged.
-- **Architecture A:** a shared `Exercise` and an extracted `QuestionView`, played by the existing `SessionRunner` and a new `RoundRunner` (§5).
+- **Architecture A:** a shared `Exercise` and an extracted `QuestionView`, played by the existing `SessionRunner` and a new `RoundRunner` (§6).
 
 Out of scope: × and ÷ (P2, P3), 見取算 (more than two terms), feeding multi-digit practice into the daily session, crediting single moves on the 180-move map from multi-digit answers.
 
@@ -36,7 +36,7 @@ export type Operation = 'add' | 'sub'
 export type Digits = 1 | 2 | 3
 export type PracticeKind = { op: Operation; digits: Digits }
 export type PracticeId = `${Operation}:${Digits}`   // 'add:1' … 'sub:3'
-export type Problem = { op: Operation; a: number; b: number }
+export type Problem = { op: Operation; digits: Digits; a: number; b: number }
 ```
 
 - `PRACTICE_KINDS`: the six kinds. `practiceId(kind)`, and `parsePracticeId(value: unknown): PracticeKind | null` for route parameters.
@@ -64,11 +64,12 @@ export type ColumnStep = {
   place: number          // 0 = ones, 1 = tens, 2 = hundreds
   atom: Atom | null      // null when b's digit here is 0: nothing moves
   steps: PlacedStep[]    // rod steps with absolute rod indexes, cascades included
+  cascades: boolean      // a carry or borrow had to ripple past the next rod
 }
 export type PlacedStep = { rodIndex: number; delta: number }
 ```
 
-- Columns run from `b`'s highest digit to its ones digit. For each, the atom is (the rod's value at that moment, `b`'s digit, the operation), and its steps come from `decompose(atom)`.
+- Columns run from `b`'s highest digit to its ones digit. For each, the atom is (the rod's value at that moment, `b`'s digit, the operation), and its steps come from `decompose(atom)`. Carries only ever go left, into columns already worked, so the rod's value at that moment is always `a`'s digit there.
 - A `'carry'` step lands on the rod to the left. If that rod shows 9 (adding) or 0 (subtracting), the step cannot be a single bead move: it becomes that rod's own 10's complement, one more carry further left. This repeats until a rod can take it. The cascade's steps come from `decompose` too, as the atom (that rod's value, 1, the operation), so they read the same way the learner already knows.
 - Subtraction never borrows past the leftmost rod, because `a ≥ b`. Addition never carries past it, because there is one spare rod.
 - `applyPlacedStep(soroban, step)` applies one step. `problemStates(problem)` is the soroban at the start (`a` set on `rodsFor(digits)` rods) and after each step, for the replay.
@@ -83,14 +84,15 @@ export type Exercise = {
   start: number
   expected: number
   states: Soroban[]      // start, then after each step
-  targetMs: number       // the time target for one timed answer
 }
 ```
 
-- `exerciseForAtom(atom, calibrationMs)`: 2 rods, `startValue`, `expectedValue`, `moveStates`, and `latencyTargetMs(classify(atom), calibrationMs)`. It must match today's behaviour exactly for all 180 atoms.
-- `exerciseForProblem(problem, calibrationMs)`: `rodsFor(digits)`, `a`, `answerOf`, `problemStates`, and a target of the sum of `latencyTargetMs` for each column's atom (columns with no atom add nothing), plus `TYPING_ALLOWANCE_MS` (400 ms, a first estimate) per digit of the answer. Like the single-move targets, the numbers are first estimates to be tuned with real use.
+- `exerciseForAtom(atom)`: 2 rods, `startValue`, `expectedValue`, `moveStates`. It must match today's behaviour exactly for all 180 atoms.
+- `exerciseForProblem(problem)`: `rodsFor(digits)`, `a`, `answerOf`, `problemStates`.
 
-The prompt and the correction card's text are not in `Exercise`: they are strings, and they come from the i18n catalogues, which take the atom or the problem (§7).
+A problem's time target is `problemTargetMs(problem, calibrationMs)` in `problem.ts`: the sum of `latencyTargetMs` for each column's atom (columns with no atom add nothing), plus `TYPING_ALLOWANCE_MS` (400 ms) per digit of the answer. Like the single-move targets, these are first estimates to be tuned with real use. Single moves keep their own targets in `fluency.ts`, so `Exercise` carries none.
+
+The prompt and the correction card's text are not in `Exercise`: they are strings, and they come from the i18n catalogues, which take the atom or the problem (§6).
 
 ## 5. Records (`src/domain/practice.ts`, `progress.ts`, `progressStore.ts`)
 
@@ -101,13 +103,12 @@ export type PracticeRecord = {
   fade: FadeLevel
   consecutiveCorrect: number
   consecutiveWrong: number
-  recentPace: number[]      // latency ÷ that problem's targetMs, last LATENCY_WINDOW
   lastPractisedAt: number
 }
 ```
 
 - `Progress` gains `practices: Partial<Record<PracticeId, PracticeRecord>>`, default `{}`. As with `highestStage`, there is no schema bump: a stored document without the field loads with `{}`. `loadProgress` keeps only entries whose key is a known `PracticeId` and whose value has the expected shape; anything else is dropped rather than discarding the whole document.
-- `applyPracticeAttempt(record, correct, pace: number | null, now)`: `pace` is null for an untimed (bead) answer. The rule mirrors `applyAttempt`: fast enough means correct and (`pace < 1`, or untimed while the record's own fade is a bead level); `nextFadeLevel` decides the level; a fade change restarts the streaks and the recent pace.
+- `applyPracticeAttempt(record, correct, pace: number | null, now)`: `pace` is the answer's latency ÷ that problem's target, or null for an untimed (bead) answer. The rule mirrors `applyAttempt`: fast enough means correct and (`pace < 1`, or untimed while the record's own fade is a bead level); `nextFadeLevel` decides the level; a fade change restarts the streaks. Pace is judged per answer, so no history of it is kept.
 - `recordPracticeAttempt(progress, id, correct, pace, now)` updates `progress.practices[id]`, creating the record at F0 if needed. It does not touch `atoms`, `calibrationMs` or `highestStage`.
 - There is no Leitner box or due date: those schedule material, and this mode is chosen, not scheduled.
 - A round's fade is read when the round starts and held for all 10 problems, as a session plan holds its items' fade. A promotion earned during a round shows from the next round.
@@ -121,7 +122,7 @@ Everything about one question, driven by an `Exercise` plus its fade, coaching, 
 
 `SessionRunner` keeps its plan logic (blocks, the time track, retries, the reserve, fade rep, the summary) and renders `QuestionView` for its current atom via `exerciseForAtom`. The extraction changes nothing the learner sees: `SessionRunner`'s existing tests must pass without edits to what they assert.
 
-The bead-mode scale is no longer the fixed `BEAD_MODE_SCALE`. It is the largest scale up to 1.38 at which `exercise.rods` rods fit the screen's usable width. On a 375 pt screen this gives 1.38 for 2 rods and about 1.3 for 4.
+The bead-mode scale is no longer the fixed `BEAD_MODE_SCALE`. It is the largest scale up to 1.38 at which `exercise.rods` rods fit the screen's usable width. On a 375 pt screen (335 pt inside the gutters) this gives 1.38 for 2 and 3 rods and about 1.16 for 4, where a bead is 58 × 24 pt.
 
 ### RoundRunner (`src/ui/round/RoundRunner.tsx`) and the `/round` route
 
@@ -145,7 +146,7 @@ The selection starts at ＋ 1けた and is remembered by Home while the app runs
 
 ### Progress screen
 
-Below `AtomGrid`, a `PracticeTable`: title けたの練習, rows ＋ and −, columns 1けた, 2けた, 3けた. Each cell shows the kind's fade level in the same visual language as the atom map's cells, or a not-yet-tried mark. Each cell has an accessibility label such as "2けたのたし算、うすさ 3".
+Below `AtomGrid`, a `PracticeTable`: title けたの練習, rows ＋ and −, columns 1けた, 2けた, 3けた. Each cell is coloured with the atom map's four cell colours and names its stage: まだ (not tried), 珠で (F0–F2), うすい珠 (F3–F5), 暗算 (F6). Each cell has an accessibility label such as "2けたのたし算、うすい珠".
 
 ### Strings
 
@@ -153,8 +154,8 @@ All new text goes in both `ja.ts` and `en.ts`, and `catalogs.test.ts` keeps them
 
 ## 7. Testing
 
-- `problem.test.ts`: operand digit counts; no negative or zero answers for subtraction; distinct problems for a fixed seed. Exhaustively for every 1- and 2-digit pair, and for a large seeded sample of 3-digit pairs: `problemStates` ends at `answerOf`, and every step keeps each rod within 0–9. Named cascade cases: 95 + 15 (carry into a 9), 999 + 999 (carries into a 9 twice), 102 − 13 (borrow through a 0), 500 − 499 (a borrow chain across two 0s).
-- `exercise.test.ts`: `exerciseForAtom` agrees with `startValue`, `expectedValue`, `moveStates` and `latencyTargetMs` for all 180 atoms. `exerciseForProblem` target arithmetic.
+- `problem.test.ts`: operand digit counts; no negative or zero answers for subtraction; distinct problems for a fixed seed. Exhaustively for every 1- and 2-digit pair, and for a large seeded sample of 3-digit pairs: `problemStates` ends at `answerOf`, and every step keeps each rod within 0–9. Named cases: 46 + 54 = 100 (a carry into a 9 cascades), 400 − 101 = 299 (a borrow from a 0 cascades), 999 + 999 = 1998 (the largest). Subtraction can only cascade with 3 digits: with 2, a tens rod left at 0 means the tens digits were equal, and then a ones borrow would make `a < b`.
+- `exercise.test.ts`: `exerciseForAtom` agrees with `startValue`, `expectedValue` and `moveStates` for all 180 atoms. `problemTargetMs` arithmetic is in `problem.test.ts`.
 - `practice.test.ts` / `progress.test.ts`: promotion after 5 fast correct, demotion after 2 wrong, the untimed bead rule, streak reset on a fade change; `recordPracticeAttempt` leaves `atoms`, `calibrationMs` and `highestStage` unchanged.
 - `progressStore.test.ts`: a document without `practices` loads with `{}`; unknown ids and malformed records are dropped.
 - `SessionRunner` tests pass unchanged after the extraction. New `QuestionView` tests for the problem card and a 4-rod soroban. `RoundRunner` tests: 10 problems, count track, miss review then move on, summary, quit.
