@@ -57,7 +57,7 @@ The lines are what `renderCorrection` draws today, generalised to `renderSteps({
 
 - `AttemptResult` (single moves) and `PracticeAttempt` (rounds) gain `assisted: boolean`.
 - `ProgressProvider.attempt` / `practise`: an assisted attempt only marks the day practised; it does not call `recordAttempt` / `recordPracticeAttempt`.
-- `SessionRunner`: an assisted right answer neither extends nor resets its atom's streak (so it cannot bring in a reserve move or retire a fade-rep move); an assisted miss is handled like any miss (review, retry, failure count). The tally counts both.
+- `SessionRunner`: an assisted answer, right or wrong, neither extends nor resets its atom's streak, and only the learner's own right answers can bring in a reserve move or retire a fade-rep move. An assisted miss is otherwise handled like any miss (review, retry, failure count). The tally counts both. After とじる, こたえる ignores taps for the same 450 ms as つぎへ, since it reappears under とじる.
 - `RoundRunner`: assisted answers count in the tally; `pace` is still computed but unused when assisted.
 
 ## 6. Home
