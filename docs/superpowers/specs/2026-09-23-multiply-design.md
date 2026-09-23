@@ -74,7 +74,7 @@ export type StepGroup =
   3. Then one page per product group (4×3, 4×6, 7×3, 7×6). The page's line is the group's card line ("4×3=12　千の位に1、百の位に2"), and its bead steps play on the soroban with the replay's timing.
   4. The last page gives the result, "47×36 = 1692".
 - つぎへ advances a page. On the last page the button is はじめる when a `kind` was passed: it marks the intro done and replaces the screen with `/round?kind=…`. Opened from the chooser without a kind, the button is おわる: it marks the intro done and goes back.
-- A dot track shows the page, as the reading drill's does. Edge swipe is disabled, as for `/round`.
+- A dot track shows the page, as the reading drill's does. Edge swipe is disabled when the walkthrough leads into a round (it has a `kind`), as for `/round`; opened from やりかた, the swipe back is allowed. The screen waits for progress to load before it can mark the intro done.
 
 ## 5. UI changes
 
