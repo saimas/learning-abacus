@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import type { Problem } from '@/domain/problem'
+import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
+import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { RoundRunner } from './RoundRunner'
@@ -190,5 +192,28 @@ describe('RoundRunner with ×', () => {
 
     fireEvent.press(screen.getByTestId('step-restart'))
     expect([lit('a'), lit('b')]).toEqual([[], []])
+  })
+
+  // A 375 × 667 phone must still show the prompt and 手順を見る above the
+  // soroban with the board present, so there both are drawn smaller. On a
+  // tall phone neither changes.
+  it.each([
+    ['a short window', 375, 667, SHORT_WINDOW_BEAD_SCALE, OPERAND_SHORT_WINDOW_SCALE],
+    ['a tall window', 402, 874, beadModeScale(4, 402 - 40), OPERAND_MAX_SCALE],
+  ])('sizes the soroban and the board for %s', (_window, width, height, product, operands) => {
+    // As in QuestionView.test.tsx: `require` reaches the module object the
+    // components' own imports read from.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+    const reactNative = require('react-native')
+    const spy = jest
+      .spyOn(reactNative, 'useWindowDimensions')
+      .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    renderRound(multiply)
+    const padding = (container: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
+    expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * product)
+    expect(padding('operand-a')).toBeCloseTo(FRAME_PADDING * operands)
+    expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * operands)
+    spy.mockRestore()
   })
 })

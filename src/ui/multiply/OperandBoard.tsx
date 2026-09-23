@@ -3,7 +3,7 @@ import { OPERATION_SYMBOL, type Digits, type Problem, type StepGroup } from '@/d
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
-import { geometryFor, scaleToFit } from '@/ui/abacus/geometry'
+import { geometryFor, scaleToFit, SHORT_WINDOW_HEIGHT } from '@/ui/abacus/geometry'
 import { colors, fontSizes, space } from '@/ui/theme'
 
 // The two numbers of a × problem, set on beads beneath the product soroban.
@@ -19,14 +19,20 @@ import { colors, fontSizes, space } from '@/ui/theme'
 
 // Small enough to stay clearly second to the product soroban above.
 export const OPERAND_MAX_SCALE = 0.65
+// Smaller still on a short window (SHORT_WINDOW_HEIGHT), so a 375 × 667
+// phone keeps the prompt and 手順を見る above the soroban with the board
+// present.
+export const OPERAND_SHORT_WINDOW_SCALE = 0.5
 // The × between the boards, with its gap on either side. It is text, so it
 // does not scale with the boards.
 export const TIMES_WIDTH = 32
 
-// The largest scale, up to OPERAND_MAX_SCALE, at which both boards and the ×
+// The largest scale, up to OPERAND_MAX_SCALE (OPERAND_SHORT_WINDOW_SCALE on
+// a window under SHORT_WINDOW_HEIGHT tall), at which both boards and the ×
 // between them fit `room`: each board gets half of what the × leaves.
-export function operandScale(digits: Digits, room: number): number {
-  return scaleToFit(digits, (room - TIMES_WIDTH) / 2, OPERAND_MAX_SCALE)
+export function operandScale(digits: Digits, room: number, windowHeight: number): number {
+  const max = windowHeight < SHORT_WINDOW_HEIGHT ? OPERAND_SHORT_WINDOW_SCALE : OPERAND_MAX_SCALE
+  return scaleToFit(digits, (room - TIMES_WIDTH) / 2, max)
 }
 
 // `activeGroup` is the group of the move the learner has just stepped to, if
@@ -34,9 +40,9 @@ export function operandScale(digits: Digits, room: number): number {
 // highest place, so place p is rod digits − 1 − p.
 export function OperandBoard({ problem, activeGroup }: { problem: Problem; activeGroup?: StepGroup }) {
   const strings = useStrings()
-  const { width } = useWindowDimensions()
+  const { width, height } = useWindowDimensions()
   // The screen's gutters are space.xl on each side (Screen).
-  const scale = operandScale(problem.digits, width - 2 * space.xl)
+  const scale = operandScale(problem.digits, width - 2 * space.xl, height)
   const g = geometryFor(scale)
   const product = activeGroup?.kind === 'product' ? activeGroup : undefined
   const last = problem.digits - 1

@@ -4,7 +4,13 @@ import { problemSteps, type Problem, type StepGroup } from '@/domain/problem'
 import { DECK_PADDING, FRAME_PADDING, geometryFor, ROD_WIDTH } from '@/ui/abacus/geometry'
 import { textOf } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
-import { OPERAND_MAX_SCALE, OperandBoard, operandScale, TIMES_WIDTH } from './OperandBoard'
+import {
+  OPERAND_MAX_SCALE,
+  OPERAND_SHORT_WINDOW_SCALE,
+  OperandBoard,
+  operandScale,
+  TIMES_WIDTH,
+} from './OperandBoard'
 
 const problem: Problem = { op: 'mul', digits: 3, a: 472, b: 385 }
 const groups = problemSteps(problem)
@@ -23,6 +29,19 @@ const lit = (name: 'a' | 'b') => [0, 1, 2].filter((i) => side(name).queryByTestI
 const digitStyle = (name: 'a' | 'b', i: number) =>
   StyleSheet.flatten(screen.getByTestId(`operand-${name}-digit-${i}`).props.style)
 const emphasised = (name: 'a' | 'b') => [0, 1, 2].filter((i) => digitStyle(name, i).color === colors.accent)
+const framePadding = () =>
+  screen.getAllByTestId('abacus-frame').map((frame) => StyleSheet.flatten(frame.props.style).padding)
+
+// As in QuestionView.test.tsx: `require` reaches the module object the
+// component's own import reads from.
+let restoreWindow = () => {}
+function windowOf(width: number, height: number) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+  const reactNative = require('react-native')
+  const spy = jest.spyOn(reactNative, 'useWindowDimensions').mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+  restoreWindow = () => spy.mockRestore()
+}
+afterEach(() => restoreWindow())
 
 describe('OperandBoard', () => {
   it('sets both numbers on beads, with their digits over the rods', () => {
@@ -51,7 +70,8 @@ describe('OperandBoard', () => {
 
   it('puts each digit over its rod', () => {
     render(<OperandBoard problem={problem} />)
-    const g = geometryFor(operandScale(3, 750 - 40))
+    // Jest's window is 750 × 1334.
+    const g = geometryFor(operandScale(3, 750 - 40, 1334))
     const row = StyleSheet.flatten(screen.getByTestId('operand-a-digits').props.style)
     expect(row.paddingHorizontal).toBeCloseTo(g.framePadding + g.deckPadding)
     expect(digitStyle('a', 1).width).toBeCloseTo(g.rodWidth)
@@ -89,18 +109,24 @@ describe('OperandBoard', () => {
     expect([lit('a'), lit('b')]).toEqual([[], []])
   })
 
-  it('fits a phone-width window', () => {
-    // As in QuestionView.test.tsx: `require` reaches the module object the
-    // component's own import reads from.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
-    const reactNative = require('react-native')
-    const spy = jest
-      .spyOn(reactNative, 'useWindowDimensions')
-      .mockReturnValue({ width: 320, height: 568, scale: 2, fontScale: 1 })
+  it('fits a narrow window', () => {
+    windowOf(320, 800)
     render(<OperandBoard problem={problem} />)
-    const padding = screen.getAllByTestId('abacus-frame').map((frame) => StyleSheet.flatten(frame.props.style).padding)
-    expect(padding).toEqual([FRAME_PADDING * operandScale(3, 280), FRAME_PADDING * operandScale(3, 280)])
-    spy.mockRestore()
+    const scale = operandScale(3, 280, 800)
+    expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
+    expect(framePadding()).toEqual([FRAME_PADDING * scale, FRAME_PADDING * scale])
+  })
+
+  it('draws the boards smaller on a short window, and at their usual size on a tall one', () => {
+    windowOf(375, 667)
+    render(<OperandBoard problem={problem} />)
+    expect(framePadding()).toEqual([FRAME_PADDING * OPERAND_SHORT_WINDOW_SCALE, FRAME_PADDING * OPERAND_SHORT_WINDOW_SCALE])
+    screen.unmount()
+    restoreWindow()
+
+    windowOf(402, 874)
+    render(<OperandBoard problem={problem} />)
+    expect(framePadding()).toEqual([FRAME_PADDING * OPERAND_MAX_SCALE, FRAME_PADDING * OPERAND_MAX_SCALE])
   })
 })
 
@@ -109,13 +135,20 @@ describe('operandScale', () => {
   // padding on each side.
   const natural = (digits: number) => digits * ROD_WIDTH + 2 * (DECK_PADDING + FRAME_PADDING)
 
-  it('draws the boards at their largest where they fit, as on a 375 pt phone', () => {
-    expect(operandScale(3, 375 - 40)).toBe(OPERAND_MAX_SCALE)
-    expect(operandScale(1, 375 - 40)).toBe(OPERAND_MAX_SCALE)
+  it('draws the boards at their largest where they fit, as on a 402 × 874 phone', () => {
+    expect(operandScale(3, 402 - 40, 874)).toBe(OPERAND_MAX_SCALE)
+    expect(operandScale(1, 402 - 40, 874)).toBe(OPERAND_MAX_SCALE)
+  })
+
+  // A 375 × 667 phone must still show the prompt and 手順を見る above the
+  // product soroban with the board under it.
+  it('draws them smaller on a short window, as on a 375 × 667 phone', () => {
+    expect(operandScale(3, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)
+    expect(operandScale(1, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)
   })
 
   it('shrinks both boards, so they, the × and its gaps just fit a narrow window', () => {
-    const scale = operandScale(3, 280)
+    const scale = operandScale(3, 280, 800)
     expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
     expect(2 * natural(3) * scale + TIMES_WIDTH).toBeCloseTo(280)
   })
