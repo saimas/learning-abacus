@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { Alert, Text } from 'react-native'
+import { Text } from 'react-native'
 import { isPracticePart, planForPart, selectSession } from '@/domain/session'
 import { useStrings } from '@/i18n'
 import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
+import { confirmQuit } from '@/ui/session/confirmQuit'
 import { SessionRunner } from '@/ui/session/SessionRunner'
 
 // Home is always underneath when the session was started from it. The
@@ -55,13 +56,6 @@ export default function Session() {
     void flush().then(goHome)
   }
 
-  const confirmQuit = () => {
-    Alert.alert(strings.quitTitle, strings.quitBody, [
-      { text: strings.quitContinue, style: 'cancel' },
-      { text: strings.quitStop, style: 'destructive', onPress: leave },
-    ])
-  }
-
   return (
     <Screen>
       <SessionRunner
@@ -69,7 +63,7 @@ export default function Session() {
         onAttempt={attempt}
         onBlockEnd={() => void flush()}
         onFinish={leave}
-        onQuit={confirmQuit}
+        onQuit={() => confirmQuit(strings, leave)}
       />
     </Screen>
   )

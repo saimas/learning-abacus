@@ -64,6 +64,27 @@ describe('ProgressProvider', () => {
     expect(mockSave).not.toHaveBeenCalled()
   })
 
+  it('practise records a multi-digit attempt and marks the day practised', async () => {
+    mockLoad.mockResolvedValue(emptyProgress())
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null }))
+    await waitFor(() => {
+      expect(api?.progress?.practices['sub:3']).toBeDefined()
+      expect(api?.progress?.daysPracticed).toBe(1)
+    })
+  })
+
   it('writes when flushed', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {

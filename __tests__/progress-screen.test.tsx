@@ -38,4 +38,13 @@ describe('ProgressScreen', () => {
     await waitFor(() => expect(getByTestId('link-today')).toBeTruthy())
     expect(getByTestId('link-today').props.children).toBe('/')
   })
+
+  it('shows practice-table', async () => {
+    const { getByTestId } = render(
+      <ProgressProvider>
+        <ProgressScreen />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+  })
 })

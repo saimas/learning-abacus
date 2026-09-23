@@ -199,4 +199,10 @@ describe('Home choosing what to practise', () => {
     expect(queryByTestId('part-chooser')).toBeNull()
     expect(mockPush).not.toHaveBeenCalled()
   })
+
+  it('starts a multi-digit round from the けたの練習 row', async () => {
+    const { getByTestId } = await openChooser()
+    fireEvent.press(getByTestId('choose-round'))
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'add:1' } })
+  })
 })

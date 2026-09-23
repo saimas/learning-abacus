@@ -105,6 +105,22 @@ describe('loadProgress', () => {
   )
 })
 
+describe('practices', () => {
+  it('loads a document written before practices existed with none', async () => {
+    const { practices: _, ...old } = emptyProgress()
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    expect((await loadProgress()).practices).toEqual({})
+  })
+
+  it('keeps known kinds and drops unknown ids and malformed records', async () => {
+    const good = { fade: 2, consecutiveCorrect: 1, consecutiveWrong: 0, lastPractisedAt: 5 }
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'mul:2': good, 'sub:1': { fade: 'x' } } }),
+    )
+    expect((await loadProgress()).practices).toEqual({ 'add:2': good })
+  })
+})
+
 describe('saveProgress', () => {
   it('writes under the versioned key', async () => {
     const progress = emptyProgress()

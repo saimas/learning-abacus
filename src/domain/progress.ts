@@ -7,6 +7,8 @@ import {
   newRecord,
   type AtomRecord,
 } from './fluency'
+import { applyPracticeAttempt, newPracticeRecord, type PracticeRecord } from './practice'
+import type { PracticeId } from './problem'
 
 export const SCHEMA_VERSION = 1
 export const DEFAULT_CALIBRATION_MS = 900
@@ -21,6 +23,9 @@ export type Progress = {
   // The highest stage ever reached. See currentStage for why this is stored
   // rather than derived fresh each time.
   highestStage: StageIndex
+  // Multi-digit practice, one record per kind (spec: multi-digit ＋ − §5).
+  // Added without a schema bump, like highestStage.
+  practices: Partial<Record<PracticeId, PracticeRecord>>
 }
 
 export function emptyProgress(): Progress {
@@ -32,6 +37,7 @@ export function emptyProgress(): Progress {
     calibrationMs: DEFAULT_CALIBRATION_MS,
     tutorialDone: false,
     highestStage: 1,
+    practices: {},
   }
 }
 
@@ -115,4 +121,22 @@ export function markDayPracticed(progress: Progress, day: string): Progress {
 // Whichever is higher wins, and neither can lower the other.
 export function currentStage(progress: Progress): StageIndex {
   return higherStage(progress.highestStage, highestUnlockedStage(progress.atoms, progress.calibrationMs))
+}
+
+// A multi-digit answer updates only its own kind's record. It does not
+// credit or fault the single moves inside it: a wrong 3-digit sum should
+// not punish five atoms (roadmap §7), and calibration stays a measure of
+// single moves.
+export function recordPracticeAttempt(
+  progress: Progress,
+  id: PracticeId,
+  correct: boolean,
+  pace: number | null,
+  now: number,
+): Progress {
+  const existing = progress.practices[id] ?? newPracticeRecord(now)
+  return {
+    ...progress,
+    practices: { ...progress.practices, [id]: applyPracticeAttempt(existing, correct, pace, now) },
+  }
 }

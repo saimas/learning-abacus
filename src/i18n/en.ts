@@ -2,6 +2,9 @@ import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
+// Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
+import type { PracticeStage } from '@/ui/progress/PracticeTable'
+import { practiceId, ROUND_LENGTH, type Operation, type PracticeId, type PracticeKind } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 import type { Strings } from './ja'
 
@@ -28,6 +31,34 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
   warmup: (count) => `Review · ${moves(count)}`,
   focus: () => 'New and shaky moves',
   faderep: (count) => `Fading the beads · ${moves(count)}`,
+}
+
+// A rod's name by its place, 0 being the ones rod, in a sentence and as a
+// line's heading.
+const PLACE: readonly string[] = ['ones rod', 'tens rod', 'hundreds rod', 'thousands rod']
+const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands']
+
+const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction' }
+
+// One fixed example per kind for the chooser's detail line.
+const EXAMPLE: Record<PracticeId, string> = {
+  'add:1': '7 + 8',
+  'add:2': '23 + 58',
+  'add:3': '472 + 385',
+  'sub:1': '9 − 4',
+  'sub:2': '81 − 36',
+  'sub:3': '634 − 258',
+}
+
+const PRACTICE_STAGE: Record<PracticeStage, string> = {
+  unseen: 'not yet',
+  beads: 'beads',
+  fading: 'fading',
+  mental: 'mental',
+}
+
+function roundName(kind: PracticeKind): string {
+  return `${kind.digits}-digit ${OP_NAME[kind.op].toLowerCase()}`
 }
 
 // English names no technique: this is the wording `explainMove` has today,
@@ -105,7 +136,26 @@ export const en: Strings = {
   watchAgain: 'Watch again',
   next: 'Next',
   replayStep: (step, total) => `${step} / ${total}`,
-  rodName: (place): string => (place === 0 ? 'ones rod' : 'tens rod'),
+  rodName: (place): string => PLACE[place] ?? `rod ${place}`,
+  problemPrompt: (problem) =>
+    `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
+  columnLine: (place, atom, cascades) =>
+    `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
+      cascades
+        ? atom.direction === 'add'
+          ? ' (and carries again into the next rod)'
+          : ' (borrowing from a rod further left)'
+        : ''
+    }`,
+  roundCount: (index, total) => `${index} / ${total}`,
+  roundComplete: 'Practice complete',
+  roundSection: 'Bigger numbers',
+  opName: (op) => OP_NAME[op],
+  digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
+  roundName,
+  roundDetail: (kind) => `e.g. ${EXAMPLE[practiceId(kind)]} · ${ROUND_LENGTH} problems`,
+  practiceStageName: (stage) => PRACTICE_STAGE[stage],
+  practiceCellLabel: (kind, stage) => `${roundName(kind)}, ${PRACTICE_STAGE[stage]}`,
 
   atomSummary: (mental, total) => `${mental} of ${total} moves are mental`,
   cellLabel: (atomId, state) => `${atomId} ${CELL_STATE[state]}`,

@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { StageIndex } from '@/domain/curriculum'
+import { isPracticeRecord } from '@/domain/practice'
+import { isPracticeId } from '@/domain/problem'
 import { emptyProgress, SCHEMA_VERSION, type Progress } from '@/domain/progress'
 
 export const STORAGE_KEY = 'learning-abacus/progress/v1'
@@ -8,6 +10,17 @@ export const STORAGE_KEY = 'learning-abacus/progress/v1'
 // the learner on a stage that does not exist.
 function asStageIndex(value: unknown, fallback: StageIndex): StageIndex {
   return value === 0 || value === 1 || value === 2 || value === 3 || value === 4 ? value : fallback
+}
+
+// Keeps each record it can trust and drops the rest, rather than discarding
+// the learner's whole history over one bad entry.
+function asPractices(value: unknown): Progress['practices'] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+  const practices: Progress['practices'] = {}
+  for (const [id, record] of Object.entries(value)) {
+    if (isPracticeId(id) && isPracticeRecord(record)) practices[id] = record
+  }
+  return practices
 }
 
 export async function loadProgress(): Promise<Progress> {
@@ -44,6 +57,8 @@ export async function loadProgress(): Promise<Progress> {
       // Added without a schema bump: documents written before the latch
       // existed simply pick up the default here rather than being discarded.
       highestStage: asStageIndex(candidate.highestStage, base.highestStage),
+      // Added without a schema bump, like highestStage.
+      practices: asPractices(candidate.practices),
     }
   } catch {
     return emptyProgress()

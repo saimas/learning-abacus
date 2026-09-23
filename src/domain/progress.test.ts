@@ -7,6 +7,7 @@ import {
   emptyProgress,
   markDayPracticed,
   recordAttempt,
+  recordPracticeAttempt,
   SCHEMA_VERSION,
   type Progress,
 } from './progress'
@@ -161,5 +162,20 @@ describe('dayKey', () => {
       // 2026-09-20T23:30Z is still 2026-09-20 in UTC, but already 2026-09-21 in Tokyo.
       expect(dayKey(Date.UTC(2026, 8, 20, 23, 30))).toBe('2026-09-21')
     })
+  })
+})
+
+describe('recordPracticeAttempt', () => {
+  it('starts a record for the kind and leaves the single moves alone', () => {
+    const before = emptyProgress()
+    const after = recordPracticeAttempt(before, 'add:2', false, 0.9, 1_000)
+    expect(after.practices['add:2']).toEqual({ fade: 0, consecutiveCorrect: 0, consecutiveWrong: 1, lastPractisedAt: 1_000 })
+    expect(after.atoms).toBe(before.atoms)
+    expect(after.calibrationMs).toBe(before.calibrationMs)
+    expect(after.highestStage).toBe(before.highestStage)
+  })
+
+  it('starts empty', () => {
+    expect(emptyProgress().practices).toEqual({})
   })
 })

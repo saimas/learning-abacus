@@ -8,9 +8,11 @@ import { colors, fonts, radius, space } from '@/ui/theme'
 export const MAX_ANSWER_DIGITS = 2
 
 // A lone "0" is replaced rather than extended, so "05" can never be typed.
-export function appendDigit(value: string, digit: string): string {
+// `maxDigits` is the most the answer can have: a problem's answer can run to
+// one digit more than its operands, 999 + 999 = 1998.
+export function appendDigit(value: string, digit: string, maxDigits = MAX_ANSWER_DIGITS): string {
   if (value === '0') return digit
-  if (value.length >= MAX_ANSWER_DIGITS) return value
+  if (value.length >= maxDigits) return value
   return value + digit
 }
 
@@ -47,6 +49,7 @@ export function AnswerPad({
   submitLabel,
   submitTestID,
   adornment,
+  maxDigits = MAX_ANSWER_DIGITS,
 }: {
   value: string
   onChange: (next: string) => void
@@ -54,6 +57,7 @@ export function AnswerPad({
   submitLabel: string
   submitTestID: string
   adornment?: ReactNode
+  maxDigits?: number
 }) {
   const strings = useStrings()
   const empty = value === ''
@@ -70,7 +74,7 @@ export function AnswerPad({
       {DIGIT_ROWS.map((row) => (
         <View key={row.join('')} style={styles.row}>
           {row.map((digit) => (
-            <DigitKey key={digit} digit={digit} onPress={() => onChange(appendDigit(value, digit))} />
+            <DigitKey key={digit} digit={digit} onPress={() => onChange(appendDigit(value, digit, maxDigits))} />
           ))}
         </View>
       ))}
@@ -84,7 +88,7 @@ export function AnswerPad({
         >
           <Icon name="delete" color={colors.muted} />
         </Pressable>
-        <DigitKey digit="0" onPress={() => onChange(appendDigit(value, '0'))} />
+        <DigitKey digit="0" onPress={() => onChange(appendDigit(value, '0', maxDigits))} />
         <Pressable
           testID={submitTestID}
           accessibilityRole="button"
