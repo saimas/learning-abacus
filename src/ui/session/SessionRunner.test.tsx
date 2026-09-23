@@ -1085,6 +1085,17 @@ describe('SessionRunner reviewing a miss', () => {
     announce.mockRestore()
   })
 
+  // At F0–F1 the panel with the answer opens by itself (no こたえを見る is
+  // ever pressed), so its announcement has to ride along with the miss
+  // announcement, or VoiceOver never hears the answer at all.
+  it('tells VoiceOver the answer along with the miss where coaching still speaks', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const { getByTestId } = renderRunner(beadPlan, autoClock())
+    answer(getByTestId, '9')
+    expect(announce).toHaveBeenCalledWith('ちがいます こたえは 7')
+    announce.mockRestore()
+  })
+
   it('hides the keypad while a keypad answer is reviewed', () => {
     const { getByTestId, queryByTestId } = renderRunner(keypadPlan, autoClock())
     answer(getByTestId, '9')

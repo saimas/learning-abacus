@@ -3,18 +3,21 @@ import { colors, radius, space } from '@/ui/theme'
 
 export type ButtonVariant = 'primary' | 'outline'
 
+// The button's own minHeight, exported for a caller that needs to hold a row
+// of buttons' place (at the same height) before or after they are mounted,
+// so nothing else on screen shifts when they appear or disappear.
+export const BUTTON_HEIGHT = 54
+
 // onPress is optional only so a Button can sit inside <Link asChild>, which
 // supplies it.
 export function Button({
   label,
-  detail,
   variant = 'primary',
   onPress,
   testID,
   disabled = false,
 }: {
   label: string
-  detail?: string
   variant?: ButtonVariant
   onPress?: () => void
   testID?: string
@@ -38,7 +41,6 @@ export function Button({
     >
       <View style={styles.content}>
         <Text style={[styles.label, tone]}>{label}</Text>
-        {detail !== undefined ? <Text style={[styles.detail, tone]}>{detail}</Text> : null}
       </View>
     </Pressable>
   )
@@ -46,7 +48,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 54,
+    minHeight: BUTTON_HEIGHT,
     borderRadius: radius.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -62,7 +64,6 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   content: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   label: { fontSize: 16, fontWeight: '600', letterSpacing: 1.5 },
-  detail: { fontSize: 12, opacity: 0.8 },
   onPrimary: { color: colors.onAccent },
   onOutline: { color: colors.accent },
 })

@@ -7,7 +7,7 @@ import { MultiplyIntro } from '@/ui/multiply/MultiplyIntro'
 import { useProgress } from '@/ui/ProgressProvider'
 
 // Spec (multiplication) §4: shown before the first × round, with that
-// round's kind, and from the chooser's やりかた link, without one. Either way
+// round's kind, and from Home's やりかた link, without one. Either way
 // finishing it marks it seen.
 export default function MultiplyIntroScreen() {
   const { hydrated, completeMultiplyIntro } = useProgress()

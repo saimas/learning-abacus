@@ -100,14 +100,13 @@ describe('Home', () => {
   })
 
   // Spec (core rounds) §6: Home is built around the けたの練習 grid; はじめる
-  // and the map preview are gone.
-  it('shows the practice grid, with no start button and no map preview', async () => {
+  // is gone.
+  it('shows the practice grid, with no start button', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId, queryByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
     expect(getByTestId('practice-cell-add:2')).toBeTruthy()
     expect(queryByTestId('start')).toBeNull()
-    expect(queryByTestId('atom-preview')).toBeNull()
   })
 
   it('starts a round by pressing its cell in the grid', async () => {
@@ -124,6 +123,27 @@ describe('Home', () => {
     await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
     fireEvent.press(getByTestId('home-howto'))
     expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
+  })
+
+  // /round has no swipe-back (app/_layout.tsx), so a double tap that pushed
+  // twice would leave the child stacked on a second round once it finishes
+  // the first. `leaving` guards a second push before Home regains focus.
+  it('pushes only once when a grid cell is tapped twice quickly', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    fireEvent.press(getByTestId('practice-cell-add:2'))
+    fireEvent.press(getByTestId('practice-cell-add:2'))
+    expect(mockPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('pushes only once when the やりかた link is tapped twice quickly', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
+    fireEvent.press(getByTestId('home-howto'))
+    fireEvent.press(getByTestId('home-howto'))
+    expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
   it('offers today’s session to a learner who has not practised today', async () => {
@@ -175,7 +195,7 @@ describe('Home', () => {
   })
 })
 
-// Spec (choosing what to practise) §4: the start button asks what to practise.
+// Spec (choosing what to practise) §4: the 基礎の練習 card asks what to practise.
 describe('Home choosing what to practise', () => {
   async function openChooser() {
     mockLoad.mockResolvedValue(learner({}))

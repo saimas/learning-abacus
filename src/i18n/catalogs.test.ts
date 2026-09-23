@@ -249,9 +249,11 @@ describe('multi-digit strings', () => {
     expect([0, 1, 2, 3].map(ja.rodName)).toEqual(['一の位', '十の位', '百の位', '千の位'])
   })
 
+  // roundName itself is module-local now (only practiceCellLabel calls it),
+  // so it is exercised through that key rather than as a catalog entry.
   it('names a kind', () => {
-    expect(ja.roundName({ op: 'add', digits: 2 })).toBe('2けたのたし算')
-    expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
+    expect(ja.practiceCellLabel({ op: 'add', digits: 2 }, 'unseen')).toBe('2けたのたし算、まだ')
+    expect(en.practiceCellLabel({ op: 'sub', digits: 3 }, 'unseen')).toBe('3-digit subtraction, not yet')
   })
 })
 

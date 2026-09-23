@@ -195,6 +195,20 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(textOf(screen.getByTestId('card'))).toBe('0 false')
   })
 
+  // The もどす/こたえる row disappearing while open would shrink the layout
+  // by a whole button row height and shift the soroban above it; a
+  // same-sized placeholder in its place keeps that from happening.
+  it('holds the answer row height in bead mode while the steps are open', () => {
+    renderView()
+    expect(screen.queryByTestId('answer-row-placeholder')).toBeNull()
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.getByTestId('answer-row-placeholder')).toBeTruthy()
+
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.queryByTestId('answer-row-placeholder')).toBeNull()
+  })
+
   it('puts the keypad away while the steps are open, and draws them solid', () => {
     renderView({ fade: 3, coaching: 'silent' })
     fireEvent.press(screen.getByTestId('steps-open'))

@@ -44,12 +44,6 @@ describe('Button', () => {
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 
-  it('shows its label and an optional detail', () => {
-    const { getByText } = render(<Button label="はじめる" detail="5分" onPress={jest.fn()} />)
-    expect(getByText('はじめる')).toBeTruthy()
-    expect(getByText('5分')).toBeTruthy()
-  })
-
   it('fills a primary button with vermilion and outlines an outline button', () => {
     const primary = render(<Button testID="p" label="a" onPress={jest.fn()} />)
     expect(styleOf(primary.getByTestId('p')).backgroundColor).toBe(colors.accent)

@@ -5,7 +5,7 @@ import { Card } from '@/ui/kit/Card'
 import { colors, fontSizes, radius, space } from '@/ui/theme'
 
 // Spec (core rounds) §3: one step panel explains a move wherever the app
-// explains one, after a miss and (later) before an answer. It comes in two
+// explains one, after a miss and before an answer. It comes in two
 // parts because they live in different places on the question screen. The
 // lines scroll with the prompt above the soroban. The controls stay pinned
 // in the fixed area just above the bottom buttons, where the thumb is, so

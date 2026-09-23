@@ -42,41 +42,27 @@ export function mentalCount(states: Record<string, CellState>): number {
 // the move (0–9), columns the operand (1–9). Every atom has a fixed cell, so
 // the technique regions show: direct moves fill in first, then the 5- and
 // 10-complement areas.
-function AtomMap({
-  direction,
-  states,
-  compact,
-}: {
-  direction: Direction
-  states: Record<string, CellState>
-  compact: boolean
-}) {
+function AtomMap({ direction, states }: { direction: Direction; states: Record<string, CellState> }) {
   const strings = useStrings()
   return (
     <View testID={`atom-map-${direction}`} style={styles.map}>
-      {compact ? null : (
-        <>
-          <Text style={styles.mapTitle}>{direction === 'add' ? strings.mapAdd : strings.mapSub}</Text>
-          <View style={styles.row}>
-            <View style={styles.axis} />
-            {OPERANDS.map((operand) => (
-              <Text key={operand} style={[styles.slot, styles.axisText]}>
-                {operand}
-              </Text>
-            ))}
-          </View>
-        </>
-      )}
+      <Text style={styles.mapTitle}>{direction === 'add' ? strings.mapAdd : strings.mapSub}</Text>
+      <View style={styles.row}>
+        <View style={styles.axis} />
+        {OPERANDS.map((operand) => (
+          <Text key={operand} style={[styles.slot, styles.axisText]}>
+            {operand}
+          </Text>
+        ))}
+      </View>
       {ROD_VALUES.map((rodValue) => (
         <View key={rodValue} testID={`atom-row-${direction}-${rodValue}`} style={styles.row}>
-          {compact ? null : <Text style={[styles.axis, styles.axisText]}>{rodValue}</Text>}
+          <Text style={[styles.axis, styles.axisText]}>{rodValue}</Text>
           {OPERANDS.map((operand) => {
             const id = atomId(rodValue, operand, direction)
             const state = states[id] ?? 'unseen'
             const fill = { backgroundColor: cellColors[state] }
-            return compact ? (
-              <View key={id} testID={`preview-cell-${id}`} style={[styles.slot, styles.cell, fill]} />
-            ) : (
+            return (
               <View
                 key={id}
                 testID={`atom-cell-${id}`}
@@ -92,21 +78,10 @@ function AtomMap({
   )
 }
 
-export function AtomGrid({ progress, compact = false }: { progress: Progress; compact?: boolean }) {
+export function AtomGrid({ progress }: { progress: Progress }) {
   const strings = useStrings()
   const states = atomStates(progress)
   const summary = strings.atomSummary(mentalCount(states), ATOMS.length)
-
-  if (compact) {
-    // A glance, not a place to explore: one screen-reader stop for all 180.
-    return (
-      <View testID="atom-preview" accessible accessibilityLabel={summary} style={styles.maps}>
-        {DIRECTIONS.map((direction) => (
-          <AtomMap key={direction} direction={direction} states={states} compact />
-        ))}
-      </View>
-    )
-  }
 
   return (
     <View>
@@ -123,7 +98,7 @@ export function AtomGrid({ progress, compact = false }: { progress: Progress; co
       </View>
       <View style={styles.maps}>
         {DIRECTIONS.map((direction) => (
-          <AtomMap key={direction} direction={direction} states={states} compact={false} />
+          <AtomMap key={direction} direction={direction} states={states} />
         ))}
       </View>
       <Text style={styles.caption}>{strings.mapAxis}</Text>

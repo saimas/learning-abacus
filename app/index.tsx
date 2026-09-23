@@ -1,5 +1,5 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { practiceId, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
@@ -36,8 +36,19 @@ export default function Home() {
   // Built when the basics card is pressed, never during render.
   const [chooser, setChooser] = useState<{ plan: SessionPlan; open: boolean } | null>(null)
 
+  // A grid cell or the やりかた link pushes straight to router.push, with no
+  // sheet to guard the second tap the way choose() does. /round and
+  // /multiply-intro both disable the swipe-back gesture (app/_layout.tsx),
+  // so a double tap that slips through lands the child in a second round or
+  // walkthrough on top of the first, only reachable by leaving it. A ref
+  // (not state) is enough: nothing needs to re-render while it is set, only
+  // read at the next press. It clears when Home regains focus, alongside
+  // refreshToday, since by then any push it was guarding has resolved.
+  const leaving = useRef(false)
+
   const refreshToday = useCallback(() => {
     setToday(dayKey(Date.now()))
+    leaving.current = false
   }, [])
 
   useFocusEffect(refreshToday)
@@ -82,13 +93,17 @@ export default function Home() {
   }
   // The grid cell and the やりかた link sit on Home itself, not inside the
   // sheet, so there is no fade-out to guard against — only the sheet being
-  // open at all, since its backdrop should otherwise catch the tap.
+  // open at all, since its backdrop should otherwise catch the tap, and
+  // `leaving`, since a second push before the first has navigated away
+  // would otherwise stack a second round or walkthrough on top of the first.
   const startRound = (kind: PracticeKind) => {
-    if (chooser?.open) return
+    if (chooser?.open || leaving.current) return
+    leaving.current = true
     router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
   }
   const openHowTo = () => {
-    if (chooser?.open) return
+    if (chooser?.open || leaving.current) return
+    leaving.current = true
     router.push('/multiply-intro')
   }
 
@@ -127,7 +142,13 @@ export default function Home() {
         <Pressable testID="home-howto" accessibilityRole="link" onPress={openHowTo} hitSlop={12} style={styles.howTo}>
           <Text style={styles.howToText}>{strings.homeHowTo}</Text>
         </Pressable>
-        <Pressable testID="home-basics" accessibilityRole="button" onPress={openChooser} style={styles.basics}>
+        <Pressable
+          testID="home-basics"
+          accessibilityRole="button"
+          accessibilityLabel={`${strings.basicsTitle}、${strings.basicsDetail}`}
+          onPress={openChooser}
+          style={({ pressed }) => [styles.basics, pressed && styles.basicsPressed]}
+        >
           <Card>
             <View style={styles.basicsHeader}>
               <Text style={styles.basicsTitle}>{strings.basicsTitle}</Text>
@@ -166,10 +187,14 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingBottom: space.xl },
   // The caption text stays small, but padding plus hitSlop above give the
-  // link a tap target close to the platforms' ~44pt minimum.
-  howTo: { alignSelf: 'flex-end', marginTop: space.sm, paddingVertical: space.sm },
+  // link a tap target close to the platforms' ~44pt minimum. marginTop has
+  // to be at least the top hitSlop (12), or that hitSlop reaches up past
+  // the grid's own bottom edge and steals taps meant for its last row.
+  howTo: { alignSelf: 'flex-end', marginTop: space.md, paddingVertical: space.sm },
   howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
   basics: { marginTop: space.xl },
+  // Same pressed feedback as the chooser's own rows (PartChooser's Row).
+  basicsPressed: { opacity: 0.85 },
   basicsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

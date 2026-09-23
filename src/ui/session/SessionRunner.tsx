@@ -263,10 +263,13 @@ export function SessionRunner({
     if (block === undefined || current === undefined) return
 
     // Spec (core rounds) §5: only a right answer of the learner's own may
-    // bring in a reserve move or retire a fade-rep move. One with help has
-    // left the streaks alone, but everything in play can already be secure
-    // without it (when the one move short of five fails out, say), and the
-    // answer with help must not be the one that acts on that.
+    // bring in a reserve move through the streak, or retire a fade-rep move.
+    // One with help has left the streaks alone, but everything in play can
+    // already be secure without it (when the one move short of five fails
+    // out, say), and the answer with help must not be the one that acts on
+    // that. The refill path below is a different door: it can still bring in
+    // a newcomer after an assisted answer, but only to avoid handing back the
+    // move just answered, never because the streak called for it.
     const own = correct && !assisted
 
     let queue = state.queue.slice(1)

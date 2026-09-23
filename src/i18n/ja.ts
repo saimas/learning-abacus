@@ -181,7 +181,6 @@ export const ja = {
   roundComplete: 'けたの練習おわり',
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
-  roundName,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind: PracticeKind, stage: PracticeStage) => `${roundName(kind)}、${PRACTICE_STAGE[stage]}`,
 

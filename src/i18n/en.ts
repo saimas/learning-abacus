@@ -171,7 +171,6 @@ export const en: Strings = {
   roundComplete: 'Practice complete',
   roundSection: 'Bigger numbers',
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
-  roundName,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind, stage) => `${roundName(kind)}, ${PRACTICE_STAGE[stage]}`,
 

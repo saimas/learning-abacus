@@ -26,7 +26,7 @@ describe('ProblemCorrectionCard', () => {
     expect(screen.getByTestId('correction-column-2')).toBeTruthy()
   })
 
-  it('highlights the column being replayed', () => {
+  it('highlights the column stepped to', () => {
     render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 472, b: 385 }} expected={857} activeGroup={1} />)
     expect(colorOf('correction-column-1')).toBe(colors.accent)
     expect(colorOf('correction-column-2')).not.toBe(colors.accent)

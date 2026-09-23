@@ -7,7 +7,7 @@ import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
 import { beadModeScale, scaleToFit } from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
-import { Button } from '@/ui/kit/Button'
+import { BUTTON_HEIGHT, Button } from '@/ui/kit/Button'
 import { parseAnswer } from '@/ui/parseAnswer'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 import { Batsu } from './Batsu'
@@ -130,14 +130,22 @@ export function QuestionView({
       AccessibilityInfo.announceForAccessibility(strings.correct)
     } else {
       guardFrom.current = t
-      AccessibilityInfo.announceForAccessibility(strings.wrong)
       // The review starts from the learner's own beads, with nothing
       // stepped, whatever was stepped through before the answer.
       stepper.clear()
       // The number alone teaches nothing. Where coaching still speaks, the
       // panel with the substitution comes up with the ✕; at silent levels it
       // waits to be asked for.
-      setReview({ cardShown: coaching !== 'silent' })
+      const cardShown = coaching !== 'silent'
+      setReview({ cardShown })
+      // At F0–F1 the panel opens on its own, so showAnswer() — the only
+      // other place that announces the answer — never runs for this miss.
+      // Folding it into this same announcement is the only way VoiceOver
+      // ever hears it; a second announceForAccessibility call right after
+      // this one would just cut the first off before it finishes.
+      AccessibilityInfo.announceForAccessibility(
+        cardShown ? `${strings.wrong} ${strings.correctionAnswer(exercise.expected)}` : strings.wrong,
+      )
     }
     onSubmit({ correct, latencyMs, t, assisted: assisted.current })
   }
@@ -332,10 +340,16 @@ export function QuestionView({
             buttons on screen. */}
         <View style={styles.beadSpacer} />
         {/* Before an answer, the steps' とじる stands in for もどす and
-            こたえる: the learner answers once they have closed the steps. */}
+            こたえる: the learner answers once they have closed the steps.
+            That row still holds its height empty rather than collapsing to
+            nothing, or opening 手順を見る would shrink the layout by a whole
+            button row and shift the soroban above it — the same reasoning
+            as controlsPlace just above, for the row below instead. */}
         {review !== null ? (
           reviewButtons
-        ) : beforeAnswer ? null : (
+        ) : beforeAnswer ? (
+          <View testID="answer-row-placeholder" style={styles.buttonRowPlaceholder} />
+        ) : (
           <View style={styles.buttonRow}>
             <View style={styles.resetSlot}>
               <Button
@@ -454,6 +468,9 @@ const styles = StyleSheet.create({
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
+  // Same height and marginTop as buttonRow, so the soroban above does not
+  // shift when 手順を見る swaps this row for it and back.
+  buttonRowPlaceholder: { marginTop: space.md, height: BUTTON_HEIGHT },
   resetSlot: { flex: 1 },
   submitSlot: { flex: 2 },
   // こたえを見る and つぎへ share the row equally (mockup); つぎへ alone
