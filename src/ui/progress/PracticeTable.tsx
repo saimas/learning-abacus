@@ -46,7 +46,8 @@ export function PracticeTable({ progress }: { progress: Progress }) {
           {DIGITS.map((digits) => {
             const kind = { op, digits }
             const stage = practiceStage(progress.practices[practiceId(kind)])
-            const dark = stage === 'fading' || stage === 'mental'
+            // Only the mental stage's dark background needs light text for contrast.
+            const onDark = stage === 'mental'
             return (
               <View
                 key={digits}
@@ -55,7 +56,7 @@ export function PracticeTable({ progress }: { progress: Progress }) {
                 accessibilityLabel={strings.practiceCellLabel(kind, stage)}
                 style={[styles.cellBox, styles.cell, { backgroundColor: STAGE_COLOR[stage] }]}
               >
-                <Text style={[styles.cellText, dark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+                <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
               </View>
             )
           })}
