@@ -85,6 +85,13 @@ export default function Home() {
     closeChooser()
     router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
   }
+  const openHowTo = () => {
+    // The same guard as choose: a second tap while the sheet fades out must
+    // not open the walkthrough twice.
+    if (chooser === null || !chooser.open) return
+    closeChooser()
+    router.push('/multiply-intro')
+  }
 
   return (
     <Screen>
@@ -145,6 +152,7 @@ export default function Home() {
         visible={chooser?.open ?? false}
         onChoose={choose}
         onChooseRound={chooseRound}
+        onHowTo={openHowTo}
         onClose={closeChooser}
       />
     </Screen>

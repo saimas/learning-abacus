@@ -50,6 +50,11 @@ export default function Round() {
     )
   }
 
+  // Spec (multiplication) §4: the first × round starts with the walkthrough.
+  if (kind.op === 'mul' && !progress.multiplyIntroDone) {
+    return <Redirect href={{ pathname: '/multiply-intro', params: { kind: id } }} />
+  }
+
   // Answers are already applied to progress one by one; this only makes
   // sure they are on disk before the screen goes.
   const leave = () => {

@@ -232,6 +232,7 @@ describe('multi-digit strings', () => {
   it('prompts a problem', () => {
     expect(ja.problemPrompt({ op: 'add', digits: 3, a: 472, b: 385 })).toBe('472に385をたす。')
     expect(ja.problemPrompt({ op: 'sub', digits: 2, a: 81, b: 36 })).toBe('81から36をひく。')
+    expect(ja.problemPrompt({ op: 'mul', digits: 2, a: 47, b: 36 })).toBe('47に36をかける。')
   })
 
   it('reads a column as its rod and its move', () => {
@@ -248,6 +249,33 @@ describe('multi-digit strings', () => {
   it('names a kind and describes it', () => {
     expect(ja.roundName({ op: 'add', digits: 2 })).toBe('2けたのたし算')
     expect(ja.roundDetail({ op: 'add', digits: 2 })).toBe('23 + 58 など・10問')
+    expect(ja.roundDetail({ op: 'mul', digits: 2 })).toBe('47 × 36 など・10問')
     expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
+  })
+})
+
+describe('multiplication strings', () => {
+  it('reads a 九九 as its product and where each digit goes', () => {
+    expect(ja.productLine(4, 3, 2, false)).toBe('4×3=12　千の位に1、百の位に2')
+    expect(ja.productLine(2, 3, 2, false)).toBe('2×3=06　百の位に6')
+    expect(ja.productLine(5, 4, 0, false)).toBe('5×4=20　十の位に2')
+    expect(ja.productLine(5, 0, 0, false)).toBe('5×0=00')
+    expect(ja.productLine(9, 9, 2, true)).toBe('9×9=81　千の位に8、百の位に1（さらに上の位へ繰り上がる）')
+    expect(en.productLine(4, 3, 2, false)).toBe('4 × 3 = 12: 1 on the thousands rod, 2 on the hundreds rod')
+  })
+
+  it('names six rods', () => {
+    expect([4, 5].map(ja.rodName)).toEqual(['万の位', '十万の位'])
+    expect([4, 5].map(en.rodName)).toEqual(['ten-thousands rod', 'hundred-thousands rod'])
+  })
+
+  it('gives the walkthrough its title, its explanations and its result', () => {
+    expect(ja.introTitle).toBe('かけ算のやりかた')
+    expect(ja.introMethod).toContain('両落とし')
+    expect(ja.introPlacement).toContain('百の位')
+    expect(ja.introResult(47, 36, 1692)).toBe('47×36 = 1692')
+    expect(en.introResult(47, 36, 1692)).toBe('47 × 36 = 1692')
+    expect(ja.chooseHowTo).toBe('やりかた')
+    expect(en.chooseHowTo).toBe('How it works')
   })
 })

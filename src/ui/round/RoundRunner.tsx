@@ -4,7 +4,7 @@ import { exerciseForProblem } from '@/domain/exercise'
 import { coachingForFade, type FadeLevel } from '@/domain/fade'
 import type { PracticeAttempt } from '@/domain/practice'
 import {
-  columnOfStep,
+  groupOfStep,
   practiceId,
   problemSteps,
   problemTargetMs,
@@ -68,7 +68,7 @@ export function RoundRunner({
   }
 
   const exercise = exerciseForProblem(problem)
-  const columns = problemSteps(problem)
+  const groups = problemSteps(problem)
 
   function next(t: number) {
     setIndex((previous) => previous + 1)
@@ -110,7 +110,7 @@ export function RoundRunner({
           <ProblemCorrectionCard
             problem={problem}
             expected={exercise.expected}
-            activeColumn={activeStep === undefined ? undefined : columnOfStep(columns, activeStep)}
+            activeGroup={activeStep === undefined ? undefined : groupOfStep(groups, activeStep)}
           />
         )}
         track={null}

@@ -115,9 +115,31 @@ describe('practices', () => {
   it('keeps known kinds and drops unknown ids and malformed records', async () => {
     const good = { fade: 2, consecutiveCorrect: 1, consecutiveWrong: 0, lastPractisedAt: 5 }
     mockGetItem.mockResolvedValue(
-      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'mul:2': good, 'sub:1': { fade: 'x' } } }),
+      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'div:1': good, 'sub:1': { fade: 'x' } } }),
     )
     expect((await loadProgress()).practices).toEqual({ 'add:2': good })
+  })
+})
+
+describe('multiplyIntroDone', () => {
+  it('loads a document written before the flag existed as not yet seen', async () => {
+    // Added without a SCHEMA_VERSION bump, like highestStage: a document
+    // already on a learner's phone arrives without it and must load intact.
+    const { multiplyIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5 }
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    const result = await loadProgress()
+    expect(result.multiplyIntroDone).toBe(false)
+    expect(result.daysPracticed).toBe(5)
+  })
+
+  it('keeps a stored true', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone: true }))
+    expect((await loadProgress()).multiplyIntroDone).toBe(true)
+  })
+
+  it.each([['yes'], [1], [null]])('discards a multiplyIntroDone of %p in favour of false', async (multiplyIntroDone) => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone }))
+    expect((await loadProgress()).multiplyIntroDone).toBe(false)
   })
 })
 

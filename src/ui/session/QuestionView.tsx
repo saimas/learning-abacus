@@ -5,7 +5,7 @@ import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
-import { beadModeScale } from '@/ui/abacus/geometry'
+import { beadModeScale, scaleToFit } from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
 import { Button } from '@/ui/kit/Button'
 import { parseAnswer } from '@/ui/parseAnswer'
@@ -87,7 +87,11 @@ export function QuestionView({
   // a stray tap on こたえる must not burn an attempt.
   const moved = readValue(shownBeads) !== exercise.start
   // The screen's gutters are space.xl on each side (Screen).
-  const beadScale = beadModeScale(exercise.rods, width - 2 * space.xl)
+  const room = width - 2 * space.xl
+  const beadScale = beadModeScale(exercise.rods, room)
+  // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
+  // (416 pt) are wider than a 375 pt phone, so it has to shrink to fit too.
+  const keypadScale = scaleToFit(exercise.rods, room, 1)
 
   // Scores the answer. A right one is the parent's to move on from; a miss
   // holds the question here for review until つぎへ.
@@ -268,7 +272,7 @@ export function QuestionView({
           off a short screen. Under review the review buttons take its place. */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
-          <Abacus soroban={replay.soroban ?? start} fade={replayFade} />
+          <Abacus soroban={replay.soroban ?? start} fade={replayFade} scale={keypadScale} />
           {stamp(110)}
         </View>
         {review !== null ? replayStep : null}
@@ -287,8 +291,8 @@ export function QuestionView({
           onSubmit={submit}
           submitLabel={strings.answer}
           submitTestID="submit"
-          // The answer fits on the soroban: 2 digits for a single move, one
-          // more than the operands for a problem.
+          // The answer always fits the soroban's rods: 2 for a single move,
+          // the operands' digit count + 1 for ＋ −, and that count × 2 for ×.
           maxDigits={exercise.rods}
         />
       )}

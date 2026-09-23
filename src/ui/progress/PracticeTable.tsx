@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { MAX_FADE } from '@/domain/fade'
 import type { PracticeRecord } from '@/domain/practice'
-import { DIGITS, OPERATIONS, practiceId } from '@/domain/problem'
+import { DIGITS, OPERATION_SYMBOL, OPERATIONS, practiceId } from '@/domain/problem'
 import type { Progress } from '@/domain/progress'
 import { useStrings } from '@/i18n'
 import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
@@ -42,7 +42,7 @@ export function PracticeTable({ progress }: { progress: Progress }) {
       </View>
       {OPERATIONS.map((op) => (
         <View key={op} style={styles.row}>
-          <Text style={[styles.head, styles.axis]}>{op === 'add' ? '＋' : '−'}</Text>
+          <Text style={[styles.head, styles.axis]}>{OPERATION_SYMBOL[op]}</Text>
           {DIGITS.map((digits) => {
             const kind = { op, digits }
             const stage = practiceStage(progress.practices[practiceId(kind)])

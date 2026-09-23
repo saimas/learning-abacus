@@ -4,17 +4,19 @@ import { useStrings } from '@/i18n'
 import { Card } from '@/ui/kit/Card'
 import { colors, fonts, space } from '@/ui/theme'
 
-// The answer card for a missed problem: the answer, then how each column is
-// worked, highest place first, in the same words as a single move's card.
-// `activeColumn` indexes problemSteps(problem): the column a replay is in.
+// The answer card for a missed problem: the answer, then how each group is
+// worked, highest place first, in the same words as a single move's card. A
+// column group (＋ −) reads as its rod and move; a product group (×) reads
+// as the 九九 and where its digits land. `activeGroup` indexes
+// problemSteps(problem): the group a replay is in.
 export function ProblemCorrectionCard({
   problem,
   expected,
-  activeColumn,
+  activeGroup,
 }: {
   problem: Problem
   expected: number
-  activeColumn?: number
+  activeGroup?: number
 }) {
   const strings = useStrings()
   return (
@@ -22,17 +24,21 @@ export function ProblemCorrectionCard({
       <Text testID="correction-answer" style={styles.answer}>
         {strings.correctionAnswer(expected)}
       </Text>
-      {problemSteps(problem).map((column, index) =>
-        column.atom === null ? null : (
-          <Text
-            key={column.place}
-            testID={`correction-column-${column.place}`}
-            style={[styles.line, index === activeColumn && styles.activeLine]}
-          >
-            {strings.columnLine(column.place, column.atom, column.cascades)}
+      {problemSteps(problem).map((group, index) => {
+        const active = index === activeGroup
+        if (group.kind === 'product') {
+          return (
+            <Text key={index} testID={`correction-product-${index}`} style={[styles.line, active && styles.activeLine]}>
+              {strings.productLine(group.x, group.y, group.place, group.cascades)}
+            </Text>
+          )
+        }
+        return group.atom === null ? null : (
+          <Text key={index} testID={`correction-column-${group.place}`} style={[styles.line, active && styles.activeLine]}>
+            {strings.columnLine(group.place, group.atom, group.cascades)}
           </Text>
-        ),
-      )}
+        )
+      })}
     </Card>
   )
 }

@@ -26,6 +26,9 @@ export type Progress = {
   // Multi-digit practice, one record per kind (spec: multi-digit ＋ − §5).
   // Added without a schema bump, like highestStage.
   practices: Partial<Record<PracticeId, PracticeRecord>>
+  // Whether the learner has seen how 両落とし multiplication works (spec:
+  // multiplication §4). Added without a schema bump, like highestStage.
+  multiplyIntroDone: boolean
 }
 
 export function emptyProgress(): Progress {
@@ -38,6 +41,7 @@ export function emptyProgress(): Progress {
     tutorialDone: false,
     highestStage: 1,
     practices: {},
+    multiplyIntroDone: false,
   }
 }
 

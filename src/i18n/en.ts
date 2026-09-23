@@ -34,11 +34,18 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 }
 
 // A rod's name by its place, 0 being the ones rod, in a sentence and as a
-// line's heading.
-const PLACE: readonly string[] = ['ones rod', 'tens rod', 'hundreds rod', 'thousands rod']
-const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands']
+// line's heading. A 3×3 multiplication's product can take six rods.
+const PLACE: readonly string[] = [
+  'ones rod',
+  'tens rod',
+  'hundreds rod',
+  'thousands rod',
+  'ten-thousands rod',
+  'hundred-thousands rod',
+]
+const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-thousands', 'Hundred-thousands']
 
-const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction' }
+const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication' }
 
 // One fixed example per kind for the chooser's detail line.
 const EXAMPLE: Record<PracticeId, string> = {
@@ -48,6 +55,9 @@ const EXAMPLE: Record<PracticeId, string> = {
   'sub:1': '9 − 4',
   'sub:2': '81 − 36',
   'sub:3': '634 − 258',
+  'mul:1': '7 × 8',
+  'mul:2': '47 × 36',
+  'mul:3': '472 × 385',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -70,6 +80,22 @@ function coachingLead(atom: Atom): string {
 
 function coaching(atom: Atom): string {
   return `${coachingLead(atom)}${describeSteps(atom)}`
+}
+
+// One line of a × problem's answer card: the 九九 with its product written
+// as two digits, then where each non-zero digit goes.
+function productLine(x: number, y: number, place: number, cascades: boolean): string {
+  const product = x * y
+  const digits = (
+    [
+      [Math.floor(product / 10), place + 1],
+      [product % 10, place],
+    ] as const
+  )
+    .filter(([digit]) => digit !== 0)
+    .map(([digit, at]) => `${digit} on the ${PLACE[at] ?? `rod ${at}`}`)
+  const head = `${x} × ${y} = ${String(product).padStart(2, '0')}`
+  return `${digits.length === 0 ? head : `${head}: ${digits.join(', ')}`}${cascades ? ' (and carries again into the next rod)' : ''}`
 }
 
 // Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
@@ -138,7 +164,9 @@ export const en: Strings = {
   replayStep: (step, total) => `${step} / ${total}`,
   rodName: (place): string => PLACE[place] ?? `rod ${place}`,
   problemPrompt: (problem) =>
-    `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
+    problem.op === 'mul'
+      ? `Multiply ${problem.a} by ${problem.b}.`
+      : `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
   columnLine: (place, atom, cascades) =>
     `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
       cascades
@@ -147,6 +175,7 @@ export const en: Strings = {
           : ' (borrowing from a rod further left)'
         : ''
     }`,
+  productLine,
   roundCount: (index, total) => `${index} / ${total}`,
   roundComplete: 'Practice complete',
   roundSection: 'Bigger numbers',
@@ -171,4 +200,12 @@ export const en: Strings = {
     'The heaven bead above the bar is worth 5. Each earth bead pushed up to the bar is worth 1. The rod reads as their total.',
   readingFeedback: (target) => `Not quite. This rod shows ${target}: ${breakdown(target)}.`,
   readingTitle: 'Reading the soroban',
+
+  introTitle: 'How to multiply',
+  introMethod:
+    'Only the answer goes on the soroban (両落とし). Take the first number’s digits from the highest, times the second number’s digits from the highest, and add each times-table answer onto the rods.',
+  introPlacement:
+    'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
+  introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  chooseHowTo: 'How it works',
 }
