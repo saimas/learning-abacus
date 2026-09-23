@@ -4,7 +4,7 @@ import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { colors } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
-import { setBeads, textOf } from './testing'
+import { setBeads, textOf, tintedBeads } from './testing'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -322,18 +322,7 @@ describe('QuestionView before an answer, with 手順を見る', () => {
 // operation (here, a column) has moved so far are red, the latest step's the
 // deepest, so a column's several moves read as one.
 describe('QuestionView colouring the operation on show', () => {
-  // Every tinted bead, as "rod bead tint", rods from the left. Each rod
-  // draws its heaven bead, then its earth beads from the beam out.
-  const tinted = () =>
-    [0, 1, 2, 3].flatMap((rod) =>
-      within(screen.getByTestId(`rod-${rod}`))
-        .getAllByTestId(/^bead-/)
-        .flatMap((bead, i) => {
-          const match = /^bead-(heaven|earth)-(group|latest)$/.exec(bead.props.testID as string)
-          if (match === null) return []
-          return [`${rod} ${match[1] === 'heaven' ? 'heaven' : `earth${i - 1}`} ${match[2]}`]
-        }),
-    )
+  const tinted = () => tintedBeads(screen.root, 4)
   const step = (testID: 'step-next' | 'step-back', times = 1) => {
     for (let i = 0; i < times; i++) fireEvent.press(screen.getByTestId(testID))
   }
