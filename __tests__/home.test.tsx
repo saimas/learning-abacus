@@ -204,6 +204,15 @@ describe('Home choosing what to practise', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/session', params: { part: 'focus' } })
   })
 
+  // startRound and openHowTo guard against the sheet being open, since its
+  // backdrop should otherwise catch the tap first.
+  it('ignores the grid and the やりかた link while the sheet is open', async () => {
+    const { getByTestId } = await openChooser()
+    fireEvent.press(getByTestId('practice-cell-add:2'))
+    fireEvent.press(getByTestId('home-howto'))
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
   it('offers 準備 only when something is due', async () => {
     // A learner who has answered nothing has nothing due.
     const { getByTestId } = await openChooser()
