@@ -1,7 +1,7 @@
 # learning-abacus — Multi-digit ＋ and − (roadmap P1)
 
 Date: 2026-09-23
-Status: Approved design, pre-plan. Sub-project P1 of `2026-09-23-n-by-n-roadmap.md`.
+Status: Implemented on feature/multi-digit-add-sub (TestFlight build 9). Sub-project P1 of `2026-09-23-n-by-n-roadmap.md`.
 
 ## 1. Goal and decisions
 
