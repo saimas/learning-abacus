@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
+import { textOf } from '@/ui/session/testing'
 import { PartChooser } from './PartChooser'
 
 const item = (atomId: string): SessionItem => ({ atomId, fade: 0, coaching: 'demo' })
@@ -16,16 +17,32 @@ const today: SessionPlan = {
   totalSeconds: 285,
 }
 
-function renderChooser(plan: SessionPlan | null = today, visible = true) {
+function renderChooser({
+  plan = today,
+  visible = true,
+  onChooseRound = jest.fn(),
+}: {
+  plan?: SessionPlan | null
+  visible?: boolean
+  onChooseRound?: jest.Mock
+} = {}) {
   const onChoose = jest.fn()
   const onClose = jest.fn()
-  render(<PartChooser plan={plan} visible={visible} onChoose={onChoose} onClose={onClose} />)
-  return { onChoose, onClose }
+  render(
+    <PartChooser
+      plan={plan}
+      visible={visible}
+      onChoose={onChoose}
+      onChooseRound={onChooseRound}
+      onClose={onClose}
+    />,
+  )
+  return { onChoose, onClose, onChooseRound }
 }
 
 describe('PartChooser', () => {
   it('is not shown while closed', () => {
-    renderChooser(today, false)
+    renderChooser({ visible: false })
     expect(screen.queryByTestId('part-chooser')).toBeNull()
   })
 
@@ -76,5 +93,26 @@ describe('PartChooser', () => {
     renderChooser()
     expect(screen.getByTestId('chooser-backdrop').props.accessibilityLabel).toBe('閉じる')
     expect(screen.getByTestId('chooser-backdrop').props.accessibilityRole).toBe('button')
+  })
+})
+
+describe('けたの練習', () => {
+  it('starts on 1-digit addition', () => {
+    const onChooseRound = jest.fn()
+    renderChooser({ onChooseRound })
+    expect(textOf(screen.getByTestId('choose-round'))).toContain('1けたのたし算')
+    fireEvent.press(screen.getByTestId('choose-round'))
+    expect(onChooseRound).toHaveBeenCalledWith({ op: 'add', digits: 1 })
+  })
+
+  it('chooses the operation and the size', () => {
+    const onChooseRound = jest.fn()
+    renderChooser({ onChooseRound })
+    fireEvent.press(screen.getByTestId('round-op-sub'))
+    fireEvent.press(screen.getByTestId('round-digits-3'))
+    expect(textOf(screen.getByTestId('choose-round'))).toContain('3けたのひき算')
+    expect(textOf(screen.getByTestId('choose-round'))).toContain('634 − 258 など・10問')
+    fireEvent.press(screen.getByTestId('choose-round'))
+    expect(onChooseRound).toHaveBeenCalledWith({ op: 'sub', digits: 3 })
   })
 })

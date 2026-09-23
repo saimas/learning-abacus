@@ -2,6 +2,7 @@ import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { ATOMS } from '@/domain/atoms'
+import { practiceId, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { selectSession, type SessionPlan } from '@/domain/session'
 import { useStrings } from '@/i18n'
@@ -77,6 +78,13 @@ export default function Home() {
     closeChooser()
     router.push(choice === 'all' ? '/session' : { pathname: '/session', params: { part: choice } })
   }
+  const chooseRound = (kind: PracticeKind) => {
+    // The same guard as choose: a second tap while the sheet fades out must
+    // not start a second round.
+    if (chooser === null || !chooser.open) return
+    closeChooser()
+    router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
+  }
 
   return (
     <Screen>
@@ -136,6 +144,7 @@ export default function Home() {
         plan={chooser?.plan ?? null}
         visible={chooser?.open ?? false}
         onChoose={choose}
+        onChooseRound={chooseRound}
         onClose={closeChooser}
       />
     </Screen>
