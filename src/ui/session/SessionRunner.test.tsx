@@ -925,11 +925,25 @@ describe('SessionRunner and the correct-answer stamp', () => {
 })
 
 // Spec (miss review) §4: a miss holds its question for review. The ✕ stamps
-// over it, こたえを見る plays the move on the soroban, and つぎへ moves on.
+// over it, and つぎへ moves on. Spec (core rounds) §4: the step panel walks
+// the move on the soroban, ▶ by ▶; it is open at once at F0–F1 and opens
+// from こたえを見る above that.
 describe('SessionRunner reviewing a miss', () => {
   const beadPlan: SessionPlan = {
     blocks: [
       { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+3')] },
+      { kind: 'close', seconds: 30, items: [] },
+    ],
+    totalSeconds: 150,
+  }
+  // F2: bead answers, silent coaching, so the panel waits for こたえを見る.
+  const silentBeadPlan: SessionPlan = {
+    blocks: [
+      {
+        kind: 'focus',
+        seconds: 120,
+        items: [item('3+4', { fade: 2, coaching: 'silent' }), item('2+3', { fade: 2, coaching: 'silent' })],
+      },
       { kind: 'close', seconds: 30, items: [] },
     ],
     totalSeconds: 150,
@@ -957,7 +971,7 @@ describe('SessionRunner reviewing a miss', () => {
 
   it('stamps a big ✕ over the soroban and offers こたえを見る and つぎへ', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
-    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+    const { getByTestId, queryByTestId } = renderRunner(silentBeadPlan, autoClock())
     answer(getByTestId, '9')
     const batsu = within(getByTestId('soroban-wrap')).getByTestId('batsu')
     expect(StyleSheet.flatten(batsu.props.style).width).toBe(140)
@@ -1004,44 +1018,50 @@ describe('SessionRunner reviewing a miss', () => {
     expect(getByTestId('correction-answer').props.children).toBe('こたえは 7')
   })
 
-  it('replays the move on the soroban, drawn solid, one step every 900 ms', () => {
-    const { getByTestId, queryByTestId } = renderRunner(keypadPlan, autoClock())
+  it('steps the move on the soroban with ▶ and ◀, drawn solid while stepping', () => {
+    const { getByTestId } = renderRunner(keypadPlan, autoClock())
     answer(getByTestId, '9')
     expect(opacity()).toBe(0.35)
 
     fireEvent.press(getByTestId('review-show'))
     expect(rods()).toBe('07')
-    expect(opacity()).toBe(1)
-    expect(queryByTestId('replay-step')).toBeNull()
+    expect(getByTestId('step-count').props.children).toBe(' ')
 
-    act(() => jest.advanceTimersByTime(899))
-    expect(rods()).toBe('07')
-    act(() => jest.advanceTimersByTime(1))
+    fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('17')
-    expect(getByTestId('replay-step').props.children).toBe('1 / 2')
+    expect(opacity()).toBe(1)
+    expect(getByTestId('step-count').props.children).toBe('1 / 2')
 
-    act(() => jest.advanceTimersByTime(900))
+    fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('15')
-    expect(getByTestId('replay-step').props.children).toBe('2 / 2')
+    expect(getByTestId('step-count').props.children).toBe('2 / 2')
 
+    // ▶ stops at the last move, and nothing plays on by itself.
+    fireEvent.press(getByTestId('step-next'))
     act(() => jest.advanceTimersByTime(5_000))
     expect(rods()).toBe('15')
+
+    fireEvent.press(getByTestId('step-back'))
+    expect(rods()).toBe('17')
+    expect(getByTestId('step-count').props.children).toBe('1 / 2')
   })
 
-  it('highlights the step just played, then offers もう一度見る', () => {
+  it('highlights the step just played, and goes back to the start from 最初から', () => {
     const { getByTestId } = renderRunner(keypadPlan, autoClock())
     answer(getByTestId, '9')
     fireEvent.press(getByTestId('review-show'))
     expect(highlighted()).toEqual([])
-    act(() => jest.advanceTimersByTime(900))
+    fireEvent.press(getByTestId('step-next'))
     expect(highlighted()).toEqual([0])
-    act(() => jest.advanceTimersByTime(900))
+    fireEvent.press(getByTestId('step-next'))
     expect(highlighted()).toEqual([1])
-    expect(within(getByTestId('review-show')).getByText('もう一度見る')).toBeTruthy()
+    fireEvent.press(getByTestId('step-back'))
+    expect(highlighted()).toEqual([0])
 
-    fireEvent.press(getByTestId('review-show'))
+    fireEvent.press(getByTestId('step-restart'))
     expect(rods()).toBe('07')
     expect(highlighted()).toEqual([])
+    expect(getByTestId('step-count').props.children).toBe('0 / 2')
   })
 
   it('moves on with つぎへ and brings the missed move back later in the block', () => {
@@ -1096,10 +1116,11 @@ describe('SessionRunner reviewing a miss', () => {
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
 
-  it('cuts a replay short at つぎへ', () => {
+  it('leaves the stepping behind at つぎへ', () => {
     const { getByTestId } = renderRunner(keypadPlan, autoClock())
     answer(getByTestId, '9')
     fireEvent.press(getByTestId('review-show'))
+    fireEvent.press(getByTestId('step-next'))
     moveOn()
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
     expect(rods()).toBe('02')
@@ -1131,21 +1152,22 @@ describe('SessionRunner reviewing a miss', () => {
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
   })
 
-  it('replays the move on the beads themselves in bead mode, from the start', () => {
+  it('steps the move on the beads themselves in bead mode, and back to the start', () => {
     const { getByTestId } = renderRunner(beadPlan, autoClock())
     answer(getByTestId, '9')
     expect(rods()).toBe('09')
-    fireEvent.press(getByTestId('review-show'))
-    expect(rods()).toBe('03')
-    act(() => jest.advanceTimersByTime(900))
+    // At F0 the panel is open at once.
+    fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('08')
-    act(() => jest.advanceTimersByTime(900))
+    fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('07')
+    fireEvent.press(getByTestId('step-restart'))
+    expect(rods()).toBe('03')
   })
 
   it('tells VoiceOver the answer when こたえを見る is pressed', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
-    const { getByTestId } = renderRunner(beadPlan, autoClock())
+    const { getByTestId } = renderRunner(silentBeadPlan, autoClock())
     answer(getByTestId, '9')
     fireEvent.press(getByTestId('review-show'))
     expect(announce).toHaveBeenLastCalledWith('こたえは 7')

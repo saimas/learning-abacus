@@ -19,7 +19,7 @@ function amountOf(step: RodStep): number {
   return step.rod === 'carry' ? step.delta * 10 : step.delta
 }
 
-// One part per step, so a replay can point at the step it has just played.
+// One part per step, so the step panel can point at the step just played.
 // Reads as arithmetic does: the first term carries its sign, and every step
 // after it is an operator applied to what came before — "+10", "− 2", not
 // "+10", "-2".

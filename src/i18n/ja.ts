@@ -84,7 +84,7 @@ function roundName(kind: PracticeKind): string {
 // referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
 // circular, which TypeScript rejects.
 // Everything in the coaching sentence before the steps themselves, so the
-// answer card can set each step apart and highlight the one being replayed.
+// answer card can set each step apart and highlight the one just stepped to.
 function coachingLead(atom: Atom): string {
   const name = TECHNIQUE[classify(atom)][atom.direction]
   const verb = atom.direction === 'add' ? 'たす' : 'ひく'
@@ -144,6 +144,9 @@ export const ja = {
   chooseEmpty: '今はありません',
   chooseClose: '閉じる',
   mapPreviewTitle: '暗算できる動き',
+  basicsTitle: '基礎の練習',
+  basicsDetail: '1けたの動き・5分',
+  homeHowTo: 'かけ算のやりかた',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 
@@ -175,9 +178,15 @@ export const ja = {
   beadHint: '珠をタップして動かします',
   resetBeads: 'もどす',
   showAnswer: 'こたえを見る',
-  watchAgain: 'もう一度見る',
   next: 'つぎへ',
   replayStep: (step: number, total: number) => `${step} / ${total}`,
+  // The step panel (spec: core rounds §3), which walks a move one bead
+  // step at a time. replayStep above is its counter.
+  stepsOpen: '手順を見る',
+  stepBack: '一つもどる',
+  stepNext: '一つすすむ',
+  stepRestart: '最初から',
+  stepsClose: 'とじる',
   rodName: (place: number): string => PLACE[place] ?? `${place}`,
   problemPrompt: (problem: Problem) =>
     problem.op === 'add'

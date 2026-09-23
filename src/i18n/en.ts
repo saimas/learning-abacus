@@ -130,6 +130,9 @@ export const en: Strings = {
   chooseEmpty: 'Nothing right now',
   chooseClose: 'Close',
   mapPreviewTitle: 'Moves you can do mentally',
+  basicsTitle: 'Basics',
+  basicsDetail: 'Single-rod moves · 5 min',
+  homeHowTo: 'How multiplication works',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
 
@@ -159,9 +162,13 @@ export const en: Strings = {
   beadHint: 'Tap the beads to move them',
   resetBeads: 'Reset',
   showAnswer: 'See answer',
-  watchAgain: 'Watch again',
   next: 'Next',
   replayStep: (step, total) => `${step} / ${total}`,
+  stepsOpen: 'Show the steps',
+  stepBack: 'Step back',
+  stepNext: 'Next step',
+  stepRestart: 'From the start',
+  stepsClose: 'Close',
   rodName: (place): string => PLACE[place] ?? `rod ${place}`,
   problemPrompt: (problem) =>
     problem.op === 'mul'

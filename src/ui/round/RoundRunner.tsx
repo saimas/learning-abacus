@@ -106,11 +106,12 @@ export function RoundRunner({
         coaching={coachingForFade(fade)}
         prompt={strings.problemPrompt(problem)}
         demonstration={null}
-        renderCorrection={(activeStep) => (
+        renderSteps={({ activeStep, showAnswer }) => (
           <ProblemCorrectionCard
             problem={problem}
             expected={exercise.expected}
             activeGroup={activeStep === undefined ? undefined : groupOfStep(groups, activeStep)}
+            showAnswer={showAnswer}
           />
         )}
         track={null}

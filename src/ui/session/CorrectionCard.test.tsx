@@ -37,6 +37,14 @@ describe('CorrectionCard', () => {
     expect(colorOf('correction-step-1')).not.toBe(colors.accent)
   })
 
+  // Spec (core rounds) §3: before an answer the same lines explain the move
+  // without giving the answer away.
+  it('leaves the answer out when asked to', () => {
+    render(<CorrectionCard atom={atom(7, 8, 'add')} expected={15} showAnswer={false} />)
+    expect(screen.queryByTestId('correction-answer')).toBeNull()
+    expect(textOf(screen.getByTestId('correction-coaching'))).toBe('十の繰上：8をたす = +10 − 2')
+  })
+
   it('names no other problem: it sits under the question it corrects', () => {
     render(<CorrectionCard atom={atom(7, 8, 'add')} expected={15} />)
     expect(screen.queryByTestId('correction-problem')).toBeNull()

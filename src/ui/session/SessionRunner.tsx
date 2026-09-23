@@ -359,8 +359,8 @@ export function SessionRunner({
         coaching={current.coaching}
         prompt={strings.prompt(atom)}
         demonstration={current.coaching === 'demo' ? strings.coaching(atom) : null}
-        renderCorrection={(activeStep) => (
-          <CorrectionCard atom={atom} expected={exercise.expected} activeStep={activeStep} />
+        renderSteps={({ activeStep, showAnswer }) => (
+          <CorrectionCard atom={atom} expected={exercise.expected} activeStep={activeStep} showAnswer={showAnswer} />
         )}
         track={null}
         maru={maru}

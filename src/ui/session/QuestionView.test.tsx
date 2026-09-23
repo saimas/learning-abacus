@@ -1,9 +1,9 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen } from '@testing-library/react-native'
 import { StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { FRAME_PADDING } from '@/ui/abacus/geometry'
 import { QuestionView } from './QuestionView'
-import { setBeads } from './testing'
+import { setBeads, textOf } from './testing'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -14,6 +14,9 @@ afterEach(() => {
 })
 
 const problem = { op: 'add', digits: 3, a: 472, b: 385 } as const
+
+// The four rods, highest place first, as the soroban reads.
+const rods = () => [0, 1, 2, 3].map((index) => screen.getByTestId(`rod-${index}`).props.accessibilityValue.text).join('')
 
 function renderView(overrides: Partial<Parameters<typeof QuestionView>[0]> = {}) {
   const onSubmit = jest.fn()
@@ -26,7 +29,9 @@ function renderView(overrides: Partial<Parameters<typeof QuestionView>[0]> = {})
       coaching="demo"
       prompt="472に385をたす。"
       demonstration={null}
-      renderCorrection={(activeStep) => <Text testID="card">{String(activeStep)}</Text>}
+      renderSteps={({ activeStep, showAnswer }) => (
+        <Text testID="card">{`${String(activeStep)} ${String(showAnswer)}`}</Text>
+      )}
       track={null}
       maru={0}
       shownAt={0}
@@ -70,14 +75,58 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(screen.getByTestId('review-next')).toBeTruthy()
   })
 
-  it('replays every step of the problem', () => {
+  it('steps through every move of the problem', () => {
     renderView()
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    fireEvent.press(screen.getByTestId('review-show'))
+    // At F0 the panel is open at once, so there is no こたえを見る to press,
+    // and the soroban still shows the learner's answer until the first ▶.
+    expect(screen.queryByTestId('review-show')).toBeNull()
+    expect(screen.getByTestId('step-count').props.children).toBe(' ')
+    expect(rods()).toBe('0800')
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+
     // 472 + 385 is 5 steps: +5 − 2, +10 − 2, +5.
-    act(() => jest.advanceTimersByTime(900))
-    expect(screen.getByTestId('replay-step').props.children).toBe('1 / 5')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(screen.getByTestId('step-count').props.children).toBe('1 / 5')
+    expect(rods()).toBe('0972')
+    expect(textOf(screen.getByTestId('card'))).toBe('0 true')
+
+    fireEvent.press(screen.getByTestId('step-back'))
+    expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+    expect(rods()).toBe('0472')
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+  })
+
+  it('opens the panel from こたえを見る at a silent level', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('step-panel')).toBeNull()
+    expect(textOf(screen.getByTestId('review-show'))).toBe('こたえを見る')
+
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.getByTestId('step-panel')).toBeTruthy()
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+    // Once the panel is open, つぎへ is all that is left to press.
+    expect(screen.queryByTestId('review-show')).toBeNull()
+    expect(screen.getByTestId('review-next')).toBeTruthy()
+  })
+
+  it('ignores つぎへ in the moment after こたえを見る, since つぎへ widens into its place', () => {
+    let clock = 0
+    const { onMoveOn } = renderView({ fade: 2, coaching: 'silent', now: () => clock })
+    setBeads(screen.getByTestId, 800, 4)
+    clock = 1_000
+    fireEvent.press(screen.getByTestId('submit'))
+    clock = 2_000
+    fireEvent.press(screen.getByTestId('review-show'))
+    clock = 2_200
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).not.toHaveBeenCalled()
+    clock = 2_500
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).toHaveBeenCalledWith(2_500)
   })
 })
 
@@ -99,7 +148,7 @@ describe('QuestionView with a 3×3 multiplication', () => {
         coaching="silent"
         prompt="472に385をかける。"
         demonstration={null}
-        renderCorrection={() => null}
+        renderSteps={() => null}
         track={null}
         maru={0}
         shownAt={0}

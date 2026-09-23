@@ -213,11 +213,9 @@ describe('the part chooser', () => {
 describe('the review step', () => {
   it('labels its buttons and announces a miss', () => {
     expect(ja.showAnswer).toBe('こたえを見る')
-    expect(ja.watchAgain).toBe('もう一度見る')
     expect(ja.next).toBe('つぎへ')
     expect(ja.wrong).toBe('ちがいます')
     expect(en.showAnswer).toBe('See answer')
-    expect(en.watchAgain).toBe('Watch again')
     expect(en.next).toBe('Next')
     expect(en.wrong).toBe('Not quite')
   })
@@ -225,6 +223,11 @@ describe('the review step', () => {
   it('counts the steps of a replay', () => {
     expect(ja.replayStep(1, 2)).toBe('1 / 2')
     expect(en.replayStep(1, 2)).toBe('1 / 2')
+  })
+
+  it('labels the step panel', () => {
+    expect(ja.stepsOpen).toBe('手順を見る')
+    expect(en.stepRestart).toBe('From the start')
   })
 })
 
