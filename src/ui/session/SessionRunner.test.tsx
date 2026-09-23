@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { AccessibilityInfo, StyleSheet } from 'react-native'
+import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
 import type { SessionItem, SessionPlan } from '@/domain/session'
 import { SessionRunner } from './SessionRunner'
 import { colors } from '@/ui/theme'
@@ -1287,6 +1287,27 @@ describe('SessionRunner reviewing a miss', () => {
     expect(rods()).toBe('07')
     fireEvent.press(getByTestId('step-restart'))
     expect(rods()).toBe('03')
+  })
+
+  // The owner's request (2026-09-23): in bead mode the lines fill the space
+  // below ◀ ▶, and the step on show is scrolled into view there.
+  it('scrolls the line of steps into view below the controls in bead mode', () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo')
+    try {
+      const { getByTestId } = renderRunner(beadPlan, autoClock())
+      answer(getByTestId, '9')
+      const layout = (testID: string, y: number, height: number) =>
+        fireEvent(getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y, width: 300, height } } })
+      // Room for the answer alone.
+      layout('step-lines-scroll', 0, 20)
+      layout('correction-coaching', 24, 14)
+      fireEvent.press(getByTestId('step-next'))
+      expect(scrollTo).not.toHaveBeenCalled()
+      fireEvent.press(getByTestId('step-next'))
+      expect(scrollTo).toHaveBeenLastCalledWith({ y: 18, animated: true })
+    } finally {
+      scrollTo.mockRestore()
+    }
   })
 
   it('tells VoiceOver the answer when こたえを見る is pressed', () => {

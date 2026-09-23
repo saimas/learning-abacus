@@ -12,7 +12,7 @@ import { parseAnswer } from '@/ui/parseAnswer'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 import { Batsu } from './Batsu'
 import { Maru } from './Maru'
-import { STEP_CONTROLS_HEIGHT, StepControls, StepLines } from './StepPanel'
+import { ScrollingStepLines, STEP_CONTROLS_HEIGHT, StepControls, StepLines } from './StepPanel'
 import { useStepper } from './useStepper'
 
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
@@ -64,7 +64,10 @@ export function QuestionView({
   // The step panel's explanation lines. `activeStep` is the bead move the
   // learner has just stepped to, counted from 0, or undefined at the start
   // or before the first step. `showAnswer` says whether the lines give the
-  // answer, which they do only once the question has been answered.
+  // answer, which they do only once the question has been answered. In bead
+  // mode the lines scroll on their own, and the card's highlighted line
+  // reports where it sits so it can be scrolled into view (see
+  // useActiveLineLayout).
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
   // leaves off the soroban, following the same `activeStep` as the step
@@ -232,13 +235,13 @@ export function QuestionView({
   const reviewing = review !== null && review.cardShown
   const beforeAnswer = review === null && stepsOpen
   const panelOpen = reviewing || beforeAnswer
-  // The step panel in its two places: the lines scroll with the prompt, and
-  // the controls sit in the fixed area just above the bottom buttons, where
-  // the thumb is, so ◀ ▶ cannot scroll off a short phone. Before an answer
-  // nothing has been got wrong, so the lines carry no correction edge.
-  const stepLines = panelOpen ? (
-    <StepLines accent={reviewing}>{renderSteps({ activeStep, showAnswer: reviewing })}</StepLines>
-  ) : null
+  // The step panel in its two places: the controls sit in the fixed area
+  // just above the bottom buttons, where the thumb is, so ◀ ▶ cannot scroll
+  // off a short phone, and in keypad mode the lines scroll with the prompt
+  // (bead mode puts them below the controls; see beadStepLines). Before an
+  // answer nothing has been got wrong, so the lines carry no correction edge.
+  const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing }) : null
+  const stepLines = panelOpen ? <StepLines accent={reviewing}>{steps}</StepLines> : null
   const stepControls = panelOpen ? (
     <StepControls
       index={stepper.index}
@@ -297,12 +300,30 @@ export function QuestionView({
 
   if (mode === 'beads') {
     // Layout A: the soroban takes the keypad's place, enlarged and within
-    // thumb reach. Only the prompt and the step panel's lines above it
-    // scroll, so the soroban, the step controls under it and the buttons
-    // stay on screen even on a 375 × 667 phone.
+    // thumb reach. Only the prompt above it and the step panel's lines below
+    // the controls scroll, so the soroban, the step controls under it and
+    // the buttons stay on screen even on a 375 × 667 phone.
     // The beads take no taps while the question is answered (under review)
     // or while they show the steps before an answer.
     const locked = review !== null || beforeAnswer
+    // The owner's request (2026-09-23): the lines used to share the small
+    // scroll above the soroban with the prompt, two lines on show at a
+    // time, while below ◀ ▶ the screen stood empty. So with the panel open
+    // they take that empty space instead, filling it to the bottom and
+    // scrolling on their own, with the line stepped to scrolled into view.
+    // They take the place of the flexible spacer under the controls, with
+    // its flex, so the prompt's scroll above keeps its share of the height
+    // and the soroban between the two does not move. Before an answer they
+    // take the もどす/こたえる row's place too. The height that row frees
+    // would otherwise be shared out and move the soroban down by half a
+    // row, so the lines start from that height and grow by the spacer's
+    // share on top of it: the soroban stays put, and no empty row is left
+    // at the bottom. In a miss's review つぎへ keeps its row below them.
+    const beadStepLines = panelOpen ? (
+      <View testID="step-lines" style={[styles.stepLines, beforeAnswer && styles.stepLinesOverAnswerRow]}>
+        <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
+      </View>
+    ) : null
     return (
       <View style={styles.practice}>
         {track}
@@ -312,7 +333,6 @@ export function QuestionView({
           </Text>
           {demonstrationLine}
           {stepsOpenButton}
-          {stepLines}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
@@ -362,19 +382,15 @@ export function QuestionView({
             the soroban. Both share `scroll`'s flexShrink:1, so on a short
             screen this collapses to 0 first and the scroll area is what
             gives way, keeping the soroban, hint (or step controls) and
-            buttons on screen. */}
-        <View style={styles.beadSpacer} />
+            buttons on screen. With the panel open the step lines take its
+            place (see beadStepLines). */}
+        {beadStepLines ?? <View style={styles.beadSpacer} />}
         {/* Before an answer, the steps' とじる stands in for もどす and
             こたえる: the learner answers once they have closed the steps.
-            That row still holds its height empty rather than collapsing to
-            nothing, or opening 手順を見る would shrink the layout by a whole
-            button row and shift the soroban above it — the same reasoning
-            as controlsPlace just above, for the row below instead. */}
+            The step lines take that row's height meanwhile. */}
         {review !== null ? (
           reviewButtons
-        ) : beforeAnswer ? (
-          <View testID="answer-row-placeholder" style={styles.buttonRowPlaceholder} />
-        ) : (
+        ) : beforeAnswer ? null : (
           <View style={styles.buttonRow}>
             <View style={styles.resetSlot}>
               <Button
@@ -501,10 +517,16 @@ const styles = StyleSheet.create({
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
+  // In beadSpacer's place, with the same flex and nothing else: a padding or
+  // margin here would count before the share-out and move the soroban (a
+  // flex basis is never less than the padding). The gap under the controls
+  // is inside, on ScrollingStepLines' scroll.
+  stepLines: { flex: 1 },
+  // Before an answer the lines start from the もどす/こたえる row's height
+  // (buttonRow's marginTop and its buttons' height), so the soroban above
+  // does not shift when 手順を見る swaps that row for them and back.
+  stepLinesOverAnswerRow: { flexBasis: space.md + BUTTON_HEIGHT },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
-  // Same height and marginTop as buttonRow, so the soroban above does not
-  // shift when 手順を見る swaps this row for it and back.
-  buttonRowPlaceholder: { marginTop: space.md, height: BUTTON_HEIGHT },
   resetSlot: { flex: 1 },
   submitSlot: { flex: 2 },
   // こたえを見る and つぎへ share the row equally (mockup); つぎへ alone
