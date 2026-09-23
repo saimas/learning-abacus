@@ -70,4 +70,25 @@ describe('Round screen', () => {
     await waitFor(() => expect(mockRedirect).toHaveBeenCalledWith('/'))
     expect(queryByTestId('prompt')).toBeNull()
   })
+
+  it("carries a kind's stored fade into the round", async () => {
+    mockParams.current = { kind: 'add:2' }
+    mockLoad.mockResolvedValue({
+      ...emptyProgress(),
+      tutorialDone: true,
+      practices: { 'add:2': { fade: 3, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: 0 } },
+    })
+    const { getByTestId, queryByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('key-1')).toBeTruthy()
+    expect(queryByTestId('soroban-wrap')).toBeNull()
+  })
+
+  it('starts a kind with no record in bead mode', async () => {
+    mockParams.current = { kind: 'add:2' }
+    const { getByTestId, queryByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('soroban-wrap')).toBeTruthy()
+    expect(queryByTestId('key-1')).toBeNull()
+  })
 })

@@ -84,7 +84,7 @@ export function QuestionView({
   const start = setValue(emptySoroban(exercise.rods), exercise.start)
   const shownBeads = beads ?? start
   // An untouched soroban is not an answer, the same rule as a blank keypad:
-  // a stray tap on こたえる must not burn one of the atom's attempts.
+  // a stray tap on こたえる must not burn an attempt.
   const moved = readValue(shownBeads) !== exercise.start
   // The screen's gutters are space.xl on each side (Screen).
   const beadScale = beadModeScale(exercise.rods, width - 2 * space.xl)

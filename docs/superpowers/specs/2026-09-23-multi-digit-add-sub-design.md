@@ -14,7 +14,7 @@ Decisions made with the owner:
 - **A round is 10 problems,** then the summary.
 - **Fade is speed-aware,** as for single moves: 5 correct in a row, each within a time target, promotes one level; 2 wrong in a row demotes one. The target comes from the per-move targets the app already calibrates.
 - **Progress appears on the progress screen** as a small table below the 180-move map. Home is unchanged.
-- **Architecture A:** a shared `Exercise` and an extracted `QuestionView`, played by the existing `SessionRunner` and a new `RoundRunner` (§6).
+- **Architecture A:** a shared `Exercise` and an extracted `QuestionView`, played by the existing `SessionRunner` and a new `RoundRunner` (§6). The count/time track (`SessionTrack`, `RoundTrack`) sits outside `QuestionView`, rendered by the runner that owns it, so it keeps its place in the tree across questions instead of remounting with each.
 
 Out of scope: × and ÷ (P2, P3), 見取算 (more than two terms), feeding multi-digit practice into the daily session, crediting single moves on the 180-move map from multi-digit answers.
 
@@ -118,7 +118,7 @@ export type PracticeRecord = {
 
 ### QuestionView (`src/ui/session/QuestionView.tsx`), extracted from SessionRunner
 
-Everything about one question, driven by an `Exercise` plus its fade, coaching, prompt text and correction content. It owns the bead state, the answer, the ✕ and the review, the replay (`useMoveReplay` over `exercise.states`) and the 〇, and reports `{ correct, latencyMs }` when the learner moves on. Latency is measured as today.
+Everything about one question, driven by an `Exercise` plus its fade, coaching, prompt text and correction content. It owns the bead state, the answer, the ✕ and the review, the replay (`useMoveReplay` over `exercise.states`) and the 〇, and reports `{ correct, latencyMs }` when the learner moves on. Latency is measured as today. It does not render the track: `track` is a prop, so `SessionTrack` and `RoundTrack` sit outside it, owned by whichever runner is playing (§1). In keypad mode the answer pad accepts up to `exercise.rods` digits — one more than the operands for a problem, the same margin a single move has today.
 
 `SessionRunner` keeps its plan logic (blocks, the time track, retries, the reserve, fade rep, the summary) and renders `QuestionView` for its current atom via `exerciseForAtom`. The extraction changes nothing the learner sees: `SessionRunner`'s existing tests must pass without edits to what they assert.
 
@@ -133,9 +133,9 @@ The bead-mode scale is no longer the fixed `BEAD_MODE_SCALE`. It is the largest 
 
 ### Problem prompt and correction card
 
-- Prompt: "472に385をたす。" / "472から385をひく。" (en: "Add 385 to 472." / "Subtract 385 from 472.").
+- Prompt: "472に385をたす。" / "472から385をひく。" (en, matching the existing English atom prompts: "The soroban shows 472. Add 385." / "The soroban shows 472. Subtract 385.").
 - F0 has no demonstration before the answer: for a problem it would be a sentence per column. As today, F0–F1 show the correction card automatically after a miss, and F2+ after こたえを見る.
-- The correction card for a problem gives the answer, then one line per column, highest place first, for example "十のくらい：7に8をたす → …", with the same step wording as the single-move card (`describeStepParts`) and a cascade described as its own carry. The replay highlights the line of the column whose steps it is playing. A column with no atom (a 0 digit in `b`) gets no line.
+- The correction card for a problem gives the answer, then one line per column, highest place first: the rod's name, then that column's move read exactly as a single move's card reads it, for example "十の位　十の繰上：8をたす = +10 − 2". When the column's carry or borrow cascades into the next rod, the line gets an appended note: "（さらに上の位へ繰り上がる）" for a carry, "（さらに上の位から繰り下がる）" for a borrow (en: " (and carries again into the next rod)" / " (borrowing from a rod further left)"). The replay highlights the line of the column whose steps it is playing. A column with no atom (a 0 digit in `b`) gets no line.
 - The replay counter reads as today ("3 / 9").
 
 ### Chooser

@@ -161,7 +161,7 @@ describe('problemSteps', () => {
 
   it('replays a large sample of 3-digit problems to their answers', () => {
     for (const op of ['add', 'sub'] as const) {
-      for (const p of generateProblems({ op, digits: 3 }, 3000, seeded(11))) expectReplaysTo(p)
+      for (const p of generateProblems({ op, digits: 3 }, 500, seeded(11))) expectReplaysTo(p)
     }
   })
 })

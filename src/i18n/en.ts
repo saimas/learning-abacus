@@ -141,7 +141,11 @@ export const en: Strings = {
     `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
   columnLine: (place, atom, cascades) =>
     `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
-      cascades ? (atom.direction === 'add' ? ' (the carry moves on a rod)' : ' (the borrow comes from a rod further on)') : ''
+      cascades
+        ? atom.direction === 'add'
+          ? ' (and carries again into the next rod)'
+          : ' (borrowing from a rod further left)'
+        : ''
     }`,
   roundCount: (index, total) => `${index} / ${total}`,
   roundComplete: 'Practice complete',
