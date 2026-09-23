@@ -36,13 +36,13 @@ Out of scope: a recommended-next round, changing the 基礎 session's content or
 ```
 
 - `total` is `states.length − 1`, the number of bead moves.
-- `index` is null when not stepping (the soroban shows whatever it showed before). `next()` from null goes to 1; from k to k + 1, stopping at `total`. `back()` from k goes to k − 1, stopping at 0. `restart()` goes to 0. `clear()` goes back to null.
+- `index` is null when not stepping (the soroban shows whatever it showed before, so a learner sees their own beads until they start). `next()` from null goes to 0, the start, drawn solid with the counter "0 / n"; from k to k + 1, stopping at `total`. So every ▶ after the first plays exactly one move. `back()` from k goes to k − 1, stopping at 0. `restart()` goes to 0. `clear()` goes back to null.
 - `soroban` is `states[index]` or null.
 - No timers: the beads' own slide animation shows each move.
 
-### `StepPanel` (`src/ui/session/StepPanel.tsx`)
+### `StepLines` and `StepControls` (`src/ui/session/StepPanel.tsx`)
 
-A card holding the explanation lines (passed in by the caller, rendered with the active move highlighted), then a control row: ◀ (`step-back`), the counter (`step-count`, "3 / 5", blank when `index` is null), ▶ (`step-next`), 最初から (`step-restart`), and, when opened before an answer, とじる (`steps-close`). ◀ is disabled at 0 or null, ▶ at `total`. Each control has an accessibility label.
+`StepLines` is a card holding the explanation lines (passed in by the caller, rendered with the active move highlighted); it sits in the scroll area. `StepControls` is the control row, pinned in the fixed area just above the bottom buttons (in bead mode under the soroban) so it can never scroll off a small phone. VoiceOver hears each change of step. The control row: ◀ (`step-back`), the counter (`step-count`, "3 / 5", blank when `index` is null), ▶ (`step-next`), 最初から (`step-restart`), and, when opened before an answer, とじる (`steps-close`). ◀ is disabled at 0 or null, ▶ at `total`. Each control has an accessibility label.
 
 The lines are what `renderCorrection` draws today, generalised to `renderSteps({ activeStep, showAnswer })`: `activeStep` is the move just played (`index − 1`, or undefined at 0 or null), and `showAnswer` says whether the "こたえは …" line is shown. `CorrectionCard` and `ProblemCorrectionCard` gain a `showAnswer` prop (default true).
 
