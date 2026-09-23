@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { atomId, type Atom, type Direction } from '@/domain/atoms'
 import { colors } from '@/ui/theme'
 import { CorrectionCard } from './CorrectionCard'
 import { textOf } from './testing'
+import { ActiveLayoutContext } from './useActiveLineLayout'
 
 function atom(rodValue: number, operand: number, direction: Direction): Atom {
   return { id: atomId(rodValue, operand, direction), rodValue, operand, direction }
@@ -48,5 +49,31 @@ describe('CorrectionCard', () => {
   it('names no other problem: it sits under the question it corrects', () => {
     render(<CorrectionCard atom={atom(7, 8, 'add')} expected={15} />)
     expect(screen.queryByTestId('correction-problem')).toBeNull()
+  })
+
+  // The owner's request (2026-09-23): in bead mode the lines scroll below
+  // the controls, and the step on show is scrolled into view. A single
+  // move's steps share one line, so the card tells the scroll around it
+  // where that line sits.
+  it('tells where the line of steps sits once a step is on show', () => {
+    const onActiveLayout = jest.fn()
+    const card = (activeStep?: number) => (
+      <ActiveLayoutContext.Provider value={onActiveLayout}>
+        <CorrectionCard atom={atom(7, 8, 'add')} expected={15} activeStep={activeStep} />
+      </ActiveLayoutContext.Provider>
+    )
+    render(card())
+    fireEvent(screen.getByTestId('correction-coaching'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 24, width: 300, height: 30 } },
+    })
+    expect(onActiveLayout).not.toHaveBeenCalled()
+
+    screen.rerender(card(0))
+    expect(onActiveLayout).toHaveBeenLastCalledWith(24, 30)
+  })
+
+  it('lays the line out for no one outside such a scroll', () => {
+    render(<CorrectionCard atom={atom(7, 8, 'add')} expected={15} activeStep={0} />)
+    expect(screen.getByTestId('correction-coaching').props.onLayout).toBeUndefined()
   })
 })

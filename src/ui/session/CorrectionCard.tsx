@@ -4,6 +4,7 @@ import type { Atom } from '@/domain/atoms'
 import { describeStepParts } from '@/domain/explain'
 import { useStrings } from '@/i18n'
 import { colors, fonts } from '@/ui/theme'
+import { useActiveLineLayout } from './useActiveLineLayout'
 
 // The explanation of a single move, as the step panel shows it: the answer,
 // and the substitution that reaches it. `activeStep` indexes
@@ -22,6 +23,12 @@ export function CorrectionCard({
   showAnswer?: boolean
 }) {
   const strings = useStrings()
+  // Where the lines scroll on their own (bead mode), the line of the step on
+  // show tells the scroll where it sits, so it can be scrolled into view.
+  // Every step is a span of the one coaching line, and a span is not laid
+  // out on its own, so that line (line 0) is the one to show, active from
+  // the first step on.
+  const lineLayout = useActiveLineLayout(activeStep === undefined ? undefined : 0)
   return (
     <View testID="correction">
       {showAnswer ? (
@@ -31,7 +38,7 @@ export function CorrectionCard({
       ) : null}
       {/* Reads exactly as strings.coaching(atom); each step is its own span
           so the panel can point at the one just stepped to. */}
-      <Text testID="correction-coaching" style={styles.coaching}>
+      <Text testID="correction-coaching" onLayout={lineLayout(0)} style={styles.coaching}>
         {strings.coachingLead(atom)}
         {describeStepParts(atom).map((part, index) => (
           <Fragment key={index}>
