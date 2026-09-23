@@ -279,4 +279,9 @@ describe('multiplication strings', () => {
     expect(ja.introResult(47, 36, 1692)).toBe('47×36 = 1692')
     expect(en.introResult(47, 36, 1692)).toBe('47 × 36 = 1692')
   })
+
+  it('reads the operand board as the problem', () => {
+    expect(ja.operandBoardLabel(472, 385)).toBe('472 × 385')
+    expect(en.operandBoardLabel(472, 385)).toBe('472 × 385')
+  })
 })

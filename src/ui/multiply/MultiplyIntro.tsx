@@ -8,6 +8,7 @@ import { beadModeScale } from '@/ui/abacus/geometry'
 import { Button } from '@/ui/kit/Button'
 import { useMoveReplay } from '@/ui/session/useMoveReplay'
 import { colors, fonts, fontSizes, space } from '@/ui/theme'
+import { OperandBoard } from './OperandBoard'
 
 // Spec (multiplication) §4: one worked 2×2 problem, small enough to follow
 // and with every kind of placement in it.
@@ -82,9 +83,12 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
           screen. */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.problem}>{`${EXAMPLE.a} × ${EXAMPLE.b}`}</Text>
-        <View style={styles.soroban}>
+        <View testID="intro-soroban" style={styles.soroban}>
           <Abacus soroban={shown} fade={0} scale={beadModeScale(4, width - 2 * space.xl)} />
         </View>
+        {/* The two numbers under the soroban, as in a × round. A 九九's page
+            points at its two digits for as long as the page is open. */}
+        <OperandBoard problem={EXAMPLE} activeGroup={group} />
         <Text testID="intro-text" style={styles.text}>
           {text}
         </Text>

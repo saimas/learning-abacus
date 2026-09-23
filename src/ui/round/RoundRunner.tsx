@@ -12,6 +12,7 @@ import {
   type Problem,
 } from '@/domain/problem'
 import { useStrings } from '@/i18n'
+import { OperandBoard } from '@/ui/multiply/OperandBoard'
 import { QuestionView, type Submission } from '@/ui/session/QuestionView'
 import { SessionSummary } from '@/ui/session/SessionSummary'
 import { ProblemCorrectionCard } from './ProblemCorrectionCard'
@@ -69,6 +70,15 @@ export function RoundRunner({
 
   const exercise = exerciseForProblem(problem)
   const groups = problemSteps(problem)
+  // The group of the move the learner has stepped to, if any: an index into
+  // `groups` for the answer card's lines, and the group itself for the
+  // operand board. Both follow it.
+  const groupIndexOf = (activeStep: number | undefined) =>
+    activeStep === undefined ? undefined : groupOfStep(groups, activeStep)
+  const groupOf = (activeStep: number | undefined) => {
+    const at = groupIndexOf(activeStep)
+    return at === undefined ? undefined : groups[at]
+  }
 
   function next(t: number) {
     setIndex((previous) => previous + 1)
@@ -112,10 +122,17 @@ export function RoundRunner({
           <ProblemCorrectionCard
             problem={problem}
             expected={exercise.expected}
-            activeGroup={activeStep === undefined ? undefined : groupOfStep(groups, activeStep)}
+            activeGroup={groupIndexOf(activeStep)}
             showAnswer={showAnswer}
           />
         )}
+        // 両落とし leaves both numbers off the soroban, so a × problem shows
+        // them on a board of their own beneath it (see OperandBoard).
+        renderBeneath={
+          problem.op === 'mul'
+            ? (activeStep) => <OperandBoard problem={problem} activeGroup={groupOf(activeStep)} />
+            : undefined
+        }
         track={null}
         maru={maru}
         shownAt={shownAt}

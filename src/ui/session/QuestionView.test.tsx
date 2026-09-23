@@ -318,6 +318,51 @@ describe('QuestionView before an answer, with 手順を見る', () => {
   })
 })
 
+// A × problem's operand board goes right under the product soroban: in the
+// fixed area in bead mode, and in the scroll with the soroban in keypad mode.
+// It follows the steps as the step lines do.
+describe('QuestionView with something beneath the soroban', () => {
+  const beneath = (activeStep: number | undefined) => <Text testID="beneath">{String(activeStep)}</Text>
+  // Every testID on screen, in the order they are drawn.
+  const order = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+
+  it('draws it under the soroban in bead mode, outside the scroll, with the step on show', () => {
+    renderView({ renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).queryByTestId('beneath')).toBeNull()
+    const drawn = order()
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('rod-3'))
+    expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('submit'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('undefined')
+
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('undefined')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('1')
+    fireEvent.press(screen.getByTestId('step-back'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+  })
+
+  it('draws it with the soroban in the scroll in keypad mode, with the step on show', () => {
+    renderView({ fade: 3, coaching: 'silent', renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('beneath')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('rod-3'))
+    expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('prompt'))
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+  })
+})
+
 describe('QuestionView with a 3×3 multiplication', () => {
   it('shrinks a six-rod soroban to fit in keypad mode', () => {
     // Jest's window is 750 pt wide, which fits six rods at scale 1: mock a

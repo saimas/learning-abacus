@@ -46,6 +46,7 @@ export function QuestionView({
   prompt,
   demonstration,
   renderSteps,
+  renderBeneath,
   track,
   maru,
   shownAt,
@@ -65,6 +66,10 @@ export function QuestionView({
   // or before the first step. `showAnswer` says whether the lines give the
   // answer, which they do only once the question has been answered.
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
+  // Drawn right under the soroban, following the same `activeStep` as the
+  // step lines: a × problem's operand board, which shows the two numbers
+  // that 両落とし leaves off the soroban. Nothing for any other question.
+  renderBeneath?: (activeStep: number | undefined) => ReactNode
   track: ReactNode
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
@@ -318,6 +323,9 @@ export function QuestionView({
           />
           {stamp(140)}
         </View>
+        {/* Fixed, like the soroban, and outside the stamp's wrap, so the 〇
+            or ✕ lands on the soroban alone. */}
+        {renderBeneath?.(activeStep)}
         {/* With the panel open the hint gives way to the step controls.
             Until こたえを見る opens the panel at a silent level, an empty
             space of the controls' height holds their place, so the soroban
@@ -382,6 +390,7 @@ export function QuestionView({
           <Abacus soroban={stepper.soroban ?? start} fade={shownFade} scale={keypadScale} />
           {stamp(110)}
         </View>
+        {renderBeneath?.(activeStep)}
         <Text testID="prompt" style={styles.prompt}>
           {prompt}
         </Text>

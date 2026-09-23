@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import type { Problem } from '@/domain/problem'
 import { setBeads } from '@/ui/session/testing'
@@ -136,5 +136,59 @@ describe('RoundRunner', () => {
     expect(screen.getByTestId('summary-result').props.children).toBe('3問中 3問正解')
     fireEvent.press(screen.getByTestId('finish-button'))
     expect(onFinish).toHaveBeenCalledTimes(1)
+  })
+})
+
+// The owner's request (2026-09-23): a × problem shows its two numbers on
+// beads under the product soroban, which 両落とし starts empty, and stepping
+// through a miss points at the two digits of each 九九 in turn.
+describe('RoundRunner with ×', () => {
+  const multiply: Partial<Parameters<typeof RoundRunner>[0]> = {
+    kind: { op: 'mul', digits: 2 },
+    problems: [{ op: 'mul', digits: 2, a: 12, b: 34 }],
+  }
+  // The product soroban's rods only: the operand board has rods of its own.
+  const onProduct: typeof screen.getByTestId = (id, options) =>
+    within(screen.getByTestId('soroban-wrap')).getByTestId(id, options)
+  const lit = (name: 'a' | 'b') =>
+    [0, 1].filter((i) => within(screen.getByTestId(`operand-${name}`)).queryByTestId(`rod-highlight-${i}`) !== null)
+
+  it('shows the two numbers under the soroban', () => {
+    renderRound(multiply)
+    expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('12 × 34')
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+  })
+
+  it('shows no operand board for ＋', () => {
+    renderRound()
+    expect(screen.queryByTestId('operand-board')).toBeNull()
+  })
+
+  it('moves the highlight to the digits of each 九九 as a miss is stepped through', () => {
+    renderRound(multiply)
+    setBeads(onProduct, 407, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+
+    // The first ▶ shows the start, with no 九九 yet.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+    // 1 × 3: the tens of each.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[0], [0]])
+    // 1 × 4: the tens of 12, the ones of 34.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[0], [1]])
+    // 2 × 3 is two bead steps (+10 − 4), and both are its.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [0]])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [0]])
+    // 2 × 4: the ones of each.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [1]])
+
+    fireEvent.press(screen.getByTestId('step-restart'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
   })
 })
