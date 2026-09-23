@@ -1,7 +1,7 @@
 # learning-abacus — Multiplication 掛算 (roadmap P2)
 
 Date: 2026-09-23
-Status: Implemented on feature/multiply (TestFlight build 10). Sub-project P2 of `2026-09-23-n-by-n-roadmap.md`, building on P1 (`2026-09-23-multi-digit-add-sub-design.md`).
+Status: Implemented (TestFlight build 10); operand board added in build 13 (§8). Sub-project P2 of `2026-09-23-n-by-n-roadmap.md`, building on P1 (`2026-09-23-multi-digit-add-sub-design.md`).
 
 ## 1. Goal and decisions
 
