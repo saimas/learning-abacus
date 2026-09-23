@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { FRAME_PADDING } from '@/ui/abacus/geometry'
@@ -86,6 +86,12 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(rods()).toBe('0800')
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
 
+    // The first ▶ shows where the move begins, with nothing highlighted.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+    expect(rods()).toBe('0472')
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+
     // 472 + 385 is 5 steps: +5 − 2, +10 − 2, +5.
     fireEvent.press(screen.getByTestId('step-next'))
     expect(screen.getByTestId('step-count').props.children).toBe('1 / 5')
@@ -96,6 +102,26 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
     expect(rods()).toBe('0472')
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+  })
+
+  // The lines scroll with the prompt, but ◀ ▶ stay in the fixed area above
+  // つぎへ, so they cannot scroll off a short phone.
+  it.each([
+    ['bead', 0, 'demo'],
+    ['keypad', 3, 'silent'],
+  ] as const)('pins the step controls outside the scrolling text in %s mode', (_mode, fade, coaching) => {
+    renderView({ fade, coaching })
+    if (fade === 0) {
+      setBeads(screen.getByTestId, 800, 4)
+    } else {
+      for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    }
+    fireEvent.press(screen.getByTestId('submit'))
+    if (coaching === 'silent') fireEvent.press(screen.getByTestId('review-show'))
+    const scroll = screen.getByTestId('question-scroll')
+    expect(within(scroll).getByTestId('step-panel')).toBeTruthy()
+    expect(within(scroll).queryByTestId('step-next')).toBeNull()
+    expect(screen.getByTestId('step-next')).toBeTruthy()
   })
 
   it('opens the panel from こたえを見る at a silent level', () => {

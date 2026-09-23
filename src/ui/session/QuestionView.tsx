@@ -12,7 +12,7 @@ import { parseAnswer } from '@/ui/parseAnswer'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 import { Batsu } from './Batsu'
 import { Maru } from './Maru'
-import { StepPanel } from './StepPanel'
+import { STEP_CONTROLS_HEIGHT, StepControls, StepLines } from './StepPanel'
 import { useStepper } from './useStepper'
 
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
@@ -153,17 +153,20 @@ export function QuestionView({
   // stepping to k the highlighted move is k − 1. At the start or before the
   // first step nothing is highlighted.
   const activeStep = stepper.index !== null && stepper.index > 0 ? stepper.index - 1 : undefined
-  const reviewPanel =
-    review !== null && review.cardShown ? (
-      <StepPanel
-        lines={renderSteps({ activeStep, showAnswer: true })}
-        index={stepper.index}
-        total={stepper.total}
-        onBack={stepper.back}
-        onNext={stepper.next}
-        onRestart={stepper.restart}
-      />
-    ) : null
+  const panelOpen = review !== null && review.cardShown
+  // The step panel in its two places: the lines scroll with the prompt, and
+  // the controls sit in the fixed area just above the bottom buttons, where
+  // the thumb is, so ◀ ▶ cannot scroll off a short phone.
+  const stepLines = panelOpen ? <StepLines>{renderSteps({ activeStep, showAnswer: true })}</StepLines> : null
+  const stepControls = panelOpen ? (
+    <StepControls
+      index={stepper.index}
+      total={stepper.total}
+      onBack={stepper.back}
+      onNext={stepper.next}
+      onRestart={stepper.restart}
+    />
+  ) : null
   // Stepping takes the soroban over, drawn solid whatever the fade level, so
   // there is something to watch at F3+.
   const shownFade = stepper.soroban !== null ? 0 : fade
@@ -203,17 +206,18 @@ export function QuestionView({
 
   if (mode === 'beads') {
     // Layout A: the soroban takes the keypad's place, enlarged and within
-    // thumb reach. Only the text above it scrolls, so the soroban and both
-    // buttons stay on screen even on a 375 × 667 phone.
+    // thumb reach. Only the prompt and the step panel's lines above it
+    // scroll, so the soroban, the step controls under it and the buttons
+    // stay on screen even on a 375 × 667 phone.
     return (
       <View style={styles.practice}>
         {track}
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           <Text testID="prompt" style={styles.prompt}>
             {prompt}
           </Text>
           {demonstrationLine}
-          {reviewPanel}
+          {stepLines}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
@@ -239,15 +243,16 @@ export function QuestionView({
           />
           {stamp(140)}
         </View>
-        {/* Under review the hint gives way to a blank line of the same
-            height, so the soroban does not jump; the step count is in the
-            panel. */}
+        {/* Under review the hint gives way to the step controls. Until
+            こたえを見る opens the panel at a silent level, an empty space of
+            the controls' height holds their place, so the soroban moves
+            once, as the ✕ lands, and not again when the controls appear. */}
         {review === null ? (
           <Text style={styles.hint}>{strings.beadHint}</Text>
+        ) : panelOpen ? (
+          stepControls
         ) : (
-          <Text accessible={false} style={styles.hint}>
-            {' '}
-          </Text>
+          <View style={styles.controlsPlace} />
         )}
         {/* Layout A puts a flexible gap on both sides of the soroban+hint
             block (mockup: a flex spacer before it, another after). The
@@ -255,7 +260,8 @@ export function QuestionView({
             below so spare height on a tall phone doesn't all pile up above
             the soroban. Both share `scroll`'s flexShrink:1, so on a short
             screen this collapses to 0 first and the scroll area is what
-            gives way, keeping the soroban, hint and buttons on screen. */}
+            gives way, keeping the soroban, hint (or step controls) and
+            buttons on screen. */}
         <View style={styles.beadSpacer} />
         {review !== null ? (
           reviewButtons
@@ -283,8 +289,9 @@ export function QuestionView({
       {track}
       {/* R9: the keypad below is always fully visible, pinned at the bottom.
           Everything here that can grow scrolls instead of pushing the keypad
-          off a short screen. Under review the review buttons take its place. */}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          off a short screen. Under review the review buttons take its place,
+          with the step controls above them once the panel is open. */}
+      <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
           <Abacus soroban={stepper.soroban ?? start} fade={shownFade} scale={keypadScale} />
           {stamp(110)}
@@ -293,10 +300,13 @@ export function QuestionView({
           {prompt}
         </Text>
         {demonstrationLine}
-        {reviewPanel}
+        {stepLines}
       </ScrollView>
       {review !== null ? (
-        reviewButtons
+        <>
+          {stepControls}
+          {reviewButtons}
+        </>
       ) : (
         <AnswerPad
           value={answer}
@@ -351,6 +361,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
+  // StepControls' row sits at the same marginTop.
+  controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   resetSlot: { flex: 1 },

@@ -5,11 +5,14 @@ import { useStepper } from './useStepper'
 const states = [0, 5, 3, 13].map((n) => setValue(emptySoroban(2), n))
 
 describe('useStepper', () => {
-  it('starts not stepping, then walks the moves one at a time', () => {
+  it('starts not stepping, shows the start first, then walks the moves one at a time', () => {
     const { result } = renderHook(() => useStepper(states))
     expect(result.current.index).toBeNull()
     expect(result.current.soroban).toBeNull()
     expect(result.current.total).toBe(3)
+    act(() => result.current.next())
+    expect(result.current.index).toBe(0)
+    expect(result.current.soroban).toEqual(states[0])
     act(() => result.current.next())
     expect(result.current.index).toBe(1)
     expect(result.current.soroban).toEqual(states[1])
@@ -21,6 +24,7 @@ describe('useStepper', () => {
 
   it('steps back to the start and no further', () => {
     const { result } = renderHook(() => useStepper(states))
+    act(() => result.current.next())
     act(() => result.current.next())
     act(() => result.current.back())
     expect(result.current.index).toBe(0)

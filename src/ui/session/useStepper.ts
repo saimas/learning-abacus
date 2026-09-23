@@ -4,8 +4,11 @@ import type { Soroban } from '@/domain/soroban'
 // Spec (core rounds) §3: the learner walks a move one bead step at a time,
 // forward and back, at their own pace. `index` is which of `states` is on
 // show: state k is the soroban after k bead moves. null means not stepping,
-// so the soroban shows whatever it showed before. There are no timers: the
-// beads' own slide shows each move.
+// so the soroban shows whatever it showed before. The first ▶ from there
+// shows the start (state 0) rather than the first move, so the learner sees
+// where the move begins before any bead slides; in keypad mode it is the
+// only time the start is drawn solid. There are no timers: the beads' own
+// slide shows each move.
 export function useStepper(states: Soroban[]): {
   index: number | null
   soroban: Soroban | null
@@ -21,7 +24,7 @@ export function useStepper(states: Soroban[]): {
     index,
     soroban: index === null ? null : (states[index] ?? null),
     total,
-    next: () => setIndex((i) => Math.min(total, (i ?? 0) + 1)),
+    next: () => setIndex((i) => (i === null ? 0 : Math.min(total, i + 1))),
     back: () => setIndex((i) => Math.max(0, (i ?? 0) - 1)),
     restart: () => setIndex(0),
     clear: () => setIndex(null),

@@ -1025,11 +1025,17 @@ describe('SessionRunner reviewing a miss', () => {
 
     fireEvent.press(getByTestId('review-show'))
     expect(rods()).toBe('07')
+    expect(opacity()).toBe(0.35)
     expect(getByTestId('step-count').props.children).toBe(' ')
+
+    // The first ▶ draws the start solid, the one time keypad mode shows it so.
+    fireEvent.press(getByTestId('step-next'))
+    expect(rods()).toBe('07')
+    expect(opacity()).toBe(1)
+    expect(getByTestId('step-count').props.children).toBe('0 / 2')
 
     fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('17')
-    expect(opacity()).toBe(1)
     expect(getByTestId('step-count').props.children).toBe('1 / 2')
 
     fireEvent.press(getByTestId('step-next'))
@@ -1050,6 +1056,8 @@ describe('SessionRunner reviewing a miss', () => {
     const { getByTestId } = renderRunner(keypadPlan, autoClock())
     answer(getByTestId, '9')
     fireEvent.press(getByTestId('review-show'))
+    expect(highlighted()).toEqual([])
+    fireEvent.press(getByTestId('step-next'))
     expect(highlighted()).toEqual([])
     fireEvent.press(getByTestId('step-next'))
     expect(highlighted()).toEqual([0])
@@ -1152,11 +1160,13 @@ describe('SessionRunner reviewing a miss', () => {
     expect(getByTestId('prompt').props.children).toBe('2に3をたす。')
   })
 
-  it('steps the move on the beads themselves in bead mode, and back to the start', () => {
+  it('steps the move on the beads themselves in bead mode, from the start', () => {
     const { getByTestId } = renderRunner(beadPlan, autoClock())
     answer(getByTestId, '9')
     expect(rods()).toBe('09')
-    // At F0 the panel is open at once.
+    // At F0 the panel is open at once, and the first ▶ shows the start.
+    fireEvent.press(getByTestId('step-next'))
+    expect(rods()).toBe('03')
     fireEvent.press(getByTestId('step-next'))
     expect(rods()).toBe('08')
     fireEvent.press(getByTestId('step-next'))
