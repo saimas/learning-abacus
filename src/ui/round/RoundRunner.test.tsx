@@ -196,7 +196,14 @@ describe('RoundRunner with ×', () => {
 
   // A 375 × 667 phone must still show the prompt and 手順を見る above the
   // soroban with the board present, so there both are drawn smaller. On a
-  // tall phone neither changes.
+  // tall phone neither changes. The window mock is undone after each test,
+  // even one that fails, so it cannot leak into the next.
+  let restoreWindow = () => {}
+  afterEach(() => {
+    restoreWindow()
+    restoreWindow = () => {}
+  })
+
   it.each([
     ['a short window', 375, 667, SHORT_WINDOW_BEAD_SCALE, OPERAND_SHORT_WINDOW_SCALE],
     ['a tall window', 402, 874, beadModeScale(4, 402 - 40), OPERAND_MAX_SCALE],
@@ -208,12 +215,12 @@ describe('RoundRunner with ×', () => {
     const spy = jest
       .spyOn(reactNative, 'useWindowDimensions')
       .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    restoreWindow = () => spy.mockRestore()
     renderRound(multiply)
     const padding = (container: string) =>
       StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
     expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * product)
     expect(padding('operand-a')).toBeCloseTo(FRAME_PADDING * operands)
     expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * operands)
-    spy.mockRestore()
   })
 })

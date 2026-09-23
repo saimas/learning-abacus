@@ -78,6 +78,14 @@ describe('OperandBoard', () => {
     expect(StyleSheet.flatten(side('a').getByTestId('rod-1').props.style).width).toBeCloseTo(g.rodWidth)
   })
 
+  // The digits and the × sit in fixed-width boxes, so large accessibility
+  // text sizes are capped rather than overflowing them.
+  it('caps the digits and the × at large text sizes', () => {
+    render(<OperandBoard problem={problem} />)
+    expect(screen.getByText('×').props.maxFontSizeMultiplier).toBe(1.3)
+    expect(screen.getByTestId('operand-b-digit-2').props.maxFontSizeMultiplier).toBe(1.3)
+  })
+
   it('highlights nothing while no 九九 is on show', () => {
     render(<OperandBoard problem={problem} />)
     expect([lit('a'), lit('b'), emphasised('a'), emphasised('b')]).toEqual([[], [], [], []])

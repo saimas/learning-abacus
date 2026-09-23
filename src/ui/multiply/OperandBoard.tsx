@@ -64,7 +64,11 @@ export function OperandBoard({ problem, activeGroup }: { problem: Problem; activ
       {/* As tall as the soroban beside it, so the × sits level with the
           beads rather than with the digits over them. */}
       <View style={[styles.times, { height: g.columnHeight + 2 * g.framePadding }]}>
-        <Text style={styles.timesLabel}>{OPERATION_SYMBOL.mul}</Text>
+        {/* Capped like the digits, so at the largest text sizes the ×
+            still fits its fixed-width box. */}
+        <Text maxFontSizeMultiplier={1.3} style={styles.timesLabel}>
+          {OPERATION_SYMBOL.mul}
+        </Text>
       </View>
       <Operand
         testID="operand-b"
