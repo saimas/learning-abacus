@@ -17,7 +17,7 @@ export default function RootLayout() {
           <Stack.Screen name="round" options={{ gestureEnabled: false }} />
           {/* Spec (multiplication) §4: opened with a round's kind, the
               walkthrough leads into it, so it is left only through its last
-              button, as a round is. Opened from the chooser's やりかた
+              button, as a round is. Opened from Home's やりかた link
               (no kind) it leads nowhere, so an edge swipe back is fine. */}
           <Stack.Screen
             name="multiply-intro"

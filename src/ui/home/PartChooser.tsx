@@ -1,47 +1,31 @@
-import { useState } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { DIGITS, OPERATION_SYMBOL, OPERATIONS, type Digits, type Operation, type PracticeKind } from '@/domain/problem'
 import { PRACTICE_PARTS, type PracticePart, type SessionPlan } from '@/domain/session'
 import { useStrings } from '@/i18n'
-import { SegmentedControl } from '@/ui/kit/SegmentedControl'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 
 export type PartChoice = PracticePart | 'all'
 
-// The size picker's options are strings, as SegmentedControl's are.
-const DIGIT_OPTIONS = DIGITS.map(String) as readonly `${Digits}`[]
-
-// Spec (choosing what to practise) §4: the start button asks what to practise.
-// ぜんぶ is today's full session, unchanged; each part below practises that
-// part alone. The counts come from the plan the session would build now, so a
-// part with nothing in it is shown, but cannot be chosen. The sheet is shown
+// Spec (core rounds) §6: opened from the 基礎の練習 card. ぜんぶ is today's
+// full session, unchanged; each part below practises that part alone. The
+// counts come from the plan the session would build now, so a part with
+// nothing in it is shown, but cannot be chosen. けたの練習 lives on Home's
+// grid now, so this sheet no longer has a section for it. The sheet is shown
 // while `visible`; `plan` is kept by Home after closing so the rows do not
 // change while the sheet fades out.
 export function PartChooser({
   plan,
   visible,
   onChoose,
-  onChooseRound,
-  onHowTo,
   onClose,
 }: {
   plan: SessionPlan | null
   visible: boolean
   onChoose: (choice: PartChoice) => void
-  onChooseRound: (kind: PracticeKind) => void
-  onHowTo: () => void
   onClose: () => void
 }) {
   const strings = useStrings()
   const insets = useSafeAreaInsets()
-
-  // Spec (multi-digit ＋ −) §6: what the round row will start. It starts at
-  // ＋ 1けた and, since the sheet stays mounted under Home, is remembered for
-  // as long as the app runs.
-  const [op, setOp] = useState<Operation>('add')
-  const [digits, setDigits] = useState<Digits>(1)
-  const kind: PracticeKind = { op, digits }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -78,50 +62,6 @@ export function PartChooser({
               />
             )
           })}
-          <View testID="round-section" style={styles.section}>
-            <View style={styles.rule} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle}>
-              {strings.roundSection}
-            </Text>
-            <View style={styles.rule} />
-          </View>
-          <View style={styles.pickers}>
-            <SegmentedControl
-              options={OPERATIONS}
-              value={op}
-              onChange={setOp}
-              labelFor={(option) => `${OPERATION_SYMBOL[option]} ${strings.opName(option)}`}
-              testIDFor={(option) => `round-op-${option}`}
-            />
-            <SegmentedControl
-              options={DIGIT_OPTIONS}
-              value={`${digits}`}
-              onChange={(option) => setDigits(Number(option) as Digits)}
-              labelFor={(option) => strings.digitsName(Number(option) as Digits)}
-              testIDFor={(option) => `round-digits-${option}`}
-            />
-          </View>
-          {/* Spec (multiplication) §5: the walkthrough is shown once, before
-              the first × round, so this is how to see it again. */}
-          {op === 'mul' ? (
-            <Pressable
-              testID="choose-howto"
-              accessibilityRole="link"
-              onPress={onHowTo}
-              hitSlop={12}
-              style={styles.howTo}
-            >
-              <Text maxFontSizeMultiplier={1.3} style={styles.howToText}>
-                {strings.chooseHowTo}
-              </Text>
-            </Pressable>
-          ) : null}
-          <Row
-            testID="choose-round"
-            name={strings.roundName(kind)}
-            detail={strings.roundDetail(kind)}
-            onPress={() => onChooseRound(kind)}
-          />
         </View>
       </View>
     </Modal>
@@ -214,12 +154,4 @@ const styles = StyleSheet.create({
   name: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   detail: { fontSize: fontSizes.caption, color: colors.muted },
   onPrimary: { color: colors.onAccent },
-  section: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.sm },
-  rule: { flex: 1, height: 1, backgroundColor: colors.cardLine },
-  sectionTitle: { fontSize: fontSizes.caption, color: colors.muted },
-  pickers: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.sm },
-  // The caption text stays small, but padding plus hitSlop above give the
-  // link a tap target close to the platforms' ~44pt minimum.
-  howTo: { alignSelf: 'flex-end', paddingVertical: space.sm },
-  howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
 })

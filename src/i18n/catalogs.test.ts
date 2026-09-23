@@ -213,11 +213,9 @@ describe('the part chooser', () => {
 describe('the review step', () => {
   it('labels its buttons and announces a miss', () => {
     expect(ja.showAnswer).toBe('こたえを見る')
-    expect(ja.watchAgain).toBe('もう一度見る')
     expect(ja.next).toBe('つぎへ')
     expect(ja.wrong).toBe('ちがいます')
     expect(en.showAnswer).toBe('See answer')
-    expect(en.watchAgain).toBe('Watch again')
     expect(en.next).toBe('Next')
     expect(en.wrong).toBe('Not quite')
   })
@@ -225,6 +223,11 @@ describe('the review step', () => {
   it('counts the steps of a replay', () => {
     expect(ja.replayStep(1, 2)).toBe('1 / 2')
     expect(en.replayStep(1, 2)).toBe('1 / 2')
+  })
+
+  it('labels the step panel', () => {
+    expect(ja.stepsOpen).toBe('手順を見る')
+    expect(en.stepRestart).toBe('From the start')
   })
 })
 
@@ -246,11 +249,11 @@ describe('multi-digit strings', () => {
     expect([0, 1, 2, 3].map(ja.rodName)).toEqual(['一の位', '十の位', '百の位', '千の位'])
   })
 
-  it('names a kind and describes it', () => {
-    expect(ja.roundName({ op: 'add', digits: 2 })).toBe('2けたのたし算')
-    expect(ja.roundDetail({ op: 'add', digits: 2 })).toBe('23 + 58 など・10問')
-    expect(ja.roundDetail({ op: 'mul', digits: 2 })).toBe('47 × 36 など・10問')
-    expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
+  // roundName itself is module-local now (only practiceCellLabel calls it),
+  // so it is exercised through that key rather than as a catalog entry.
+  it('names a kind', () => {
+    expect(ja.practiceCellLabel({ op: 'add', digits: 2 }, 'unseen')).toBe('2けたのたし算、まだ')
+    expect(en.practiceCellLabel({ op: 'sub', digits: 3 }, 'unseen')).toBe('3-digit subtraction, not yet')
   })
 })
 
@@ -275,7 +278,5 @@ describe('multiplication strings', () => {
     expect(ja.introPlacement).toContain('百の位')
     expect(ja.introResult(47, 36, 1692)).toBe('47×36 = 1692')
     expect(en.introResult(47, 36, 1692)).toBe('47 × 36 = 1692')
-    expect(ja.chooseHowTo).toBe('やりかた')
-    expect(en.chooseHowTo).toBe('How it works')
   })
 })

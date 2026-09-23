@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import type { Problem } from '@/domain/problem'
 import { setBeads } from '@/ui/session/testing'
+import { colors } from '@/ui/theme'
 import { RoundRunner } from './RoundRunner'
 
 beforeEach(() => {
@@ -54,7 +56,23 @@ describe('RoundRunner', () => {
   it('records each answer against the kind, untimed on the beads', () => {
     const { onAttempt } = renderRound()
     answerBeads(81)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
+  })
+
+  // Spec (core rounds) §4–§5: 手順を見る opens the problem's steps without
+  // the answer, and an answer after it is recorded as with help.
+  it('records an answer after 手順を見る as with help, for that problem only', () => {
+    const { onAttempt } = renderRound()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.getByTestId('correction-column-1')).toBeTruthy()
+    expect(screen.queryByTestId('correction-answer')).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    answerBeads(81)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true })
+
+    // The next problem starts afresh.
+    answerBeads(100)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
   })
 
   it('records a keypad answer’s pace against the problem’s target', () => {
@@ -73,6 +91,40 @@ describe('RoundRunner', () => {
     act(() => jest.advanceTimersByTime(500))
     fireEvent.press(screen.getByTestId('review-next'))
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+  })
+
+  // Spec (core rounds) §3: each ▶ plays one bead move, and the line of the
+  // column that move belongs to lights up (groupOfStep).
+  it('steps through a missed problem, lighting the column each move belongs to', () => {
+    renderRound()
+    answerBeads(80)
+    const count = () => screen.getByTestId('step-count').props.children
+    // Tens first, then ones, as the card lists them.
+    const lit = () =>
+      [1, 0].filter(
+        (place) =>
+          StyleSheet.flatten(screen.getByTestId(`correction-column-${place}`).props.style)?.color === colors.accent,
+      )
+    expect(lit()).toEqual([])
+
+    // 23 + 58: +5 on the tens rod, then the ones' 8 as +10 − 2.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(count()).toBe('0 / 3')
+    expect(lit()).toEqual([])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(count()).toBe('1 / 3')
+    expect(lit()).toEqual([1])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(count()).toBe('2 / 3')
+    expect(lit()).toEqual([0])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(count()).toBe('3 / 3')
+    expect(lit()).toEqual([0])
+
+    fireEvent.press(screen.getByTestId('step-back'))
+    fireEvent.press(screen.getByTestId('step-back'))
+    expect(count()).toBe('1 / 3')
+    expect(lit()).toEqual([1])
   })
 
   it('ends with the summary after the last problem', () => {

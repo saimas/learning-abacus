@@ -1,29 +1,35 @@
-import { StyleSheet, Text } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { problemSteps, type Problem } from '@/domain/problem'
 import { useStrings } from '@/i18n'
-import { Card } from '@/ui/kit/Card'
-import { colors, fonts, space } from '@/ui/theme'
+import { colors, fonts } from '@/ui/theme'
 
-// The answer card for a missed problem: the answer, then how each group is
-// worked, highest place first, in the same words as a single move's card. A
-// column group (＋ −) reads as its rod and move; a product group (×) reads
-// as the 九九 and where its digits land. `activeGroup` indexes
-// problemSteps(problem): the group a replay is in.
+// The explanation of a problem, as the step panel shows it: the answer, then
+// how each group is worked, highest place first, in the same words as a
+// single move's card. A column group (＋ −) reads as its rod and move; a
+// product group (×) reads as the 九九 and where its digits land.
+// `activeGroup` indexes problemSteps(problem): the group the learner has
+// stepped into. The panel draws the card around these lines. `showAnswer`
+// is false before an answer, where the lines explain the problem without
+// giving the answer away.
 export function ProblemCorrectionCard({
   problem,
   expected,
   activeGroup,
+  showAnswer = true,
 }: {
   problem: Problem
   expected: number
   activeGroup?: number
+  showAnswer?: boolean
 }) {
   const strings = useStrings()
   return (
-    <Card accent testID="correction" style={styles.card}>
-      <Text testID="correction-answer" style={styles.answer}>
-        {strings.correctionAnswer(expected)}
-      </Text>
+    <View testID="correction">
+      {showAnswer ? (
+        <Text testID="correction-answer" style={styles.answer}>
+          {strings.correctionAnswer(expected)}
+        </Text>
+      ) : null}
       {problemSteps(problem).map((group, index) => {
         const active = index === activeGroup
         if (group.kind === 'product') {
@@ -39,12 +45,11 @@ export function ProblemCorrectionCard({
           </Text>
         )
       })}
-    </Card>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: space.md, paddingVertical: space.sm },
   answer: { fontFamily: fonts.display, fontSize: 17, color: colors.ink },
   line: { marginTop: 2, fontSize: 12, color: colors.muted },
   activeLine: { color: colors.accent, fontWeight: '700', backgroundColor: colors.accentSoft },

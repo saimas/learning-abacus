@@ -14,8 +14,11 @@ export type PracticeRecord = {
 
 // `pace` is the answer's latency over its problem's time target, so answers
 // to problems of different difficulty compare; below 1 is fast enough. It is
-// null for an untimed answer, one made on the beads.
-export type PracticeAttempt = { id: PracticeId; correct: boolean; pace: number | null }
+// null for an untimed answer, one made on the beads. `assisted` marks an
+// answer given after 手順を見る (spec (core rounds) §5): the learner had the
+// steps in front of them, so it is not evidence of fluency and must not move
+// the record's fade either way.
+export type PracticeAttempt = { id: PracticeId; correct: boolean; pace: number | null; assisted: boolean }
 
 export function newPracticeRecord(now: number): PracticeRecord {
   return { fade: 0, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: now }

@@ -16,7 +16,17 @@ describe('ProblemCorrectionCard', () => {
     expect(textOf(screen.getByTestId('correction-column-0'))).toContain('一の位')
   })
 
-  it('highlights the column being replayed', () => {
+  // Spec (core rounds) §3: before an answer the same lines explain the
+  // problem without giving the answer away.
+  it('leaves the answer out when asked to', () => {
+    render(
+      <ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 345, b: 102 }} expected={447} showAnswer={false} />,
+    )
+    expect(screen.queryByTestId('correction-answer')).toBeNull()
+    expect(screen.getByTestId('correction-column-2')).toBeTruthy()
+  })
+
+  it('highlights the column stepped to', () => {
     render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 472, b: 385 }} expected={857} activeGroup={1} />)
     expect(colorOf('correction-column-1')).toBe(colors.accent)
     expect(colorOf('correction-column-2')).not.toBe(colors.accent)

@@ -1,8 +1,6 @@
 import { render, within } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
 import { emptyProgress } from '@/domain/progress'
 import { newRecord } from '@/domain/fluency'
-import { cellColors } from '@/ui/theme'
 import { AtomGrid, atomStates, cellState, mentalCount } from './AtomGrid'
 
 const NOW = 1_700_000_000_000
@@ -60,24 +58,6 @@ describe('AtomGrid maps', () => {
   it('names the four states in a legend', () => {
     const { getByText } = render(<AtomGrid progress={emptyProgress()} />)
     for (const name of ['未学習', '学習中', '即答', '暗算']) expect(getByText(name)).toBeTruthy()
-  })
-})
-
-describe('AtomGrid compact', () => {
-  it('renders all 180 cells as one screen-reader stop', () => {
-    const { getAllByTestId, queryAllByTestId, getByTestId } = render(
-      <AtomGrid progress={emptyProgress()} compact />,
-    )
-    expect(getAllByTestId(/^preview-cell-/)).toHaveLength(180)
-    expect(queryAllByTestId(/^atom-cell-/)).toHaveLength(0)
-    expect(getByTestId('atom-preview').props.accessibilityLabel).toContain('180問中 0問')
-  })
-
-  it('colours a cell by its state', () => {
-    const progress = { ...emptyProgress(), atoms: { '1+3': MENTAL } }
-    const { getByTestId } = render(<AtomGrid progress={progress} compact />)
-    const style = StyleSheet.flatten(getByTestId('preview-cell-1+3').props.style)
-    expect(style.backgroundColor).toBe(cellColors.mental)
   })
 })
 

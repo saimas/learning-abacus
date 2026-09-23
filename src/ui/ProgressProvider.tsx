@@ -70,13 +70,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const attempt = useCallback((result: AttemptResult) => {
     const now = Date.now()
-    const withAttempt = recordAttempt(
-      latest.current,
-      result.atomId,
-      result.correct,
-      result.latencyMs,
-      now,
-    )
+    // Spec (core rounds) §5: an answer with help is practice, so it stamps
+    // the day, but it leaves the move's box and fade as they were.
+    const withAttempt = result.assisted
+      ? latest.current
+      : recordAttempt(latest.current, result.atomId, result.correct, result.latencyMs, now)
     const next = markDayPracticed(withAttempt, dayKey(now))
     latest.current = next
     setProgress(next)
@@ -84,7 +82,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const practise = useCallback((attempt: PracticeAttempt) => {
     const now = Date.now()
-    const withAttempt = recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, now)
+    // Spec (core rounds) §5: likewise, an answer with help leaves the kind's
+    // fade and streaks as they were.
+    const withAttempt = attempt.assisted
+      ? latest.current
+      : recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, now)
     // A round of problems is practice too, so it stamps the day's seal.
     const next = markDayPracticed(withAttempt, dayKey(now))
     latest.current = next
