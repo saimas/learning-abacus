@@ -88,3 +88,11 @@ The lines are what `renderCorrection` draws today, generalised to `renderSteps({
 2. 手順を見る before answering, and "with help" through both runners and the records.
 3. The new Home: the grid, the basics card, the trimmed sheet, the やりかた link.
 4. Simulator check, TestFlight build 12, PR.
+
+## 10. Addendum: colouring the operation on show (TestFlight build 14)
+
+After build 13 the owner said: "it's bit hard to see the motion as a group … when the marble moves by multiple steps for a number like 81 with carried over, it is hard to see up to which move it belongs to a certain operation. maybe we should change the color of all marbles that are currently under operation as a group."
+
+- While stepping (手順を見る, the miss review, the × walkthrough), every bead the current operation has moved so far is drawn red: a column for ＋ −, a 九九 (both digits and any cascade) for ×, the whole move for a single move. The beads moved by the latest step are the deepest red; earlier moves in the same operation a lighter red. A bead that moved and moved back within the operation stays coloured.
+- Moving into the next operation clears the previous one's colour; ◀ colours exactly as ▶ did, because the colouring depends only on the step on show. Nothing is coloured at the start state, when not stepping, or on the learner's own soroban.
+- `changedBeads` (soroban.ts), `Exercise.groupStarts` and `stepColouring` (exercise.ts) compute it; `Abacus`'s `tintedBeads` draws it (a tinted bead's testID gains `-group` / `-latest`).
