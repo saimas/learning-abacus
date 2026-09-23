@@ -1,7 +1,7 @@
 # learning-abacus — けたの練習 at the core, with a step-by-step assistant
 
 Date: 2026-09-23
-Status: Approved design, pre-plan.
+Status: Implemented on feature/core-rounds (TestFlight build 12).
 
 ## 1. Goal and decisions
 
