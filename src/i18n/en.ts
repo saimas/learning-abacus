@@ -38,7 +38,7 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 const PLACE: readonly string[] = ['ones rod', 'tens rod', 'hundreds rod', 'thousands rod']
 const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands']
 
-const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction' }
+const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication' }
 
 // One fixed example per kind for the chooser's detail line.
 const EXAMPLE: Record<PracticeId, string> = {
@@ -48,6 +48,9 @@ const EXAMPLE: Record<PracticeId, string> = {
   'sub:1': '9 − 4',
   'sub:2': '81 − 36',
   'sub:3': '634 − 258',
+  'mul:1': '7 × 8',
+  'mul:2': '47 × 36',
+  'mul:3': '472 × 385',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -138,7 +141,9 @@ export const en: Strings = {
   replayStep: (step, total) => `${step} / ${total}`,
   rodName: (place): string => PLACE[place] ?? `rod ${place}`,
   problemPrompt: (problem) =>
-    `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
+    problem.op === 'mul'
+      ? `Multiply ${problem.a} by ${problem.b}.`
+      : `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
   columnLine: (place, atom, cascades) =>
     `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
       cascades

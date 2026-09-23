@@ -23,4 +23,9 @@ describe('exerciseForProblem', () => {
       states: problemStates(problem),
     })
   })
+
+  it('starts a multiplication at 0 on twice as many rods as digits', () => {
+    const problem = { op: 'mul', digits: 2, a: 47, b: 36 } as const
+    expect(exerciseForProblem(problem)).toEqual({ rods: 4, start: 0, expected: 1692, states: problemStates(problem) })
+  })
 })

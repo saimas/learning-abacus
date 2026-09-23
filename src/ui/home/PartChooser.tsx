@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { DIGITS, OPERATIONS, type Digits, type Operation, type PracticeKind } from '@/domain/problem'
+import { DIGITS, OPERATION_SYMBOL, OPERATIONS, type Digits, type Operation, type PracticeKind } from '@/domain/problem'
 import { PRACTICE_PARTS, type PracticePart, type SessionPlan } from '@/domain/session'
 import { useStrings } from '@/i18n'
 import { SegmentedControl } from '@/ui/kit/SegmentedControl'
@@ -88,7 +88,7 @@ export function PartChooser({
               options={OPERATIONS}
               value={op}
               onChange={setOp}
-              labelFor={(option) => `${option === 'add' ? '＋' : '−'} ${strings.opName(option)}`}
+              labelFor={(option) => `${OPERATION_SYMBOL[option]} ${strings.opName(option)}`}
               testIDFor={(option) => `round-op-${option}`}
             />
             <SegmentedControl

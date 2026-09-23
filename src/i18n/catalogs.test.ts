@@ -232,6 +232,7 @@ describe('multi-digit strings', () => {
   it('prompts a problem', () => {
     expect(ja.problemPrompt({ op: 'add', digits: 3, a: 472, b: 385 })).toBe('472に385をたす。')
     expect(ja.problemPrompt({ op: 'sub', digits: 2, a: 81, b: 36 })).toBe('81から36をひく。')
+    expect(ja.problemPrompt({ op: 'mul', digits: 2, a: 47, b: 36 })).toBe('47に36をかける。')
   })
 
   it('reads a column as its rod and its move', () => {
@@ -248,6 +249,7 @@ describe('multi-digit strings', () => {
   it('names a kind and describes it', () => {
     expect(ja.roundName({ op: 'add', digits: 2 })).toBe('2けたのたし算')
     expect(ja.roundDetail({ op: 'add', digits: 2 })).toBe('23 + 58 など・10問')
+    expect(ja.roundDetail({ op: 'mul', digits: 2 })).toBe('47 × 36 など・10問')
     expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
   })
 })

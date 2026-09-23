@@ -17,7 +17,7 @@ describe('ProblemCorrectionCard', () => {
   })
 
   it('highlights the column being replayed', () => {
-    render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 472, b: 385 }} expected={857} activeColumn={1} />)
+    render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 472, b: 385 }} expected={857} activeGroup={1} />)
     expect(colorOf('correction-column-1')).toBe(colors.accent)
     expect(colorOf('correction-column-2')).not.toBe(colors.accent)
   })

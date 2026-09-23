@@ -1,26 +1,34 @@
-import { atomId, classify, decompose, type Atom } from './atoms'
+import { atomId, classify, decompose, type Atom, type Direction } from './atoms'
 import { latencyTargetMs } from './fluency'
 import { emptySoroban, readRod, rodFor, setValue, type Soroban } from './soroban'
 
-// Spec (multi-digit ＋ −) §3: practice of two numbers of the same size,
-// chosen as an operation and a digit count.
-export type Operation = 'add' | 'sub'
+// Spec (multi-digit ＋ − and ×) §3: practice of two numbers of the same
+// size, chosen as an operation and a digit count.
+export type Operation = 'add' | 'sub' | 'mul'
 export type Digits = 1 | 2 | 3
 export type PracticeKind = { op: Operation; digits: Digits }
 export type PracticeId = `${Operation}:${Digits}`
 export type Problem = { op: Operation; digits: Digits; a: number; b: number }
 
-export const OPERATIONS: readonly Operation[] = ['add', 'sub']
+export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul']
 export const DIGITS: readonly Digits[] = [1, 2, 3]
 export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =>
   DIGITS.map((digits) => ({ op, digits })),
 )
+
+// The same in every language, so it lives with the operations rather than
+// in the string catalogues.
+export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×' }
 
 export const ROUND_LENGTH = 10
 // Typing the answer costs time the arithmetic does not, and a 4-digit answer
 // costs more of it than a 2-digit one. A first estimate, like the per-move
 // targets it is added to.
 export const TYPING_ALLOWANCE_MS = 400
+
+// Recalling a 九九 is part of the work a × answer takes that no bead move
+// measures. A first estimate, like the per-move targets.
+export const MULTIPLY_RECALL_MS = 600
 
 export function practiceId(kind: PracticeKind): PracticeId {
   return `${kind.op}:${kind.digits}`
@@ -37,12 +45,19 @@ export function isPracticeId(value: unknown): value is PracticeId {
 }
 
 export function answerOf(problem: Problem): number {
-  return problem.op === 'add' ? problem.a + problem.b : problem.a - problem.b
+  return problem.op === 'add' ? problem.a + problem.b : problem.op === 'sub' ? problem.a - problem.b : problem.a * problem.b
 }
 
-// One rod beyond the operands takes the last carry: 999 + 999 = 1998.
-export function rodsFor(digits: Digits): number {
-  return digits + 1
+// ＋ and − keep one rod beyond the operands for the last carry (999 + 999 =
+// 1998). A product of two N-digit numbers can have 2N digits (99 × 99 =
+// 9801), and 両落とし puts only the product on the soroban.
+export function rodsFor(kind: { op: Operation; digits: Digits }): number {
+  return kind.op === 'mul' ? kind.digits * 2 : kind.digits + 1
+}
+
+// What the soroban shows before the first step: a for ＋ −, nothing for ×.
+export function startOf(problem: Problem): number {
+  return problem.op === 'mul' ? 0 : problem.a
 }
 
 function randomInt(random: () => number, low: number, high: number): number {
@@ -54,7 +69,9 @@ function randomInt(random: () => number, low: number, high: number): number {
 // numbers are drawn again, since 0 teaches nothing and reads as a blank
 // soroban.
 export function generateProblems(kind: PracticeKind, count: number, random: () => number): Problem[] {
-  const low = 10 ** (kind.digits - 1)
+  // × 1 teaches nothing (anything × 1 is itself), so 1×1 draws from the 九九
+  // range instead of the usual single-digit range, which would include 0.
+  const low = kind.op === 'mul' && kind.digits === 1 ? 2 : 10 ** (kind.digits - 1)
   const high = 10 ** kind.digits - 1
   const problems: Problem[] = []
   const seen = new Set<string>()
@@ -79,14 +96,25 @@ export function generateProblems(kind: PracticeKind, count: number, random: () =
 // several rods and a cascade can reach past the one next door.
 export type PlacedStep = { rodIndex: number; delta: number }
 
-// One column of the problem as the learner works it: the single move it is
-// (one of the 180 atoms), and the bead steps that make it.
-export type ColumnStep = {
-  place: number
-  atom: Atom | null
-  steps: PlacedStep[]
-  cascades: boolean
-}
+// One digit put on the soroban: the single move it is (one of the 180
+// atoms), where it goes, and the bead steps that make it.
+export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: boolean }
+
+// What the learner works as one unit, and what one line of the answer card
+// explains: a column of a ＋ − problem, or one 九九 of a × problem. `steps`
+// is every bead step of the group in order; `cascades` says whether any
+// carry in it had to ripple on.
+export type StepGroup =
+  | { kind: 'column'; place: number; atom: Atom | null; steps: PlacedStep[]; cascades: boolean }
+  | {
+    kind: 'product'
+    x: number
+    y: number
+    place: number
+    moves: Move[]
+    steps: PlacedStep[]
+    cascades: boolean
+  }
 
 export function applyPlacedStep(s: Soroban, step: PlacedStep): Soroban {
   const target = s.rods[step.rodIndex]
@@ -102,8 +130,8 @@ function digitAt(n: number, place: number): number {
   return Math.floor(n / 10 ** place) % 10
 }
 
-function atomFor(rodValue: number, operand: number, op: Operation): Atom {
-  return { id: atomId(rodValue, operand, op), rodValue, operand, direction: op }
+function atomFor(rodValue: number, operand: number, direction: Direction): Atom {
+  return { id: atomId(rodValue, operand, direction), rodValue, operand, direction }
 }
 
 // Plays one move on rod `index`, step by step, so each step sees the rods as
@@ -147,33 +175,81 @@ function placeMove(
 // Spec §3: a soroban works from the highest place down. Carries only ever go
 // left, into columns already worked, so the rod a column is worked on still
 // shows a's digit there when its turn comes.
-export function problemSteps(problem: Problem): ColumnStep[] {
-  const rods = rodsFor(problem.digits)
+function columnSteps(problem: Problem, direction: Direction): StepGroup[] {
+  const rods = rodsFor(problem)
   let soroban = setValue(emptySoroban(rods), problem.a)
-  const columns: ColumnStep[] = []
+  const columns: StepGroup[] = []
   for (let place = problem.digits - 1; place >= 0; place--) {
     const digit = digitAt(problem.b, place)
     if (digit === 0) {
-      columns.push({ place, atom: null, steps: [], cascades: false })
+      columns.push({ kind: 'column', place, atom: null, steps: [], cascades: false })
       continue
     }
     const index = rods - 1 - place
     const rod = soroban.rods[index]
     if (rod === undefined) throw new Error(`no rod at index ${index}`)
-    const atom = atomFor(readRod(rod), digit, problem.op)
+    const atom = atomFor(readRod(rod), digit, direction)
     const move = placeMove(soroban, index, atom)
     soroban = move.soroban
-    columns.push({ place, atom, steps: move.steps, cascades: move.cascades })
+    columns.push({ kind: 'column', place, atom, steps: move.steps, cascades: move.cascades })
   }
   return columns
 }
 
+// Spec (multiplication) §3: 両落とし from the top. Neither number is set on
+// the soroban; the multiplicand's digits are taken from the highest, each
+// times the multiplier's digits from the highest, and each 九九 is added as
+// its tens digit then its ones digit. The ones digit's place is the two
+// digits' places added together. A digit of 0 is not a move, but the 九九 is
+// still a step the learner takes, so it keeps its group.
+function productSteps(problem: Problem): StepGroup[] {
+  let soroban = emptySoroban(rodsFor(problem))
+  const rods = soroban.rods.length
+  const groups: StepGroup[] = []
+  for (let i = problem.digits - 1; i >= 0; i--) {
+    for (let j = problem.digits - 1; j >= 0; j--) {
+      const x = digitAt(problem.a, i)
+      const y = digitAt(problem.b, j)
+      const place = i + j
+      const moves: Move[] = []
+      for (const [digit, at] of [
+        [Math.floor((x * y) / 10), place + 1],
+        [(x * y) % 10, place],
+      ] as const) {
+        if (digit === 0) continue
+        const index = rods - 1 - at
+        const rod = soroban.rods[index]
+        if (rod === undefined) throw new Error(`no rod at index ${index}`)
+        const atom = atomFor(readRod(rod), digit, 'add')
+        const move = placeMove(soroban, index, atom)
+        soroban = move.soroban
+        moves.push({ place: at, atom, steps: move.steps, cascades: move.cascades })
+      }
+      groups.push({
+        kind: 'product',
+        x,
+        y,
+        place,
+        moves,
+        steps: moves.flatMap((move) => move.steps),
+        cascades: moves.some((move) => move.cascades),
+      })
+    }
+  }
+  return groups
+}
+
+export function problemSteps(problem: Problem): StepGroup[] {
+  const op = problem.op
+  return op === 'mul' ? productSteps(problem) : columnSteps(problem, op)
+}
+
 // The soroban at the start, then after each step, for replaying the problem.
 export function problemStates(problem: Problem): Soroban[] {
-  let current = setValue(emptySoroban(rodsFor(problem.digits)), problem.a)
+  let current = setValue(emptySoroban(rodsFor(problem)), startOf(problem))
   const states = [current]
-  for (const column of problemSteps(problem)) {
-    for (const step of column.steps) {
+  for (const group of problemSteps(problem)) {
+    for (const step of group.steps) {
       current = applyPlacedStep(current, step)
       states.push(current)
     }
@@ -181,24 +257,26 @@ export function problemStates(problem: Problem): Soroban[] {
   return states
 }
 
-// Which column (an index into `columns`) the replay's step `stepIndex`
-// belongs to, counting steps from 0 across all columns.
-export function columnOfStep(columns: ColumnStep[], stepIndex: number): number | undefined {
+// Which group (an index into `groups`) the replay's step `stepIndex`
+// belongs to, counting steps from 0 across all groups.
+export function groupOfStep(groups: StepGroup[], stepIndex: number): number | undefined {
   let remaining = stepIndex
-  for (let index = 0; index < columns.length; index++) {
-    const count = columns[index]?.steps.length ?? 0
+  for (let index = 0; index < groups.length; index++) {
+    const count = groups[index]?.steps.length ?? 0
     if (remaining < count) return index
     remaining -= count
   }
   return undefined
 }
 
-// Spec §4: the time a fluent learner needs is the time for each column's
-// move, which the app already calibrates to them, plus typing the answer.
+// Spec (multiplication) §3: each digit's move, which the app already
+// calibrates to the learner, plus recalling each 九九, plus typing the answer.
 export function problemTargetMs(problem: Problem, calibrationMs: number): number {
-  const moves = problemSteps(problem).reduce(
-    (sum, column) => (column.atom === null ? sum : sum + latencyTargetMs(classify(column.atom), calibrationMs)),
-    0,
-  )
-  return moves + TYPING_ALLOWANCE_MS * String(answerOf(problem)).length
+  let total = TYPING_ALLOWANCE_MS * String(answerOf(problem)).length
+  for (const group of problemSteps(problem)) {
+    const atoms = group.kind === 'column' ? (group.atom === null ? [] : [group.atom]) : group.moves.map((m) => m.atom)
+    for (const atom of atoms) total += latencyTargetMs(classify(atom), calibrationMs)
+    if (group.kind === 'product') total += MULTIPLY_RECALL_MS
+  }
+  return total
 }

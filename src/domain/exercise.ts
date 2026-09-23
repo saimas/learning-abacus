@@ -1,5 +1,5 @@
 import { expectedValue, moveStates, startValue, type Atom } from './atoms'
-import { answerOf, problemStates, rodsFor, type Problem } from './problem'
+import { answerOf, problemStates, rodsFor, startOf, type Problem } from './problem'
 import type { Soroban } from './soroban'
 
 // Spec (multi-digit ＋ −) §4: what one question puts on the soroban, whether
@@ -19,8 +19,8 @@ export function exerciseForAtom(atom: Atom): Exercise {
 
 export function exerciseForProblem(problem: Problem): Exercise {
   return {
-    rods: rodsFor(problem.digits),
-    start: problem.a,
+    rods: rodsFor(problem),
+    start: startOf(problem),
     expected: answerOf(problem),
     states: problemStates(problem),
   }
