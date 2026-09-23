@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
+import { ScrollView, StyleSheet } from 'react-native'
 import type { Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
@@ -192,6 +192,35 @@ describe('RoundRunner with ×', () => {
 
     fireEvent.press(screen.getByTestId('step-restart'))
     expect([lit('a'), lit('b')]).toEqual([[], []])
+  })
+
+  // The owner's request (2026-09-23): the lines fill the space below ◀ ▶ in
+  // bead mode, and the 九九 stepped to is scrolled into view there.
+  it('scrolls the line of the 九九 stepped to into view below the controls', () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo')
+    try {
+      renderRound(multiply)
+      setBeads(onProduct, 407, 4)
+      fireEvent.press(screen.getByTestId('submit'))
+      const layout = (testID: string, y: number, height: number) =>
+        fireEvent(screen.getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y, width: 300, height } } })
+      // Room for the answer and three 九九 of the four.
+      layout('step-lines-scroll', 0, 60)
+      for (const [index, y] of [20, 38, 56, 74].entries()) layout(`correction-product-${index}`, y, 16)
+
+      // The start, 1 × 3 and 1 × 4 are all on show.
+      for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).not.toHaveBeenCalled()
+      // 2 × 3 reaches past the bottom, and 2 × 4 further still.
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).toHaveBeenLastCalledWith({ y: 12, animated: true })
+      fireEvent.press(screen.getByTestId('step-next'))
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).toHaveBeenLastCalledWith({ y: 30, animated: true })
+      expect(scrollTo).toHaveBeenCalledTimes(2)
+    } finally {
+      scrollTo.mockRestore()
+    }
   })
 
   // A 375 × 667 phone must still show the prompt and 手順を見る above the

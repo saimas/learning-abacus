@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
-import { StyleSheet, Text } from 'react-native'
+import { ScrollView, StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
-import { colors } from '@/ui/theme'
+import { BUTTON_HEIGHT } from '@/ui/kit/Button'
+import { colors, space } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
 import { setBeads, textOf, tintedBeads } from './testing'
+import { useActiveLineLayout } from './useActiveLineLayout'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -105,12 +107,14 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
   })
 
-  // The lines scroll with the prompt, but ◀ ▶ stay in the fixed area above
-  // つぎへ, so they cannot scroll off a short phone.
+  // ◀ ▶ stay in the fixed area above つぎへ, so they cannot scroll off a
+  // short phone. The lines scroll in their own place below them in bead
+  // mode (the owner's request, 2026-09-23), and with the prompt in keypad
+  // mode.
   it.each([
-    ['bead', 0, 'demo'],
-    ['keypad', 3, 'silent'],
-  ] as const)('pins the step controls outside the scrolling text in %s mode', (_mode, fade, coaching) => {
+    ['bead', 0, 'demo', 'step-lines-scroll'],
+    ['keypad', 3, 'silent', 'question-scroll'],
+  ] as const)('pins the step controls outside the scrolling text in %s mode', (_mode, fade, coaching, linesScroll) => {
     renderView({ fade, coaching })
     if (fade === 0) {
       setBeads(screen.getByTestId, 800, 4)
@@ -119,9 +123,10 @@ describe('QuestionView with a 3-digit problem', () => {
     }
     fireEvent.press(screen.getByTestId('submit'))
     if (coaching === 'silent') fireEvent.press(screen.getByTestId('review-show'))
-    const scroll = screen.getByTestId('question-scroll')
+    const scroll = screen.getByTestId(linesScroll)
     expect(within(scroll).getByTestId('step-panel')).toBeTruthy()
     expect(within(scroll).queryByTestId('step-next')).toBeNull()
+    expect(within(screen.getByTestId('question-scroll')).queryByTestId('step-next')).toBeNull()
     expect(screen.getByTestId('step-next')).toBeTruthy()
   })
 
@@ -170,7 +175,8 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(within(scroll).getByTestId('steps-open')).toBeTruthy()
 
     fireEvent.press(screen.getByTestId('steps-open'))
-    expect(within(scroll).getByTestId('step-panel')).toBeTruthy()
+    // Bead mode: the lines scroll on their own, below the controls.
+    expect(within(screen.getByTestId('step-lines-scroll')).getByTestId('step-panel')).toBeTruthy()
     expect(textOf(screen.getByTestId('card'))).toBe('undefined false')
     // Nothing has been got wrong, so the lines carry no correction edge.
     expect(edge()).not.toBe(colors.accent)
@@ -196,17 +202,26 @@ describe('QuestionView before an answer, with 手順を見る', () => {
   })
 
   // The もどす/こたえる row disappearing while open would shrink the layout
-  // by a whole button row height and shift the soroban above it; a
-  // same-sized placeholder in its place keeps that from happening.
+  // by a whole button row height and shift the soroban above it. The lines
+  // below the controls take its height as their starting size instead, and
+  // grow by the same share as the spacer they stand in for, so the soroban
+  // stays put and no empty row is left at the bottom. Their space takes no
+  // padding or margin: either would count before the share-out and move the
+  // soroban.
   it('holds the answer row height in bead mode while the steps are open', () => {
     renderView()
-    expect(screen.queryByTestId('answer-row-placeholder')).toBeNull()
+    expect(screen.queryByTestId('step-lines')).toBeNull()
+    expect(screen.getByTestId('submit')).toBeTruthy()
 
     fireEvent.press(screen.getByTestId('steps-open'))
-    expect(screen.getByTestId('answer-row-placeholder')).toBeTruthy()
+    expect(StyleSheet.flatten(screen.getByTestId('step-lines').props.style)).toEqual({
+      flex: 1,
+      flexBasis: space.md + BUTTON_HEIGHT,
+    })
+    expect(screen.queryByTestId('answer-row-placeholder')).toBeNull()
 
     fireEvent.press(screen.getByTestId('steps-close'))
-    expect(screen.queryByTestId('answer-row-placeholder')).toBeNull()
+    expect(screen.queryByTestId('step-lines')).toBeNull()
   })
 
   it('puts the keypad away while the steps are open, and draws them solid', () => {
@@ -315,6 +330,115 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('demonstration')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(screen.getByTestId('demonstration')).toBeTruthy()
+  })
+})
+
+// The owner's request (2026-09-23): the step lines sat in the small scroll
+// above the soroban, two lines at a time, while the screen below ◀ ▶ was
+// empty. In bead mode they now fill that space, scrolling on their own, and
+// the line stepped to is scrolled into view. Keypad mode is unchanged.
+describe('QuestionView with the step lines below the controls', () => {
+  // Every testID on screen, in the order they are drawn.
+  const order = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+  const expectLinesBelowControls = () => {
+    const lines = screen.getByTestId('step-lines-scroll')
+    expect(within(lines).getByTestId('step-panel')).toBeTruthy()
+    expect(within(screen.getByTestId('question-scroll')).queryByTestId('step-panel')).toBeNull()
+    const drawn = order()
+    expect(drawn.indexOf('step-lines-scroll')).toBeGreaterThan(drawn.indexOf('step-next'))
+    expect(drawn.indexOf('step-lines-scroll')).toBeGreaterThan(drawn.indexOf('soroban-wrap'))
+  }
+
+  it('draws the lines below ◀ ▶ while the steps are open before an answer, and not once closed', () => {
+    renderView()
+    expect(screen.queryByTestId('step-lines-scroll')).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expectLinesBelowControls()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.queryByTestId('step-lines-scroll')).toBeNull()
+  })
+
+  it('draws the lines below ◀ ▶ in the review of a miss, with つぎへ below them', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    // Until こたえを見る, nothing is open.
+    expect(screen.queryByTestId('step-lines-scroll')).toBeNull()
+    fireEvent.press(screen.getByTestId('review-show'))
+    expectLinesBelowControls()
+    const drawn = order()
+    expect(drawn.indexOf('review-next')).toBeGreaterThan(drawn.indexOf('step-lines-scroll'))
+    // つぎへ holds its own row, so the lines take just the spacer's place:
+    // its flex, and no padding or margin to move the soroban.
+    expect(StyleSheet.flatten(screen.getByTestId('step-lines').props.style)).toEqual({ flex: 1 })
+  })
+
+  // The top scroll keeps its flex share whether the lines are open or not,
+  // so the soroban under it does not move.
+  it('leaves the top scroll as it was, holding just the prompt', () => {
+    renderView({ demonstration: '385は…' })
+    const closed = StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)).toEqual(closed)
+    const top = within(screen.getByTestId('question-scroll'))
+    expect(top.getByTestId('prompt')).toBeTruthy()
+    expect(top.queryByTestId('demonstration')).toBeNull()
+    expect(top.queryByTestId('steps-open')).toBeNull()
+  })
+
+  it('keeps the lines in the scroll with the prompt in keypad mode', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('step-panel')).toBeTruthy()
+    expect(screen.queryByTestId('step-lines-scroll')).toBeNull()
+  })
+
+  describe('scrolling the line stepped to into view', () => {
+    let scrollTo: jest.SpyInstance
+    beforeEach(() => {
+      scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo')
+    })
+    afterEach(() => scrollTo.mockRestore())
+
+    // A card with one line, active from the first move on, as a card
+    // draws it.
+    function Line({ activeStep }: { activeStep: number | undefined }) {
+      const lineLayout = useActiveLineLayout(activeStep === undefined ? undefined : 0)
+      return <Text testID="line" onLayout={lineLayout(0)}>{String(activeStep)}</Text>
+    }
+    const layout = (testID: string, y: number, height: number) =>
+      fireEvent(screen.getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y, width: 300, height } } })
+
+    it('scrolls to the line stepped to when it sits below the part on show', () => {
+      renderView({ renderSteps: ({ activeStep }) => <Line activeStep={activeStep} /> })
+      fireEvent.press(screen.getByTestId('steps-open'))
+      layout('step-lines-scroll', 0, 80)
+      layout('line', 200, 16)
+      // Nothing is stepped to yet.
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).not.toHaveBeenCalled()
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).toHaveBeenLastCalledWith({ y: 136, animated: true })
+    })
+
+    it('leaves the lines where they are when the line stepped to is on show', () => {
+      renderView({ renderSteps: ({ activeStep }) => <Line activeStep={activeStep} /> })
+      fireEvent.press(screen.getByTestId('steps-open'))
+      layout('step-lines-scroll', 0, 80)
+      layout('line', 30, 16)
+      fireEvent.press(screen.getByTestId('step-next'))
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(scrollTo).not.toHaveBeenCalled()
+    })
+
+    it('asks nothing of the lines in keypad mode', () => {
+      renderView({ fade: 3, coaching: 'silent', renderSteps: ({ activeStep }) => <Line activeStep={activeStep} /> })
+      fireEvent.press(screen.getByTestId('steps-open'))
+      expect(screen.getByTestId('line').props.onLayout).toBeUndefined()
+    })
   })
 })
 

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { problemSteps, type Problem } from '@/domain/problem'
 import { useStrings } from '@/i18n'
+import { useActiveLineLayout } from '@/ui/session/useActiveLineLayout'
 import { colors, fonts } from '@/ui/theme'
 
 // The explanation of a problem, as the step panel shows it: the answer, then
@@ -23,6 +24,10 @@ export function ProblemCorrectionCard({
   showAnswer?: boolean
 }) {
   const strings = useStrings()
+  // Where the lines scroll on their own (bead mode), the active group's line
+  // tells the scroll where it sits, so it can be scrolled into view. The
+  // lines are numbered as problemSteps numbers the groups.
+  const lineLayout = useActiveLineLayout(activeGroup)
   return (
     <View testID="correction">
       {showAnswer ? (
@@ -34,13 +39,23 @@ export function ProblemCorrectionCard({
         const active = index === activeGroup
         if (group.kind === 'product') {
           return (
-            <Text key={index} testID={`correction-product-${index}`} style={[styles.line, active && styles.activeLine]}>
+            <Text
+              key={index}
+              testID={`correction-product-${index}`}
+              onLayout={lineLayout(index)}
+              style={[styles.line, active && styles.activeLine]}
+            >
               {strings.productLine(group.x, group.y, group.place, group.cascades)}
             </Text>
           )
         }
         return group.atom === null ? null : (
-          <Text key={index} testID={`correction-column-${group.place}`} style={[styles.line, active && styles.activeLine]}>
+          <Text
+            key={index}
+            testID={`correction-column-${group.place}`}
+            onLayout={lineLayout(index)}
+            style={[styles.line, active && styles.activeLine]}
+          >
             {strings.columnLine(group.place, group.atom, group.cascades)}
           </Text>
         )
