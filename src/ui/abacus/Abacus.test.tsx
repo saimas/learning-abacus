@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { emptySoroban, rodFor, setValue } from '@/domain/soroban'
+import { colors } from '@/ui/theme'
 import { Abacus } from './Abacus'
 import { BEAD_HEIGHT, BEAD_MODE_SCALE, BEAM_TOP, EARTH_TOP, beadTops } from './geometry'
 
@@ -16,7 +17,7 @@ function topOf(element: { props: { style?: unknown } } | undefined): number | un
 describe('Abacus', () => {
   it('renders one rod per column', () => {
     const { getAllByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={0} />)
-    expect(getAllByTestId(/^rod-/)).toHaveLength(2)
+    expect(getAllByTestId(/^rod-\d+$/)).toHaveLength(2)
   })
 
   it('renders the frame at F5 but not at F6', () => {
@@ -53,7 +54,7 @@ describe('Abacus', () => {
   it('keeps its layout at F6 so the prompt and keypad do not jump', () => {
     const { getAllByTestId, queryByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={6} />)
     expect(queryByTestId('deck-lines')).toBeNull()
-    expect(getAllByTestId(/^rod-/)).toHaveLength(2)
+    expect(getAllByTestId(/^rod-\d+$/)).toHaveLength(2)
   })
 
   it('marks the ones rod on the beam', () => {
@@ -64,6 +65,40 @@ describe('Abacus', () => {
   it('makes no bead a button', () => {
     const { queryAllByRole } = render(<Abacus soroban={setValue(emptySoroban(2), 47)} fade={0} />)
     expect(queryAllByRole('button')).toHaveLength(0)
+  })
+})
+
+// The operand board points at the two digits of the 九九 on show by
+// highlighting their rods.
+describe('highlighted rods', () => {
+  it('draws a soft band behind each listed rod and no other', () => {
+    const { getByTestId, queryAllByTestId } = render(
+      <Abacus soroban={setValue(emptySoroban(3), 472)} fade={0} highlightRods={[0, 2]} />,
+    )
+    expect(queryAllByTestId(/^rod-highlight-/).map((band) => band.props.testID)).toEqual([
+      'rod-highlight-0',
+      'rod-highlight-2',
+    ])
+    expect(StyleSheet.flatten(getByTestId('rod-highlight-2').props.style).backgroundColor).toBe(colors.accentSoft)
+  })
+
+  it('puts the band around its rod, under the rod line and the beads', () => {
+    const { getByTestId } = render(<Abacus soroban={emptySoroban(3)} fade={0} highlightRods={[1]} />)
+    const band = StyleSheet.flatten<{ left: number; width: number }>(getByTestId('rod-highlight-1').props.style)
+    const line = StyleSheet.flatten<{ left: number; width: number }>(getByTestId('frame-rod-1').props.style)
+    expect(band.left).toBeLessThan(line.left)
+    expect(band.left + band.width).toBeGreaterThan(line.left + line.width)
+    // Drawn before the rod lines and the beam in the static layer, which is
+    // itself under the bead layer, so neither the beam nor a bead is hidden.
+    const layer = getByTestId('deck-lines').children.map((child) =>
+      typeof child === 'string' ? child : child.props.testID,
+    )
+    expect(layer.indexOf('rod-highlight-1')).toBeLessThan(layer.indexOf('frame-rod-0'))
+  })
+
+  it('highlights nothing without the prop', () => {
+    const { queryAllByTestId } = render(<Abacus soroban={emptySoroban(3)} fade={0} />)
+    expect(queryAllByTestId(/^rod-highlight-/)).toHaveLength(0)
   })
 })
 

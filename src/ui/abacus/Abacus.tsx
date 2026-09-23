@@ -10,17 +10,20 @@ import { Rod } from './Rod'
 
 // Controlled: the parent owns the soroban. With onTapBead and onAdjustRod the
 // rods take taps and VoiceOver adjustments. Without them it is the static
-// soroban the keypad levels show.
+// soroban the keypad levels show. `highlightRods` (rod indices, highest place
+// first) puts a soft band behind those rods' columns.
 export function Abacus({
   soroban,
   fade,
   scale = 1,
+  highlightRods,
   onTapBead,
   onAdjustRod,
 }: {
   soroban: Soroban
   fade: FadeLevel
   scale?: number
+  highlightRods?: readonly number[]
   onTapBead?: (rodIndex: number, bead: BeadRef) => void
   onAdjustRod?: (rodIndex: number, delta: number) => void
 }) {
@@ -38,7 +41,7 @@ export function Abacus({
     >
       {framed ? <FrameBackground scale={scale} /> : null}
       <View style={[styles.deck, { paddingHorizontal: g.deckPadding }, framed && styles.deckFilled]}>
-        {framed ? <DeckLines rodCount={count} scale={scale} /> : null}
+        {framed ? <DeckLines rodCount={count} scale={scale} highlight={highlightRods} /> : null}
         {/* Only the beads fade. At F6 nothing above is drawn, but the bead
             columns still take their space, so the screen does not jump. */}
         <FadeLayer level={fade}>
