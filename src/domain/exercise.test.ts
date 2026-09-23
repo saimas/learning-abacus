@@ -102,6 +102,26 @@ describe('stepColouring', () => {
     })
   })
 
+  it('colours both digits of a 九九 as one operation', () => {
+    // 47 × 36's 7×3 = 21: +2 on the hundreds (+5 −3, 1400 → 1940 → 1640),
+    // then +1 on the tens (+5 −4, 1640 → 1690 → 1650).
+    const mul = exerciseForProblem({ op: 'mul', digits: 2, a: 47, b: 36 })
+    expect(stepColouring(mul.states, mul.groupStarts, 8)).toEqual({
+      group: [
+        heaven(1),
+        earth(1, 1),
+        earth(1, 2),
+        earth(1, 3),
+        heaven(2),
+        earth(2, 0),
+        earth(2, 1),
+        earth(2, 2),
+        earth(2, 3),
+      ],
+      latest: [earth(2, 0), earth(2, 1), earth(2, 2), earth(2, 3)],
+    })
+  })
+
   it('keeps a bead coloured that moved and moved back within the operation', () => {
     // One rod: 0 → 1 → 0 → 5. Earth bead 0 took part, though the rod shows
     // no earth bead at the end.

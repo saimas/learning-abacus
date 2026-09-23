@@ -1,10 +1,10 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import type { Exercise } from '@/domain/exercise'
+import { stepColouring, type Exercise } from '@/domain/exercise'
 import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
-import { Abacus } from '@/ui/abacus/Abacus'
+import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
 import { beadModeScale, scaleToFit, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_HEIGHT } from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
 import { BUTTON_HEIGHT, Button } from '@/ui/kit/Button'
@@ -252,6 +252,15 @@ export function QuestionView({
   // Stepping takes the soroban over, drawn solid whatever the fade level, so
   // there is something to watch at F3+.
   const shownFade = stepper.soroban !== null ? 0 : fade
+  // The owner's request (2026-09-23): when one number takes several moves, as
+  // with a carry, it was hard to see which moves belong to one operation. So
+  // while stepping, the beads the operation on show (a column, a 九九, or a
+  // whole single move) has moved so far are red, the latest step's the
+  // deepest. The learner's own beads are never coloured.
+  const tintedBeads =
+    stepper.soroban !== null
+      ? tintsFor(stepColouring(exercise.states, exercise.groupStarts, stepper.index))
+      : undefined
   // The 〇 over the next question after a right answer, or the ✕ over a
   // missed one under review. Either is decoration and never takes a tap.
   const stamp = (size: number) => {
@@ -317,6 +326,7 @@ export function QuestionView({
             soroban={stepper.soroban ?? shownBeads}
             fade={shownFade}
             scale={beadScale}
+            tintedBeads={tintedBeads}
             onTapBead={
               locked
                 ? undefined
@@ -394,7 +404,12 @@ export function QuestionView({
           alone, and the keypad comes back, with what was typed, at とじる. */}
       <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
-          <Abacus soroban={stepper.soroban ?? start} fade={shownFade} scale={keypadScale} />
+          <Abacus
+            soroban={stepper.soroban ?? start}
+            fade={shownFade}
+            scale={keypadScale}
+            tintedBeads={tintedBeads}
+          />
           {stamp(110)}
         </View>
         <Text testID="prompt" style={styles.prompt}>
