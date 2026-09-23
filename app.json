@@ -9,10 +9,10 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#F4EEE2",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/app.icon",
       "supportsTablet": false,
       "bundleIdentifier": "com.saimas.learningabacus",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "config": {
         "usesNonExemptEncryption": false
       },
