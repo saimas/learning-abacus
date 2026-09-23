@@ -1,0 +1,45 @@
+import { StyleSheet, Text } from 'react-native'
+import { problemSteps, type Problem } from '@/domain/problem'
+import { useStrings } from '@/i18n'
+import { Card } from '@/ui/kit/Card'
+import { colors, fonts, space } from '@/ui/theme'
+
+// The answer card for a missed problem: the answer, then how each column is
+// worked, highest place first, in the same words as a single move's card.
+// `activeColumn` indexes problemSteps(problem): the column a replay is in.
+export function ProblemCorrectionCard({
+  problem,
+  expected,
+  activeColumn,
+}: {
+  problem: Problem
+  expected: number
+  activeColumn?: number
+}) {
+  const strings = useStrings()
+  return (
+    <Card accent testID="correction" style={styles.card}>
+      <Text testID="correction-answer" style={styles.answer}>
+        {strings.correctionAnswer(expected)}
+      </Text>
+      {problemSteps(problem).map((column, index) =>
+        column.atom === null ? null : (
+          <Text
+            key={column.place}
+            testID={`correction-column-${column.place}`}
+            style={[styles.line, index === activeColumn && styles.activeLine]}
+          >
+            {strings.columnLine(column.place, column.atom, column.cascades)}
+          </Text>
+        ),
+      )}
+    </Card>
+  )
+}
+
+const styles = StyleSheet.create({
+  card: { marginTop: space.md, paddingVertical: space.sm },
+  answer: { fontFamily: fonts.display, fontSize: 17, color: colors.ink },
+  line: { marginTop: 2, fontSize: 12, color: colors.muted },
+  activeLine: { color: colors.accent, fontWeight: '700', backgroundColor: colors.accentSoft },
+})

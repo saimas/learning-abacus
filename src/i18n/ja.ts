@@ -2,6 +2,17 @@ import { classify, startValue, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 // Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
 import type { CellState } from '@/ui/progress/AtomGrid'
+// Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
+import type { PracticeStage } from '@/ui/progress/PracticeTable'
+import {
+  practiceId,
+  ROUND_LENGTH,
+  type Digits,
+  type Operation,
+  type PracticeId,
+  type PracticeKind,
+  type Problem,
+} from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
@@ -37,6 +48,33 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
   warmup: (count) => `おさらい・${count}つの動き`,
   focus: () => '新しい動きと苦手な動き',
   faderep: (count) => `珠を消す・${count}つの動き`,
+}
+
+// A rod's name by its place, 0 being the ones rod. A 3-digit problem's
+// soroban has four rods.
+const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位']
+
+const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算' }
+
+// One fixed example per kind for the chooser's detail line.
+const EXAMPLE: Record<PracticeId, string> = {
+  'add:1': '7 + 8',
+  'add:2': '23 + 58',
+  'add:3': '472 + 385',
+  'sub:1': '9 − 4',
+  'sub:2': '81 − 36',
+  'sub:3': '634 − 258',
+}
+
+const PRACTICE_STAGE: Record<PracticeStage, string> = {
+  unseen: 'まだ',
+  beads: '珠で',
+  fading: 'うすい珠',
+  mental: '暗算',
+}
+
+function roundName(kind: PracticeKind): string {
+  return `${kind.digits}けたの${OP_NAME[kind.op]}`
 }
 
 // Declared as a function rather than inline on the object: a member
@@ -120,7 +158,24 @@ export const ja = {
   watchAgain: 'もう一度見る',
   next: 'つぎへ',
   replayStep: (step: number, total: number) => `${step} / ${total}`,
-  rodName: (place: number): string => (place === 0 ? '一の位' : '十の位'),
+  rodName: (place: number): string => PLACE[place] ?? `${place}`,
+  problemPrompt: (problem: Problem) =>
+    problem.op === 'add' ? `${problem.a}に${problem.b}をたす。` : `${problem.a}から${problem.b}をひく。`,
+  // One line of a problem's answer card: the rod, then the move worked on
+  // it, read exactly as a single move's card reads it.
+  columnLine: (place: number, atom: Atom, cascades: boolean) =>
+    `${PLACE[place] ?? place}　${coaching(atom)}${
+      cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
+    }`,
+  roundCount: (index: number, total: number) => `${index} / ${total}`,
+  roundComplete: 'けたの練習おわり',
+  roundSection: 'けたの練習',
+  opName: (op: Operation) => OP_NAME[op],
+  digitsName: (digits: Digits) => `${digits}けた`,
+  roundName,
+  roundDetail: (kind: PracticeKind) => `${EXAMPLE[practiceId(kind)]} など・${ROUND_LENGTH}問`,
+  practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
+  practiceCellLabel: (kind: PracticeKind, stage: PracticeStage) => `${roundName(kind)}、${PRACTICE_STAGE[stage]}`,
 
   atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
   cellLabel: (atomId: string, state: CellState) => `${atomId} ${CELL_STATE[state]}`,

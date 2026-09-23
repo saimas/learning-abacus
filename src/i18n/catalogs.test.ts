@@ -227,3 +227,27 @@ describe('the review step', () => {
     expect(en.replayStep(1, 2)).toBe('1 / 2')
   })
 })
+
+describe('multi-digit strings', () => {
+  it('prompts a problem', () => {
+    expect(ja.problemPrompt({ op: 'add', digits: 3, a: 472, b: 385 })).toBe('472に385をたす。')
+    expect(ja.problemPrompt({ op: 'sub', digits: 2, a: 81, b: 36 })).toBe('81から36をひく。')
+  })
+
+  it('reads a column as its rod and its move', () => {
+    expect(ja.columnLine(1, atom(7, 8, 'add'), false)).toBe('十の位　十の繰上：8をたす = +10 − 2')
+    expect(ja.columnLine(0, atom(6, 4, 'add'), true)).toBe(
+      '一の位　十の繰上と五の分解：4をたす = +10 − 5 − 1（さらに上の位へ繰り上がる）',
+    )
+  })
+
+  it('names all four rods', () => {
+    expect([0, 1, 2, 3].map(ja.rodName)).toEqual(['一の位', '十の位', '百の位', '千の位'])
+  })
+
+  it('names a kind and describes it', () => {
+    expect(ja.roundName({ op: 'add', digits: 2 })).toBe('2けたのたし算')
+    expect(ja.roundDetail({ op: 'add', digits: 2 })).toBe('23 + 58 など・10問')
+    expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
+  })
+})
