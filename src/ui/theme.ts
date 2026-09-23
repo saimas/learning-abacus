@@ -23,6 +23,15 @@ export const colors = {
   beadHighlight: '#6B4028',
   bead: '#3A2014',
   beadShade: '#24130B',
+  // While stepping, the beads of the operation on show are red instead of
+  // wood (the owner's request, 2026-09-23), lit the same way. The latest
+  // step's beads are the deepest: the accent itself, shading to
+  // accentShadow. The operation's earlier beads are the accent mixed with
+  // paper, lighter but still dark enough to read against the deck.
+  beadLatestHighlight: '#C26450',
+  beadGroupHighlight: '#D8A090',
+  beadGroup: '#C87563',
+  beadGroupShade: '#BB523E',
   shadow: '#3C2314',
   // Dims Home behind the practice chooser: ink at a little over a third.
   scrim: 'rgba(42, 35, 32, 0.38)',

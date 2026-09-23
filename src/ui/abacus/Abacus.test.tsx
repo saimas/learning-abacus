@@ -1,8 +1,8 @@
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { emptySoroban, rodFor, setValue } from '@/domain/soroban'
 import { colors } from '@/ui/theme'
-import { Abacus } from './Abacus'
+import { Abacus, tintsFor } from './Abacus'
 import { BEAD_HEIGHT, BEAD_MODE_SCALE, BEAM_TOP, EARTH_TOP, beadTops } from './geometry'
 
 function topOf(element: { props: { style?: unknown } } | undefined): number | undefined {
@@ -99,6 +99,121 @@ describe('highlighted rods', () => {
   it('highlights nothing without the prop', () => {
     const { queryAllByTestId } = render(<Abacus soroban={emptySoroban(3)} fade={0} />)
     expect(queryAllByTestId(/^rod-highlight-/)).toHaveLength(0)
+  })
+})
+
+// The owner's request (2026-09-23): while stepping, the beads the current
+// operation has moved are red, the latest step's the deepest.
+describe('tinted beads', () => {
+  type Node = ReturnType<typeof screen.getByTestId>
+  // Each rod's beads, heaven first, then earth from the beam out.
+  const beadsOn = (rod: number) =>
+    within(screen.getByTestId(`rod-${rod}`))
+      .getAllByTestId(/^bead-/)
+      .map((bead) => bead.props.testID as string)
+  // The three stops of the gradient a bead is filled with.
+  const stopsOf = (bead: Node) => {
+    const host = (node: Node) => typeof node.type === 'string'
+    const fill = bead.findAll((node) => host(node) && typeof node.props.fill === 'string')[0]?.props.fill as string
+    const id = fill.replace(/^url\(#(.*)\)$/, '$1')
+    const gradient = bead.findAll((node) => host(node) && node.props.id === id)[0]
+    return gradient?.findAll((node) => host(node) && node.props.stopColor !== undefined).map((stop) => stop.props.stopColor)
+  }
+
+  it('marks each listed bead with its tint, on its own rod only', () => {
+    render(
+      <Abacus
+        soroban={setValue(emptySoroban(2), 7)}
+        fade={0}
+        tintedBeads={[
+          { rod: 1, bead: { kind: 'heaven' }, tint: 'group' },
+          { rod: 1, bead: { kind: 'earth', index: 1 }, tint: 'latest' },
+        ]}
+      />,
+    )
+    expect(beadsOn(0)).toEqual(['bead-heaven', 'bead-earth', 'bead-earth', 'bead-earth', 'bead-earth'])
+    expect(beadsOn(1)).toEqual(['bead-heaven-group', 'bead-earth', 'bead-earth-latest', 'bead-earth', 'bead-earth'])
+  })
+
+  it('draws the latest step deepest where a bead is listed as both', () => {
+    render(
+      <Abacus
+        soroban={emptySoroban(1)}
+        fade={0}
+        tintedBeads={[
+          { rod: 0, bead: { kind: 'earth', index: 0 }, tint: 'latest' },
+          { rod: 0, bead: { kind: 'earth', index: 0 }, tint: 'group' },
+        ]}
+      />,
+    )
+    expect(beadsOn(0)).toEqual(['bead-heaven', 'bead-earth-latest', 'bead-earth', 'bead-earth', 'bead-earth'])
+  })
+
+  it('fills a bead with wood, the operation’s red, or the latest step’s deeper red', () => {
+    render(
+      <Abacus
+        soroban={emptySoroban(1)}
+        fade={0}
+        tintedBeads={[
+          { rod: 0, bead: { kind: 'heaven' }, tint: 'latest' },
+          { rod: 0, bead: { kind: 'earth', index: 0 }, tint: 'group' },
+        ]}
+      />,
+    )
+    expect(stopsOf(screen.getByTestId('bead-heaven-latest'))).toEqual([
+      colors.beadLatestHighlight,
+      colors.accent,
+      colors.accentShadow,
+    ])
+    expect(stopsOf(screen.getByTestId('bead-earth-group'))).toEqual([
+      colors.beadGroupHighlight,
+      colors.beadGroup,
+      colors.beadGroupShade,
+    ])
+    expect(stopsOf(screen.getAllByTestId('bead-earth')[0] as Node)).toEqual([
+      colors.beadHighlight,
+      colors.bead,
+      colors.beadShade,
+    ])
+  })
+
+  it('gives each tint its own gradient id', () => {
+    // No two different gradients on screen share a name (see Bead).
+    render(
+      <Abacus
+        soroban={emptySoroban(1)}
+        fade={0}
+        tintedBeads={[
+          { rod: 0, bead: { kind: 'heaven' }, tint: 'latest' },
+          { rod: 0, bead: { kind: 'earth', index: 0 }, tint: 'group' },
+        ]}
+      />,
+    )
+    const fills = ['bead-heaven-latest', 'bead-earth-group'].map(
+      (testID) =>
+        screen.getByTestId(testID).findAll((node) => typeof node.type === 'string' && node.props.fill !== undefined)[0]
+          ?.props.fill,
+    )
+    const wood = screen
+      .getAllByTestId('bead-earth')[0]
+      ?.findAll((node) => typeof node.type === 'string' && node.props.fill !== undefined)[0]?.props.fill
+    expect(new Set([...fills, wood]).size).toBe(3)
+  })
+
+  it('tints nothing without the prop', () => {
+    render(<Abacus soroban={setValue(emptySoroban(2), 47)} fade={0} />)
+    expect(beadsOn(0)).toEqual(['bead-heaven', 'bead-earth', 'bead-earth', 'bead-earth', 'bead-earth'])
+    expect(beadsOn(1)).toEqual(['bead-heaven', 'bead-earth', 'bead-earth', 'bead-earth', 'bead-earth'])
+  })
+
+  it('turns a step colouring into tints, the latest step’s over the operation’s', () => {
+    const heaven = { rod: 0, bead: { kind: 'heaven' } } as const
+    const earth = { rod: 1, bead: { kind: 'earth', index: 2 } } as const
+    expect(tintsFor({ group: [heaven, earth], latest: [earth] })).toEqual([
+      { ...heaven, tint: 'group' },
+      { ...earth, tint: 'group' },
+      { ...earth, tint: 'latest' },
+    ])
   })
 })
 

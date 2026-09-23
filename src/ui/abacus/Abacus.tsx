@@ -1,22 +1,39 @@
 import { StyleSheet, View } from 'react-native'
 import { visualForFade, type FadeLevel } from '@/domain/fade'
-import type { BeadRef, Soroban } from '@/domain/soroban'
+import type { StepColouring } from '@/domain/exercise'
+import type { BeadRef, PlacedBead, Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { colors } from '@/ui/theme'
+import type { BeadTint } from './Bead'
 import { FadeLayer, showsFrame } from './FadeLayer'
 import { DeckLines, FrameBackground } from './Frame'
 import { geometryFor } from './geometry'
 import { Rod } from './Rod'
 
+// A bead to draw red while stepping, and which red.
+export type TintedBead = PlacedBead & { tint: BeadTint }
+
+// The owner's request (2026-09-23): the beads the current operation has moved
+// so far are red, the latest step's the deepest. The latest step's beads are
+// in the operation's too, and the rod draws a bead listed as both 'latest'.
+export function tintsFor(colouring: StepColouring): TintedBead[] {
+  return [
+    ...colouring.group.map((placed): TintedBead => ({ ...placed, tint: 'group' })),
+    ...colouring.latest.map((placed): TintedBead => ({ ...placed, tint: 'latest' })),
+  ]
+}
+
 // Controlled: the parent owns the soroban. With onTapBead and onAdjustRod the
 // rods take taps and VoiceOver adjustments. Without them it is the static
 // soroban the keypad levels show. `highlightRods` (rod indices, highest place
-// first) puts a soft band behind those rods' columns.
+// first) puts a soft band behind those rods' columns. `tintedBeads` draws
+// those beads red instead of wood, for stepping through a move.
 export function Abacus({
   soroban,
   fade,
   scale = 1,
   highlightRods,
+  tintedBeads,
   onTapBead,
   onAdjustRod,
 }: {
@@ -24,6 +41,7 @@ export function Abacus({
   fade: FadeLevel
   scale?: number
   highlightRods?: readonly number[]
+  tintedBeads?: readonly TintedBead[]
   onTapBead?: (rodIndex: number, bead: BeadRef) => void
   onAdjustRod?: (rodIndex: number, delta: number) => void
 }) {
@@ -53,6 +71,7 @@ export function Abacus({
                 index={index}
                 scale={scale}
                 label={strings.rodName(count - 1 - index)}
+                tints={tintedBeads?.filter((tinted) => tinted.rod === index)}
                 onTapBead={onTapBead === undefined ? undefined : (bead) => onTapBead(index, bead)}
                 onAdjust={onAdjustRod === undefined ? undefined : (delta) => onAdjustRod(index, delta)}
               />
