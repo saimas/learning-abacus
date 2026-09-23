@@ -7,6 +7,7 @@ import {
   EARTH_TOP,
   EDGE_GAP,
   beadAt,
+  beadModeScale,
   beadTops,
   geometryFor,
 } from './geometry'
@@ -91,5 +92,17 @@ describe('beadAt', () => {
   it('works at bead-mode scale', () => {
     const top = beadTops(rodFor(0), BEAD_MODE_SCALE).earth[0] ?? 0
     expect(beadAt(rodFor(0), top + 5, BEAD_MODE_SCALE)).toEqual({ kind: 'earth', index: 0 })
+  })
+})
+
+describe('beadModeScale', () => {
+  it('keeps the full bead-mode size when the rods fit', () => {
+    expect(beadModeScale(2, 335)).toBe(BEAD_MODE_SCALE)
+    expect(beadModeScale(3, 335)).toBe(BEAD_MODE_SCALE)
+  })
+
+  it('shrinks four rods to fit a 375 pt phone', () => {
+    // 4 rods × 64 + 2 × (6 + 10) of deck and frame padding = 288 pt at scale 1.
+    expect(beadModeScale(4, 335)).toBeCloseTo(335 / 288)
   })
 })

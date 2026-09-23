@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AccessibilityInfo, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { decompose, expectedValue, moveStates, startValue, type Atom } from '@/domain/atoms'
-import { answerModeForFade, FADE_PROMOTE_STREAK, type FadeLevel } from '@/domain/fade'
+import { StyleSheet, View } from 'react-native'
+import type { Atom } from '@/domain/atoms'
+import { exerciseForAtom } from '@/domain/exercise'
+import { FADE_PROMOTE_STREAK, type FadeLevel } from '@/domain/fade'
 import {
   MAX_ATTEMPTS_PER_ATOM,
   type BlockKind,
@@ -9,35 +10,16 @@ import {
   type SessionItem,
   type SessionPlan,
 } from '@/domain/session'
-import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
-import { Abacus } from '@/ui/abacus/Abacus'
-import { BEAD_MODE_SCALE } from '@/ui/abacus/geometry'
-import { AnswerPad } from '@/ui/answer/AnswerPad'
-import { Button } from '@/ui/kit/Button'
-import { Seal } from '@/ui/kit/Seal'
-import { parseAnswer } from '@/ui/parseAnswer'
-import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
-import { Batsu } from './Batsu'
 import { CorrectionCard } from './CorrectionCard'
-import { Maru } from './Maru'
+import { QuestionView, type Submission } from './QuestionView'
+import { SessionSummary } from './SessionSummary'
 import { SessionTrack } from './SessionTrack'
-import { useMoveReplay } from './useMoveReplay'
 
 // latencyMs is null for an untimed attempt (answered with the beads).
 export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number | null }
 
 type RunnerState = { blockIndex: number; queue: SessionItem[] }
-
-// A missed question held on screen until つぎへ. It is still state.queue[0],
-// so only whether its answer card is up needs keeping: up at once where
-// coaching still speaks (F0–F1), and after こたえを見る at silent levels.
-type Review = { cardShown: boolean }
-
-// A tap on つぎへ this soon after a miss is the second half of a double tap
-// on こたえる, which sits in the same place. It must not skip a review the
-// learner has not seen yet.
-const NEXT_GUARD_MS = 450
 
 function parseAtomId(atomId: string): { rodValue: number; operand: number; sign: 1 | -1 } {
   const match = /^(\d)([+-])(\d)$/.exec(atomId)
@@ -149,18 +131,12 @@ export function SessionRunner({
   const [state, setState] = useState<RunnerState>(
     () => findActiveBlock(plan.blocks, 0, {}) ?? { blockIndex: plan.blocks.length, queue: [] },
   )
-  const [answer, setAnswer] = useState('')
-  // Non-null while a missed question is held on screen for review.
-  const [review, setReview] = useState<Review | null>(null)
-  // こたえを見る's step-by-step replay of the move, on the same soroban.
-  const replay = useMoveReplay()
   const [tally, setTally] = useState({ answered: 0, correct: 0 })
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
   const [maru, setMaru] = useState(0)
-  // The soroban as the learner has moved it in bead mode. null means
-  // untouched: it shows the question's starting value.
-  const [beads, setBeads] = useState<Soroban | null>(null)
+  // Counts the questions shown, as QuestionView's key.
+  const [question, setQuestion] = useState(0)
   const failures = useRef<Record<string, number>>({})
   // Consecutive-correct streak per atom this session, independent of the
   // Leitner box and fade ladder — it only gates when the next reserve atom
@@ -176,9 +152,9 @@ export function SessionRunner({
   // Only the focus block's refill ever reads this; warm-up and fade rep are
   // untouched by it.
   const [joined, setJoined] = useState<SessionItem[]>([])
-  const shownAt = useRef<number>(sessionStartedAt)
-  // When the question now under review was missed, for NEXT_GUARD_MS.
-  const missedAt = useRef<number | null>(null)
+  // When the current question came up. State, not a ref: QuestionView reads
+  // it during render.
+  const [shownAt, setShownAt] = useState(sessionStartedAt)
   const finished = useRef(false)
 
   const deadlines = useMemo(
@@ -212,28 +188,16 @@ export function SessionRunner({
 
   if (block.kind === 'close') {
     return (
-      <View testID="session-summary" style={styles.summary}>
-        <View style={styles.summaryBody}>
-          <Seal text={strings.sealDone} state="stamped" size={118} animateIn />
-          <Text testID="summary-text" style={styles.summaryTitle}>
-            {strings.sessionComplete}
-          </Text>
-          {/* Spec §6: the close block reports the result. Atoms mastered and
-              tomorrow's preview still belong here and are not built yet. */}
-          <Text testID="summary-result" style={styles.summaryResult}>
-            {strings.sessionResult(tally.answered, tally.correct)}
-          </Text>
-        </View>
-        <Button
-          testID="finish-button"
-          label={strings.done}
-          onPress={() => {
-            if (finished.current) return
-            finished.current = true
-            onFinish()
-          }}
-        />
-      </View>
+      <SessionSummary
+        title={strings.sessionComplete}
+        answered={tally.answered}
+        correct={tally.correct}
+        onDone={() => {
+          if (finished.current) return
+          finished.current = true
+          onFinish()
+        }}
+      />
     )
   }
 
@@ -253,31 +217,14 @@ export function SessionRunner({
     operand,
     direction: sign === 1 ? 'add' : 'sub',
   }
-  const expected = expectedValue(atom)
-  const mode = answerModeForFade(current.fade)
-  const start = setValue(emptySoroban(2), startValue(atom))
-  const shownBeads = beads ?? start
-  // An untouched soroban is not an answer, the same rule as a blank keypad:
-  // a stray tap on こたえる must not burn one of the atom's attempts.
-  const moved = readValue(shownBeads) !== startValue(atom)
 
-  // Scores the answer. A right one moves straight on; a miss holds the
-  // question for review, and advance() runs later, from つぎへ.
-  function submit() {
+  // The session's side of an answer: the attempt, the tally, the streak and
+  // the 〇. A right one moves straight on; a miss is held for review in
+  // QuestionView, and advance() runs later, from つぎへ.
+  function submitted({ correct, latencyMs, t }: Submission) {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
     // does not carry a const's narrowing into a nested closure.
     if (block === undefined || current === undefined) return
-
-    // A blank or unparseable field is not an answer. Scoring it would mark
-    // every n−n atom correct, and scoring it wrong would burn an attempt for
-    // a mistap, so nothing happens at all.
-    const given = mode === 'beads' ? (moved ? readValue(shownBeads) : null) : parseAnswer(answer)
-    if (given === null) return
-
-    const t = now()
-    // Bead answers are untimed: speed only counts once the work is mental.
-    const latencyMs = mode === 'beads' ? null : Math.max(0, t - shownAt.current)
-    const correct = given === expected
 
     onAttempt({ atomId: current.atomId, correct, latencyMs })
     setTally((previous) => ({
@@ -290,23 +237,16 @@ export function SessionRunner({
 
     if (correct) {
       setMaru((previous) => previous + 1)
-      AccessibilityInfo.announceForAccessibility(strings.correct)
       advance(true, t)
       return
     }
 
     failures.current[current.atomId] = (failures.current[current.atomId] ?? 0) + 1
-    missedAt.current = t
     setMaru(0)
-    AccessibilityInfo.announceForAccessibility(strings.wrong)
-    // The number alone teaches nothing. Where coaching still speaks, the
-    // card with the substitution comes up with the ✕; at silent levels it
-    // waits to be asked for.
-    setReview({ cardShown: current.coaching !== 'silent' })
   }
 
   // Moves the session on from the question just answered: requeue, joins,
-  // refill, block end. A right answer runs it straight from submit(); a miss
+  // refill, block end. A right answer runs it straight from submitted(); a miss
   // runs it from つぎへ, with `t` the moment つぎへ was pressed, so the
   // deadline is checked then and the review never counts toward the next
   // answer's latency.
@@ -315,7 +255,7 @@ export function SessionRunner({
 
     let queue = state.queue.slice(1)
 
-    // submit() has already counted this failure.
+    // submitted() has already counted this failure.
     if (!correct && (failures.current[current.atomId] ?? 0) < MAX_ATTEMPTS_PER_ATOM) {
       // A high-fade miss reveals one level for the retry, so the learner
       // sees what they should have been imagining.
@@ -385,10 +325,8 @@ export function SessionRunner({
 
     if (joinedNow !== joined) setJoined(joinedNow)
 
-    setAnswer('')
-    setBeads(null)
-    setReview(null)
-    replay.stop()
+    // A new key gives the next question a clean field, untouched beads and no review.
+    setQuestion((previous) => previous + 1)
 
     if (timeUp || queue.length === 0) {
       // Either the deadline passed, or every item in the block has now
@@ -399,252 +337,42 @@ export function SessionRunner({
     } else {
       setState({ blockIndex: state.blockIndex, queue })
     }
-    shownAt.current = t
+    setShownAt(t)
   }
 
-  function showAnswer() {
-    AccessibilityInfo.announceForAccessibility(strings.correctionAnswer(expected))
-    setReview({ cardShown: true })
-    replay.play(moveStates(atom))
-  }
-
-  function moveOn() {
-    const t = now()
-    if (missedAt.current !== null && t - missedAt.current < NEXT_GUARD_MS) return
-    advance(false, t)
-  }
-
-  const demonstration =
-    current.coaching === 'demo' && review === null ? (
-      // Spec §4: F0 is where the app demonstrates the move, so the
-      // substitution is shown *before* the answer, not after a miss. Under
-      // review the answer card says it instead.
-      <Text testID="demonstration" style={styles.demonstration}>
-        {strings.coaching(atom)}
-      </Text>
-    ) : null
-  // The step a replay has just played: state k of moveStates is the one
-  // after step k − 1, and the start (k = 0) has played nothing yet.
-  const played = replay.step !== null && replay.step > 0 ? replay.step : null
-  const correctionCard =
-    review !== null && review.cardShown ? (
-      <CorrectionCard
-        atom={atom}
-        expected={expected}
-        activeStep={played === null ? undefined : played - 1}
-      />
-    ) : null
-  // The line under the soroban while a miss is reviewed: the replay's step
-  // count once a step has played, blank before that. It keeps its height the
-  // whole time, so the soroban does not jump as the hint gives way to it or
-  // the count appears.
-  const replayStep = (
-    <Text
-      testID={played !== null ? 'replay-step' : undefined}
-      accessible={played !== null}
-      style={styles.hint}
-    >
-      {played !== null ? strings.replayStep(played, decompose(atom).length) : ' '}
-    </Text>
-  )
-  // A replay takes the soroban over, drawn solid whatever the fade level, so
-  // there is something to watch at F3+.
-  const replayFade = replay.soroban !== null ? 0 : current.fade
-  const track = (
-    <SessionTrack
-      segments={segments}
-      label={strings.blockLabel(block.kind)}
-      quitLabel={strings.quitLabel}
-      onQuit={onQuit}
-    />
-  )
-  // The 〇 over the next question after a right answer, or the ✕ over a
-  // missed one under review. Either is decoration and never takes a tap.
-  const stamp = (size: number) => {
-    if (review !== null) {
-      return (
-        <View style={styles.stampOverlay} pointerEvents="none">
-          <Batsu size={size} />
-        </View>
-      )
-    }
-    if (maru > 0) {
-      return (
-        <View style={styles.stampOverlay} pointerEvents="none">
-          <Maru key={maru} size={size} />
-        </View>
-      )
-    }
-    return null
-  }
-  const reviewButtons = (
-    <View style={styles.buttonRow}>
-      <View style={styles.reviewSlot}>
-        <Button
-          testID="review-show"
-          variant="outline"
-          label={replay.step === null ? strings.showAnswer : strings.watchAgain}
-          onPress={showAnswer}
-        />
-      </View>
-      <View style={styles.reviewSlot}>
-        <Button testID="review-next" label={strings.next} onPress={moveOn} />
-      </View>
-    </View>
-  )
-
-  if (mode === 'beads') {
-    // Layout A: the soroban takes the keypad's place, enlarged and within
-    // thumb reach. Only the text above it scrolls, so the soroban and both
-    // buttons stay on screen even on a 375 × 667 phone.
-    return (
-      <View style={styles.practice}>
-        {track}
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          <Text testID="prompt" style={styles.prompt}>
-            {strings.prompt(atom)}
-          </Text>
-          {demonstration}
-          {correctionCard}
-        </ScrollView>
-        <View style={styles.sorobanWrap} testID="soroban-wrap">
-          {/* `previous ?? start` relies on `start` staying constant for the
-              presented question: advance() is the only path that changes the
-              question, and it resets `beads` to null first. Under review the
-              beads stay as the learner left them and take no taps: the
-              answer is in. */}
-          <Abacus
-            soroban={replay.soroban ?? shownBeads}
-            fade={replayFade}
-            scale={BEAD_MODE_SCALE}
-            onTapBead={
-              review !== null
-                ? undefined
-                : (rodIndex, bead) => setBeads((previous) => tapSoroban(previous ?? start, rodIndex, bead))
-            }
-            onAdjustRod={
-              review !== null
-                ? undefined
-                : (rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))
-            }
-          />
-          {stamp(140)}
-        </View>
-        {review === null ? <Text style={styles.hint}>{strings.beadHint}</Text> : replayStep}
-        {/* Layout A puts a flexible gap on both sides of the soroban+hint
-            block (mockup: a flex spacer before it, another after). The
-            scroll above already absorbs the top gap; this one balances it
-            below so spare height on a tall phone doesn't all pile up above
-            the soroban. Both share `scroll`'s flexShrink:1, so on a short
-            screen this collapses to 0 first and the scroll area is what
-            gives way, keeping the soroban, hint and buttons on screen. */}
-        <View style={styles.beadSpacer} />
-        {review !== null ? (
-          reviewButtons
-        ) : (
-          <View style={styles.buttonRow}>
-            <View style={styles.resetSlot}>
-              <Button
-                testID="reset-beads"
-                variant="outline"
-                label={strings.resetBeads}
-                onPress={() => setBeads(null)}
-              />
-            </View>
-            <View style={styles.submitSlot}>
-              <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
-            </View>
-          </View>
-        )}
-      </View>
-    )
-  }
-
+  const exercise = exerciseForAtom(atom)
+  // The time track sits outside the keyed QuestionView, which remounts with
+  // every question: its fill runs from the runner's mount, and remounting it
+  // would start it over at 0. QuestionView's own track slot stays empty.
   return (
     <View style={styles.practice}>
-      {track}
-      {/* R9: the keypad below is always fully visible, pinned at the bottom.
-          Everything here that can grow scrolls instead of pushing the keypad
-          off a short screen. Under review the review buttons take its place. */}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.soroban}>
-          <Abacus soroban={replay.soroban ?? start} fade={replayFade} />
-          {stamp(110)}
-        </View>
-        {review !== null ? replayStep : null}
-        <Text testID="prompt" style={styles.prompt}>
-          {strings.prompt(atom)}
-        </Text>
-        {demonstration}
-        {correctionCard}
-      </ScrollView>
-      {review !== null ? (
-        reviewButtons
-      ) : (
-        <AnswerPad
-          value={answer}
-          onChange={setAnswer}
-          onSubmit={submit}
-          submitLabel={strings.answer}
-          submitTestID="submit"
-        />
-      )}
+      <SessionTrack
+        segments={segments}
+        label={strings.blockLabel(block.kind)}
+        quitLabel={strings.quitLabel}
+        onQuit={onQuit}
+      />
+      <QuestionView
+        key={question}
+        exercise={exercise}
+        fade={current.fade}
+        coaching={current.coaching}
+        prompt={strings.prompt(atom)}
+        demonstration={current.coaching === 'demo' ? strings.coaching(atom) : null}
+        renderCorrection={(activeStep) => (
+          <CorrectionCard atom={atom} expected={exercise.expected} activeStep={activeStep} />
+        )}
+        track={null}
+        maru={maru}
+        shownAt={shownAt}
+        now={now}
+        onSubmit={submitted}
+        onMoveOn={(t) => advance(false, t)}
+      />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   practice: { flex: 1 },
-  soroban: { marginTop: space.md, position: 'relative' },
-  prompt: {
-    marginTop: space.lg,
-    textAlign: 'center',
-    fontFamily: fonts.display,
-    fontSize: fontSizes.prompt,
-    color: colors.ink,
-    letterSpacing: 1,
-  },
-  demonstration: {
-    alignSelf: 'center',
-    marginTop: space.sm,
-    paddingVertical: 7,
-    paddingHorizontal: space.md,
-    borderRadius: radius.panel,
-    overflow: 'hidden',
-    backgroundColor: colors.soft,
-    color: colors.muted,
-    fontSize: fontSizes.small,
-  },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: space.sm },
-  summary: { flex: 1 },
-  summaryBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  summaryTitle: {
-    marginTop: 26,
-    fontFamily: fonts.display,
-    fontSize: 24,
-    letterSpacing: 2,
-    color: colors.ink,
-  },
-  summaryResult: { marginTop: space.sm, fontSize: fontSizes.body, color: colors.muted },
-  sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
-  // Centred over whichever soroban it is placed inside (bead mode's
-  // sorobanWrap, or keypad mode's soroban view) — that view must itself be
-  // position:'relative' for this to fill and centre over it.
-  stampOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
-  beadSpacer: { flex: 1 },
-  buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
-  resetSlot: { flex: 1 },
-  submitSlot: { flex: 2 },
-  // こたえを見る and つぎへ share the row equally (mockup).
-  reviewSlot: { flex: 1 },
 })

@@ -26,6 +26,15 @@ export const COLUMN_HEIGHT = EARTH_TOP + EARTH_HEIGHT
 // enough to tap: 69 × 29 pt on 88 pt rods.
 export const BEAD_MODE_SCALE = 1.38
 
+// Bead mode draws the soroban as large as BEAD_MODE_SCALE allows, but a
+// 3-digit problem's four rods at that size are wider than a 375 pt phone.
+// `width` is the room the soroban has; the frame is its rods plus the deck's
+// and the frame's padding on each side.
+export function beadModeScale(rods: number, width: number): number {
+  const natural = rods * ROD_WIDTH + 2 * (DECK_PADDING + FRAME_PADDING)
+  return Math.min(BEAD_MODE_SCALE, width / natural)
+}
+
 export type Geometry = {
   beadWidth: number
   beadHeight: number

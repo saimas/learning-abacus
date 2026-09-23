@@ -188,6 +188,21 @@ describe('SessionRunner', () => {
     expect(getByTestId('block-label').props.children).toBe('集中')
   })
 
+  it('keeps one time track across questions, so its fill never starts over', () => {
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('2+1')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+    }
+    const { getByTestId } = renderRunner(plan, autoClock())
+    const track = getByTestId('track-segment-0')
+    answer(getByTestId, '7')
+    expect(getByTestId('prompt').props.children).toBe('2に1をたす。')
+    expect(getByTestId('track-segment-0')).toBe(track)
+  })
+
   it('offers the way out it is given', () => {
     const onQuit = jest.fn()
     const { getByTestId } = renderRunner(basicPlan, autoClock(), { onQuit })

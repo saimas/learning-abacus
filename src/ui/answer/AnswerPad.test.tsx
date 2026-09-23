@@ -18,6 +18,11 @@ describe('appendDigit', () => {
   it('replaces a lone zero, so "05" can never be typed', () => {
     expect(appendDigit('0', '5')).toBe('5')
   })
+
+  it('takes as many digits as a problem’s answer can have', () => {
+    expect(appendDigit('185', '7', 4)).toBe('1857')
+    expect(appendDigit('1857', '3', 4)).toBe('1857')
+  })
 })
 
 describe('AnswerPad', () => {
