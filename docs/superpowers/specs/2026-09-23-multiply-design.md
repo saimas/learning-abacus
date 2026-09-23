@@ -104,3 +104,12 @@ export type StepGroup =
 3. `multiplyIntroDone`, the walkthrough and the `/round` redirect.
 4. The chooser (× and やりかた) and the progress table's × row.
 5. Simulator check (6-rod tap test; fall back to keypad for 3×3 if it fails); TestFlight build 10; PR.
+
+## 8. Addendum: the operand board (TestFlight build 13)
+
+After build 12 the owner said: "for 3 digits x 3 digits the abacus start with empty state. i was expecting to see the number to being multiplied on … how about just showing the initial numbers on the different box beneath the calculation box?" 両落とし keeps the product soroban empty, and the traditional placement (multiplicand on the same row as the product) needs about 12 rods, which doesn't fit a phone. So the two numbers go on their own row.
+
+- **`OperandBoard`** (`src/ui/multiply/OperandBoard.tsx`): a read-only soroban row beneath the product soroban for every × problem (1×1 to 3×3) and in the walkthrough, showing the multiplicand and the multiplier as beads with a × between them and their digits above the rods. It is always drawn solid (it is the problem, not the mental image) and takes no taps.
+- **Highlight:** while stepping (手順を見る or the miss review) and on each 九九 page of the walkthrough, the rods of the two digits being multiplied are highlighted with a soft band (`Abacus`'s `highlightRods`), and their digits are emphasised. Product groups carry `xPlace` / `yPlace` for this.
+- **Placement:** bead mode, directly under the product soroban; keypad mode, after the prompt in the scroll area, so the prompt stays visible.
+- **Short windows** (under 750 pt tall, with a board): the product soroban's bead scale is capped at 1.1× and the board at 0.5×, so a 375 × 667 phone still shows the prompt and 手順を見る. Taller windows: the board is up to 0.65×.
