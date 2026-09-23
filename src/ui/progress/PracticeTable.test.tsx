@@ -38,6 +38,11 @@ describe('PracticeTable', () => {
     expect(screen.getByTestId('practice-cell-sub:3').props.accessibilityLabel).toBe('3けたのひき算、まだ')
   })
 
+  it('has a row for ×, alongside ＋ and −', () => {
+    render(<PracticeTable progress={emptyProgress()} />)
+    expect(screen.getByTestId('practice-cell-mul:3').props.accessibilityLabel).toBe('3けたのかけ算、まだ')
+  })
+
   it('uses ink text for fading stage and paper text for mental stage', () => {
     const progress = {
       ...emptyProgress(),

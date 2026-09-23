@@ -31,4 +31,18 @@ describe('ProblemCorrectionCard', () => {
     expect(colorOf('correction-product-1')).toBe(colors.accent)
     expect(colorOf('correction-product-0')).not.toBe(colors.accent)
   })
+
+  it('still gives a line for a 九九 whose product is 0, since recalling it is still a step', () => {
+    // 40 × 36: the third 九九 (a's ones digit 0 × b's tens digit 3) moves
+    // nothing, but the learner still recalls "0×3", so its line must render.
+    render(<ProblemCorrectionCard problem={{ op: 'mul', digits: 2, a: 40, b: 36 }} expected={1440} />)
+    expect(textOf(screen.getByTestId('correction-product-2'))).toBe('0×3=00')
+  })
+
+  it('places a single-digit product at the ones place when its tens digit is 0', () => {
+    // 2 × 3 = 06: the tens digit is 0 and filtered out, leaving one digit at
+    // the ones place rather than a "十の位" line.
+    render(<ProblemCorrectionCard problem={{ op: 'mul', digits: 1, a: 2, b: 3 }} expected={6} />)
+    expect(textOf(screen.getByTestId('correction-product-0'))).toBe('2×3=06　一の位に6')
+  })
 })

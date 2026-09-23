@@ -291,8 +291,8 @@ export function QuestionView({
           onSubmit={submit}
           submitLabel={strings.answer}
           submitTestID="submit"
-          // The answer fits on the soroban: 2 digits for a single move, one
-          // more than the operands for a problem.
+          // The answer always fits the soroban's rods: 2 for a single move,
+          // the operands' digit count + 1 for ＋ −, and that count × 2 for ×.
           maxDigits={exercise.rods}
         />
       )}

@@ -15,9 +15,14 @@ export default function RootLayout() {
               and saves) or おわる. A stray edge swipe must not skip either. */}
           <Stack.Screen name="session" options={{ gestureEnabled: false }} />
           <Stack.Screen name="round" options={{ gestureEnabled: false }} />
-          {/* Spec (multiplication) §4: the walkthrough is left through its
-              last button, which marks it seen, as a round is. */}
-          <Stack.Screen name="multiply-intro" options={{ gestureEnabled: false }} />
+          {/* Spec (multiplication) §4: opened with a round's kind, the
+              walkthrough leads into it, so it is left only through its last
+              button, as a round is. Opened from the chooser's やりかた
+              (no kind) it leads nowhere, so an edge swipe back is fine. */}
+          <Stack.Screen
+            name="multiply-intro"
+            options={({ route }) => ({ gestureEnabled: !(route.params as { kind?: string } | undefined)?.kind })}
+          />
         </Stack>
       </ProgressProvider>
     </LocaleProvider>

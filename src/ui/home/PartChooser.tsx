@@ -104,7 +104,13 @@ export function PartChooser({
           {/* Spec (multiplication) §5: the walkthrough is shown once, before
               the first × round, so this is how to see it again. */}
           {op === 'mul' ? (
-            <Pressable testID="choose-howto" accessibilityRole="link" onPress={onHowTo} hitSlop={8} style={styles.howTo}>
+            <Pressable
+              testID="choose-howto"
+              accessibilityRole="link"
+              onPress={onHowTo}
+              hitSlop={12}
+              style={styles.howTo}
+            >
               <Text maxFontSizeMultiplier={1.3} style={styles.howToText}>
                 {strings.chooseHowTo}
               </Text>
@@ -212,6 +218,8 @@ const styles = StyleSheet.create({
   rule: { flex: 1, height: 1, backgroundColor: colors.cardLine },
   sectionTitle: { fontSize: fontSizes.caption, color: colors.muted },
   pickers: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.sm },
-  howTo: { alignSelf: 'flex-end' },
+  // The caption text stays small, but padding plus hitSlop above give the
+  // link a tap target close to the platforms' ~44pt minimum.
+  howTo: { alignSelf: 'flex-end', paddingVertical: space.sm },
   howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
 })

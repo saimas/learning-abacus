@@ -69,8 +69,8 @@ function randomInt(random: () => number, low: number, high: number): number {
 // numbers are drawn again, since 0 teaches nothing and reads as a blank
 // soroban.
 export function generateProblems(kind: PracticeKind, count: number, random: () => number): Problem[] {
-  // × 1 teaches nothing (anything × 1 is itself), so 1×1 draws from the 九九
-  // range instead of the usual single-digit range, which would include 0.
+  // × 1 teaches nothing (anything × 1 is itself), so 1×1 draws from 2..9
+  // instead of the usual single-digit range of 1..9, leaving out × 1.
   const low = kind.op === 'mul' && kind.digits === 1 ? 2 : 10 ** (kind.digits - 1)
   const high = 10 ** kind.digits - 1
   const problems: Problem[] = []

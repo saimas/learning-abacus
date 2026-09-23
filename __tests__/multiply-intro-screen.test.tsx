@@ -50,6 +50,20 @@ async function renderToLastPage() {
 }
 
 describe('Multiply intro screen', () => {
+  it('shows a loading state before progress has hydrated, so finishing cannot save over it', () => {
+    mockParams.current = { kind: 'mul:2' }
+    // A load that never resolves keeps the provider pre-hydration for the
+    // whole test, so its later resolution cannot fire an update outside act().
+    mockLoad.mockReturnValueOnce(new Promise(() => {}))
+    render(
+      <ProgressProvider>
+        <MultiplyIntroScreen />
+      </ProgressProvider>,
+    )
+    expect(screen.getByTestId('hydrating')).toBeTruthy()
+    expect(screen.queryByTestId('intro-next')).toBeNull()
+  })
+
   it('starts the round it was shown before, once the walkthrough is marked seen', async () => {
     mockParams.current = { kind: 'mul:2' }
     await renderToLastPage()
