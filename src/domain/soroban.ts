@@ -72,3 +72,25 @@ export function tapSoroban(s: Soroban, rodIndex: number, bead: BeadRef): Soroban
 export function adjustRod(s: Soroban, rodIndex: number, delta: number): Soroban {
   return replaceRod(s, rodIndex, (rod) => rodFor(Math.min(ROD_MAX, Math.max(0, readRod(rod) + delta))))
 }
+
+// A bead on a particular rod, rods counted from the left (highest place).
+export type PlacedBead = { rod: number; bead: BeadRef }
+
+// The beads that slide going from `before` to `after`, rod by rod from the
+// left, the heaven bead before the earth beads. The owner (2026-09-23) found
+// it hard to see which bead moves belong to one operation, so the stepping
+// soroban colours the beads each step moved; this is how it knows them. Earth
+// bead i touches the beam when i < earth, so going from one count to another
+// moves exactly the beads between the two.
+export function changedBeads(before: Soroban, after: Soroban): PlacedBead[] {
+  const beads: PlacedBead[] = []
+  before.rods.forEach((from, rod) => {
+    const to = after.rods[rod]
+    if (to === undefined) return
+    if (from.heaven !== to.heaven) beads.push({ rod, bead: { kind: 'heaven' } })
+    for (let index = Math.min(from.earth, to.earth); index < Math.max(from.earth, to.earth); index++) {
+      beads.push({ rod, bead: { kind: 'earth', index } })
+    }
+  })
+  return beads
+}

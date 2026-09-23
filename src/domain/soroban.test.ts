@@ -1,4 +1,15 @@
-import { adjustRod, applyStep, emptySoroban, readRod, readValue, rodFor, setValue, tapBead, tapSoroban } from './soroban'
+import {
+  adjustRod,
+  applyStep,
+  changedBeads,
+  emptySoroban,
+  readRod,
+  readValue,
+  rodFor,
+  setValue,
+  tapBead,
+  tapSoroban,
+} from './soroban'
 
 describe('rod', () => {
   it('reads 0 as no beads', () => {
@@ -116,5 +127,56 @@ describe('adjustRod', () => {
   it('stays within 0–9', () => {
     expect(readRod(adjustRod(setValue(emptySoroban(1), 9), 0, 1).rods[0] ?? rodFor(0))).toBe(9)
     expect(readRod(adjustRod(setValue(emptySoroban(1), 0), 0, -1).rods[0] ?? rodFor(9))).toBe(0)
+  })
+})
+
+// The owner's request (2026-09-23): while stepping, the beads the current
+// operation has moved are coloured, so the app has to know which beads a
+// step moved, not only the value it left.
+describe('changedBeads', () => {
+  const one = (value: number) => setValue(emptySoroban(1), value)
+
+  it('moves only the heaven bead from 0 to 5', () => {
+    expect(changedBeads(one(0), one(5))).toEqual([{ rod: 0, bead: { kind: 'heaven' } }])
+  })
+
+  it('moves the earth beads between the two counts, from 3 to 1', () => {
+    // Earth beads 0–2 touch the beam at 3, and only bead 0 at 1.
+    expect(changedBeads(one(3), one(1))).toEqual([
+      { rod: 0, bead: { kind: 'earth', index: 1 } },
+      { rod: 0, bead: { kind: 'earth', index: 2 } },
+    ])
+  })
+
+  it('moves the same beads either way', () => {
+    expect(changedBeads(one(1), one(3))).toEqual(changedBeads(one(3), one(1)))
+  })
+
+  it('moves the heaven bead and all four earth beads from 4 to 5', () => {
+    expect(changedBeads(one(4), one(5))).toEqual([
+      { rod: 0, bead: { kind: 'heaven' } },
+      { rod: 0, bead: { kind: 'earth', index: 0 } },
+      { rod: 0, bead: { kind: 'earth', index: 1 } },
+      { rod: 0, bead: { kind: 'earth', index: 2 } },
+      { rod: 0, bead: { kind: 'earth', index: 3 } },
+    ])
+  })
+
+  it('moves nothing on a rod that did not change', () => {
+    expect(changedBeads(one(7), one(7))).toEqual([])
+    expect(changedBeads(setValue(emptySoroban(3), 472), setValue(emptySoroban(3), 472))).toEqual([])
+  })
+
+  it('names each changed rod, highest place first, and skips the rest', () => {
+    // 372 → 912: the hundreds rod goes from 3 to 9, the tens rod from 7 to
+    // 1, and the ones rod is left alone.
+    const before = setValue(emptySoroban(3), 372)
+    const after = setValue(emptySoroban(3), 912)
+    expect(changedBeads(before, after)).toEqual([
+      { rod: 0, bead: { kind: 'heaven' } },
+      { rod: 0, bead: { kind: 'earth', index: 3 } },
+      { rod: 1, bead: { kind: 'heaven' } },
+      { rod: 1, bead: { kind: 'earth', index: 1 } },
+    ])
   })
 })
