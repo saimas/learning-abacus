@@ -4,7 +4,7 @@ import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { colors } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
-import { setBeads, textOf } from './testing'
+import { setBeads, textOf, tintedBeads } from './testing'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -315,6 +315,68 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('demonstration')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(screen.getByTestId('demonstration')).toBeTruthy()
+  })
+})
+
+// The owner's request (2026-09-23): while stepping, the beads the current
+// operation (here, a column) has moved so far are red, the latest step's the
+// deepest, so a column's several moves read as one.
+describe('QuestionView colouring the operation on show', () => {
+  const tinted = () => tintedBeads(screen.root, 4)
+  const step = (testID: 'step-next' | 'step-back', times = 1) => {
+    for (let i = 0; i < times; i++) fireEvent.press(screen.getByTestId(testID))
+  }
+
+  it.each([
+    ['bead', 0, 'demo'],
+    ['keypad', 3, 'silent'],
+  ] as const)('colours only the column on show in %s mode, and ◀ brings the last one back', (_mode, fade, coaching) => {
+    renderView({ fade, coaching })
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(tinted()).toEqual([])
+    // The start: nothing has moved yet.
+    step('step-next')
+    expect(tinted()).toEqual([])
+    // The hundreds column, 472 + 385's first: +5, then −2.
+    step('step-next', 2)
+    expect(rods()).toBe('0772')
+    expect(tinted()).toEqual(['1 heaven group', '1 earth2 latest', '1 earth3 latest'])
+
+    // The tens column's first move is its carry onto the hundreds rod. The
+    // hundreds column's beads go back to wood.
+    step('step-next')
+    expect(rods()).toBe('0872')
+    expect(tinted()).toEqual(['1 earth2 latest'])
+    // Its −2 on the tens rod: the carry's bead stays red, lighter now.
+    step('step-next')
+    expect(rods()).toBe('0852')
+    expect(tinted()).toEqual(['1 earth2 group', '2 earth0 latest', '2 earth1 latest'])
+
+    step('step-back', 2)
+    expect(rods()).toBe('0772')
+    expect(tinted()).toEqual(['1 heaven group', '1 earth2 latest', '1 earth3 latest'])
+  })
+
+  it("colours nothing on the learner's own beads, or once the steps are closed", () => {
+    renderView()
+    setBeads(screen.getByTestId, 800, 4)
+    expect(tinted()).toEqual([])
+    fireEvent.press(screen.getByTestId('steps-open'))
+    step('step-next', 2)
+    expect(tinted()).toEqual(['1 heaven latest'])
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(rods()).toBe('0800')
+    expect(tinted()).toEqual([])
+  })
+
+  it('colours the review of a miss the same way, from its first step', () => {
+    renderView()
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    // The learner's answer, before any ▶.
+    expect(tinted()).toEqual([])
+    step('step-next', 2)
+    expect(tinted()).toEqual(['1 heaven latest'])
   })
 })
 

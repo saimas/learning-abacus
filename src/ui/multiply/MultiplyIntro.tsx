@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { stepColouring } from '@/domain/exercise'
 import { answerOf, problemStates, problemSteps, type Problem } from '@/domain/problem'
-import { emptySoroban } from '@/domain/soroban'
+import { emptySoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
-import { Abacus } from '@/ui/abacus/Abacus'
+import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
 import { beadModeScale } from '@/ui/abacus/geometry'
 import { Button } from '@/ui/kit/Button'
 import { useMoveReplay } from '@/ui/session/useMoveReplay'
@@ -43,16 +44,31 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
   const current = pages[page] ?? { kind: 'result' }
   const shown = replay.soroban ?? states[current.kind === 'result' ? states.length - 1 : 0] ?? emptySoroban(4)
 
+  // What a 九九's page replays: the soroban before its first step, then after
+  // each of its steps.
+  function groupStates(index: number): Soroban[] {
+    const from = starts[index] ?? 0
+    const to = starts[index + 1] ?? from
+    return states.slice(from, to + 1)
+  }
+
   function next() {
     const target = pages[page + 1]
     if (target === undefined) return
-    if (target.kind === 'group') {
-      const from = starts[target.index] ?? 0
-      const to = starts[target.index + 1] ?? from
-      replay.play(states.slice(from, to + 1))
-    }
+    if (target.kind === 'group') replay.play(groupStates(target.index))
     setPage(page + 1)
   }
+
+  // The owner's request (2026-09-23), as when stepping a question: the page's
+  // 九九 is the operation, so the beads it has moved so far are red, the
+  // latest step's the deepest. The replay's step is its index into the
+  // page's states, so this follows the replay and, once it has played out,
+  // keeps the whole 九九 coloured until the next page. Other pages colour
+  // nothing.
+  const tintedBeads =
+    current.kind === 'group' && replay.step !== null
+      ? tintsFor(stepColouring(groupStates(current.index), [0], replay.step))
+      : undefined
 
   const group = current.kind === 'group' ? groups[current.index] : undefined
   const text =
@@ -84,7 +100,12 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.problem}>{`${EXAMPLE.a} × ${EXAMPLE.b}`}</Text>
         <View testID="intro-soroban" style={styles.soroban}>
-          <Abacus soroban={shown} fade={0} scale={beadModeScale(4, width - 2 * space.xl)} />
+          <Abacus
+            soroban={shown}
+            fade={0}
+            scale={beadModeScale(4, width - 2 * space.xl)}
+            tintedBeads={tintedBeads}
+          />
         </View>
         {/* The two numbers under the soroban, as in a × round. A 九九's page
             points at its two digits for as long as the page is open. */}
