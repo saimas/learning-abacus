@@ -48,7 +48,7 @@ The lines are what `renderCorrection` draws today, generalised to `renderSteps({
 
 ## 4. QuestionView
 
-- **Before an answer:** a small 手順を見る button (`steps-open`) under the prompt (and under the F0 demonstration line when there is one). It opens the panel with `showAnswer: false` and marks the question `assisted`. While open: the soroban shows `stepper.soroban ?? shownBeads` at fade 0, takes no taps, and the answer controls (bead mode's もどす / こたえる, keypad mode's pad) are replaced by the panel's とじる. とじる clears the stepper and closes the panel; the learner's beads and typed answer are untouched throughout.
+- **Before an answer:** a small 手順を見る button (`steps-open`) under the prompt (and under the F0 demonstration line when there is one). It opens the panel with `showAnswer: false` and marks the question `assisted`. While open: the soroban shows `stepper.soroban ?? shownBeads`, drawn solid once stepping starts (until the first ▶ it stays as it was, at the fade level), takes no taps, and the answer controls (bead mode's もどす / こたえる, keypad mode's pad) are replaced by the panel's とじる. とじる clears the stepper and closes the panel; the learner's beads and typed answer are untouched throughout.
 - **After a miss:** the panel replaces the replay. At F0–F1 it is open at once; above F1 it opens from こたえを見る (`review-show`, which no longer changes label). It shows the answer line. The review buttons are こたえを見る (until the panel is open) and つぎへ. The ✕ stays.
 - `Submission` gains `assisted: boolean`: true if 手順を見る was opened before this answer.
 - `useMoveReplay` is no longer used here (it stays for `MultiplyIntro`). The `replay-step` counter is replaced by the panel's `step-count`.
@@ -57,7 +57,7 @@ The lines are what `renderCorrection` draws today, generalised to `renderSteps({
 
 - `AttemptResult` (single moves) and `PracticeAttempt` (rounds) gain `assisted: boolean`.
 - `ProgressProvider.attempt` / `practise`: an assisted attempt only marks the day practised; it does not call `recordAttempt` / `recordPracticeAttempt`.
-- `SessionRunner`: an assisted answer, right or wrong, neither extends nor resets its atom's streak, and only the learner's own right answers can bring in a reserve move or retire a fade-rep move. An assisted miss is otherwise handled like any miss (review, retry, failure count). The tally counts both. After とじる, こたえる ignores taps for the same 450 ms as つぎへ, since it reappears under とじる.
+- `SessionRunner`: an assisted answer, right or wrong, neither extends nor resets its atom's streak, and only the learner's own right answers can bring in a reserve move through the streak or retire a fade-rep move. (The refill path that brings in a newcomer only to avoid repeating the same move still runs after an assisted answer.) An assisted miss is otherwise handled like any miss (review, retry, failure count). The tally counts both. After とじる, こたえる ignores taps for the same 450 ms as つぎへ, since it reappears under とじる.
 - `RoundRunner`: assisted answers count in the tally; `pace` is still computed but unused when assisted.
 
 ## 6. Home
