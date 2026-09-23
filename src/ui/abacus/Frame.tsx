@@ -27,11 +27,40 @@ export function FrameBackground({ scale = 1 }: { scale?: number }) {
 // Rods, beam, and the dot marking the ones rod (定位点). Drawn behind the
 // beads and outside the fade layer, so an F5 "empty frame" still has rods to
 // imagine beads on. The ones rod is the rightmost.
-export function DeckLines({ rodCount, scale = 1 }: { rodCount: number; scale?: number }) {
+//
+// A highlighted rod (the operand board's pointer at a 九九's digit) gets a
+// soft band down its column. It is drawn here, first, rather than with the
+// rod's beads: the bead layer sits above the rod lines and the beam, so a
+// band there would paint over the beam across that rod.
+export function DeckLines({
+  rodCount,
+  scale = 1,
+  highlight = [],
+}: {
+  rodCount: number
+  scale?: number
+  highlight?: readonly number[]
+}) {
   const g = geometryFor(scale)
   const unit = rodCount - 1
+  const inset = HIGHLIGHT_INSET * scale
   return (
     <View testID="deck-lines" pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {highlight.map((index) => (
+        <View
+          key={`highlight-${index}`}
+          testID={`rod-highlight-${index}`}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: g.deckPadding + index * g.rodWidth + inset,
+            width: g.rodWidth - 2 * inset,
+            borderRadius: HIGHLIGHT_RADIUS * scale,
+            backgroundColor: colors.accentSoft,
+          }}
+        />
+      ))}
       {Array.from({ length: rodCount }, (_, index) => (
         <View
           key={index}
@@ -71,3 +100,9 @@ export function DeckLines({ rodCount, scale = 1 }: { rodCount: number; scale?: n
     </View>
   )
 }
+
+// The band stops just short of its column's edges, so two highlighted
+// neighbours still read as two, and is still wider than a bead (BEAD_WIDTH
+// 50 on a ROD_WIDTH 64 rod), so it shows on both sides of the beads.
+const HIGHLIGHT_INSET = 2
+const HIGHLIGHT_RADIUS = 8

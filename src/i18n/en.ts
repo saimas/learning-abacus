@@ -195,4 +195,5 @@ export const en: Strings = {
   introPlacement:
     'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  operandBoardLabel: (a, b) => `${a} × ${b}`,
 }

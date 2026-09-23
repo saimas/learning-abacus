@@ -103,13 +103,17 @@ export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: b
 // What the learner works as one unit, and what one line of the answer card
 // explains: a column of a ＋ − problem, or one 九九 of a × problem. `steps`
 // is every bead step of the group in order; `cascades` says whether any
-// carry in it had to ripple on.
+// carry in it had to ripple on. A 九九's `xPlace` and `yPlace` are the places
+// (0 = ones) its digits `x` and `y` come from in a and b, so the operand
+// board can point at the two digits being multiplied.
 export type StepGroup =
   | { kind: 'column'; place: number; atom: Atom | null; steps: PlacedStep[]; cascades: boolean }
   | {
     kind: 'product'
     x: number
     y: number
+    xPlace: number
+    yPlace: number
     place: number
     moves: Move[]
     steps: PlacedStep[]
@@ -229,6 +233,8 @@ function productSteps(problem: Problem): StepGroup[] {
         kind: 'product',
         x,
         y,
+        xPlace: i,
+        yPlace: j,
         place,
         moves,
         steps: moves.flatMap((move) => move.steps),

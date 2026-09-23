@@ -5,7 +5,7 @@ import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
-import { beadModeScale, scaleToFit } from '@/ui/abacus/geometry'
+import { beadModeScale, scaleToFit, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_HEIGHT } from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
 import { BUTTON_HEIGHT, Button } from '@/ui/kit/Button'
 import { parseAnswer } from '@/ui/parseAnswer'
@@ -46,6 +46,7 @@ export function QuestionView({
   prompt,
   demonstration,
   renderSteps,
+  renderBeneath,
   track,
   maru,
   shownAt,
@@ -65,6 +66,11 @@ export function QuestionView({
   // or before the first step. `showAnswer` says whether the lines give the
   // answer, which they do only once the question has been answered.
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
+  // A × problem's operand board, which shows the two numbers that 両落とし
+  // leaves off the soroban, following the same `activeStep` as the step
+  // lines. Bead mode draws it right under the soroban; keypad mode after the
+  // prompt. Nothing for any other question.
+  renderBeneath?: (activeStep: number | undefined) => ReactNode
   track: ReactNode
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
@@ -75,7 +81,7 @@ export function QuestionView({
   onMoveOn: (t: number) => void
 }) {
   const strings = useStrings()
-  const { width } = useWindowDimensions()
+  const { width, height } = useWindowDimensions()
   const [answer, setAnswer] = useState('')
   // Non-null while a missed question is held on screen for review.
   const [review, setReview] = useState<Review | null>(null)
@@ -106,7 +112,13 @@ export function QuestionView({
   const moved = readValue(shownBeads) !== exercise.start
   // The screen's gutters are space.xl on each side (Screen).
   const room = width - 2 * space.xl
-  const beadScale = beadModeScale(exercise.rods, room)
+  const fittedBeadScale = beadModeScale(exercise.rods, room)
+  // With a board beneath it, a short phone draws the soroban smaller, so the
+  // prompt and 手順を見る keep their room above it (SHORT_WINDOW_HEIGHT).
+  const beadScale =
+    renderBeneath !== undefined && height < SHORT_WINDOW_HEIGHT
+      ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
+      : fittedBeadScale
   // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
   // (416 pt) are wider than a 375 pt phone, so it has to shrink to fit too.
   const keypadScale = scaleToFit(exercise.rods, room, 1)
@@ -318,6 +330,9 @@ export function QuestionView({
           />
           {stamp(140)}
         </View>
+        {/* Fixed, like the soroban, and outside the stamp's wrap, so the 〇
+            or ✕ lands on the soroban alone. */}
+        {renderBeneath?.(activeStep)}
         {/* With the panel open the hint gives way to the step controls.
             Until こたえを見る opens the panel at a silent level, an empty
             space of the controls' height holds their place, so the soroban
@@ -387,6 +402,10 @@ export function QuestionView({
         </Text>
         {demonstrationLine}
         {stepsOpenButton}
+        {/* After the prompt rather than under the soroban, so it can never
+            push the prompt off a short phone, but ahead of the step lines,
+            near the soroban it explains. */}
+        {renderBeneath?.(activeStep)}
         {stepLines}
       </ScrollView>
       {review !== null ? (

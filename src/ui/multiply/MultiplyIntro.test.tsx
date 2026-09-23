@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { REPLAY_STEP_MS } from '@/ui/session/useMoveReplay'
 import { MultiplyIntro } from './MultiplyIntro'
 
@@ -10,7 +10,11 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
-const rod = (i: number) => screen.getByTestId(`rod-${i}`).props.accessibilityValue.text
+// The product soroban's rods: the operand board under it has rods of its own.
+const rod = (i: number) =>
+  within(screen.getByTestId('intro-soroban')).getByTestId(`rod-${i}`).props.accessibilityValue.text
+const lit = (name: 'a' | 'b') =>
+  [0, 1].filter((i) => within(screen.getByTestId(`operand-${name}`)).queryByTestId(`rod-highlight-${i}`) !== null)
 
 // Plays a 九九's bead steps to the end. Each step is scheduled by the render
 // that shows the one before it, so time passes a step at a time, with a
@@ -55,6 +59,36 @@ describe('MultiplyIntro', () => {
     expect([0, 1, 2, 3].map(rod)).toEqual(['0', '0', '0', '0'])
     fireEvent.press(screen.getByTestId('intro-next'))
     expect([0, 1, 2, 3].map(rod)).toEqual(['0', '0', '0', '0'])
+  })
+
+  // The owner's request (2026-09-23): the two numbers show on beads under the
+  // soroban, and each 九九's page points at its two digits for the whole page.
+  it('shows 47 and 36 under the soroban, pointing at the digits of each 九九', () => {
+    render(<MultiplyIntro finishLabel="はじめる" onFinish={jest.fn()} />)
+    expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('47 × 36')
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+    fireEvent.press(screen.getByTestId('intro-next'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+
+    // 4 × 3: the tens of each, while its beads play and after.
+    fireEvent.press(screen.getByTestId('intro-next'))
+    expect([lit('a'), lit('b')]).toEqual([[0], [0]])
+    playOut()
+    expect([lit('a'), lit('b')]).toEqual([[0], [0]])
+    // 4 × 6, 7 × 3, 7 × 6.
+    const rest = [
+      [[0], [1]],
+      [[1], [0]],
+      [[1], [1]],
+    ]
+    for (const expected of rest) {
+      fireEvent.press(screen.getByTestId('intro-next'))
+      playOut()
+      expect([lit('a'), lit('b')]).toEqual(expected)
+    }
+    // The result page points at nothing.
+    fireEvent.press(screen.getByTestId('intro-next'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
   })
 
   it('labels its last button as it is told', () => {

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
-import { FRAME_PADDING } from '@/ui/abacus/geometry'
+import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { colors } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
 import { setBeads, textOf } from './testing'
@@ -315,6 +315,97 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('demonstration')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(screen.getByTestId('demonstration')).toBeTruthy()
+  })
+})
+
+// A × problem's operand board goes right under the product soroban in bead
+// mode, in the fixed area. In keypad mode it goes in the scroll after the
+// prompt, so the board never pushes the prompt off a short phone. It follows
+// the steps as the step lines do.
+describe('QuestionView with something beneath the soroban', () => {
+  const beneath = (activeStep: number | undefined) => <Text testID="beneath">{String(activeStep)}</Text>
+  // Every testID on screen, in the order they are drawn.
+  const order = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+
+  it('draws it under the soroban in bead mode, outside the scroll, with the step on show', () => {
+    renderView({ renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).queryByTestId('beneath')).toBeNull()
+    const drawn = order()
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('rod-3'))
+    expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('submit'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('undefined')
+
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('undefined')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('1')
+    fireEvent.press(screen.getByTestId('step-back'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+  })
+
+  it('draws it in the scroll after the prompt in keypad mode, with the step on show', () => {
+    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…', renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('beneath')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('prompt'))
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('demonstration'))
+    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('steps-open'))
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    // Ahead of the step lines, so it stays near the soroban it explains.
+    const open = order()
+    expect(open.indexOf('beneath')).toBeLessThan(open.indexOf('step-panel'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(textOf(screen.getByTestId('beneath'))).toBe('0')
+  })
+})
+
+// With a board under it, a 375 × 667 phone has too little height left in
+// bead mode for the prompt and 手順を見る above the soroban, so there the
+// soroban is drawn smaller. Nowhere else does its size change.
+describe('QuestionView on a short window, with something beneath the soroban', () => {
+  let restore = () => {}
+  function windowOf(width: number, height: number) {
+    // As in the 3×3 test below: `require` reaches the module object that
+    // QuestionView's own import reads from.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+    const reactNative = require('react-native')
+    const spy = jest
+      .spyOn(reactNative, 'useWindowDimensions')
+      .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    restore = () => spy.mockRestore()
+  }
+  afterEach(() => restore())
+
+  // 7 × 8's two rods are drawn at the full bead-mode scale on any phone.
+  const nineByNine = exerciseForProblem({ op: 'mul', digits: 1, a: 7, b: 8 })
+  const padding = () =>
+    StyleSheet.flatten(within(screen.getByTestId('soroban-wrap')).getByTestId('abacus-frame').props.style).padding
+
+  it('draws the bead-mode soroban smaller', () => {
+    windowOf(375, 667)
+    renderView({ exercise: nineByNine, renderBeneath: () => null })
+    expect(padding()).toBeCloseTo(FRAME_PADDING * SHORT_WINDOW_BEAD_SCALE)
+  })
+
+  it('keeps the soroban its size with nothing beneath it', () => {
+    windowOf(375, 667)
+    renderView({ exercise: nineByNine })
+    expect(padding()).toBeCloseTo(FRAME_PADDING * BEAD_MODE_SCALE)
+  })
+
+  it('keeps the soroban its size on a tall window', () => {
+    windowOf(402, 874)
+    renderView({ exercise: nineByNine, renderBeneath: () => null })
+    expect(padding()).toBeCloseTo(FRAME_PADDING * BEAD_MODE_SCALE)
   })
 })
 

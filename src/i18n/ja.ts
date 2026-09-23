@@ -206,6 +206,9 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
+  // What VoiceOver reads for the operand board under a × problem's soroban:
+  // the two numbers, as the board shows them.
+  operandBoardLabel: (a: number, b: number) => `${a} × ${b}`,
 }
 
 // The contract every catalog satisfies, derived from the catalog that ships

@@ -1,6 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import type { Problem } from '@/domain/problem'
+import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
+import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { RoundRunner } from './RoundRunner'
@@ -136,5 +138,89 @@ describe('RoundRunner', () => {
     expect(screen.getByTestId('summary-result').props.children).toBe('3問中 3問正解')
     fireEvent.press(screen.getByTestId('finish-button'))
     expect(onFinish).toHaveBeenCalledTimes(1)
+  })
+})
+
+// The owner's request (2026-09-23): a × problem shows its two numbers on
+// beads under the product soroban, which 両落とし starts empty, and stepping
+// through a miss points at the two digits of each 九九 in turn.
+describe('RoundRunner with ×', () => {
+  const multiply: Partial<Parameters<typeof RoundRunner>[0]> = {
+    kind: { op: 'mul', digits: 2 },
+    problems: [{ op: 'mul', digits: 2, a: 12, b: 34 }],
+  }
+  // The product soroban's rods only: the operand board has rods of its own.
+  const onProduct: typeof screen.getByTestId = (id, options) =>
+    within(screen.getByTestId('soroban-wrap')).getByTestId(id, options)
+  const lit = (name: 'a' | 'b') =>
+    [0, 1].filter((i) => within(screen.getByTestId(`operand-${name}`)).queryByTestId(`rod-highlight-${i}`) !== null)
+
+  it('shows the two numbers under the soroban', () => {
+    renderRound(multiply)
+    expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('12 × 34')
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+  })
+
+  it('shows no operand board for ＋', () => {
+    renderRound()
+    expect(screen.queryByTestId('operand-board')).toBeNull()
+  })
+
+  it('moves the highlight to the digits of each 九九 as a miss is stepped through', () => {
+    renderRound(multiply)
+    setBeads(onProduct, 407, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+
+    // The first ▶ shows the start, with no 九九 yet.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+    // 1 × 3: the tens of each.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[0], [0]])
+    // 1 × 4: the tens of 12, the ones of 34.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[0], [1]])
+    // 2 × 3 is two bead steps (+10 − 4), and both are its.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [0]])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [0]])
+    // 2 × 4: the ones of each.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect([lit('a'), lit('b')]).toEqual([[1], [1]])
+
+    fireEvent.press(screen.getByTestId('step-restart'))
+    expect([lit('a'), lit('b')]).toEqual([[], []])
+  })
+
+  // A 375 × 667 phone must still show the prompt and 手順を見る above the
+  // soroban with the board present, so there both are drawn smaller. On a
+  // tall phone neither changes. The window mock is undone after each test,
+  // even one that fails, so it cannot leak into the next.
+  let restoreWindow = () => {}
+  afterEach(() => {
+    restoreWindow()
+    restoreWindow = () => {}
+  })
+
+  it.each([
+    ['a short window', 375, 667, SHORT_WINDOW_BEAD_SCALE, OPERAND_SHORT_WINDOW_SCALE],
+    ['a tall window', 402, 874, beadModeScale(4, 402 - 40), OPERAND_MAX_SCALE],
+  ])('sizes the soroban and the board for %s', (_window, width, height, product, operands) => {
+    // As in QuestionView.test.tsx: `require` reaches the module object the
+    // components' own imports read from.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+    const reactNative = require('react-native')
+    const spy = jest
+      .spyOn(reactNative, 'useWindowDimensions')
+      .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    restoreWindow = () => spy.mockRestore()
+    renderRound(multiply)
+    const padding = (container: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
+    expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * product)
+    expect(padding('operand-a')).toBeCloseTo(FRAME_PADDING * operands)
+    expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * operands)
   })
 })

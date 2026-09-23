@@ -238,6 +238,18 @@ describe('multiplication', () => {
     ])
   })
 
+  // The operand board highlights the two digits of the 九九 on show, so each
+  // group says which place of a and which place of b it multiplies.
+  it('names the places of the two digits each 九九 multiplies', () => {
+    const groups = problemSteps(problem('mul', 47, 36))
+    expect(groups.map((g) => (g.kind === 'product' ? [g.xPlace, g.yPlace] : null))).toEqual([
+      [1, 1],
+      [1, 0],
+      [0, 1],
+      [0, 0],
+    ])
+  })
+
   it('adds the tens digit one place above the ones digit', () => {
     const [first] = problemSteps(problem('mul', 47, 36))
     if (first === undefined || first.kind !== 'product') throw new Error('expected a product group')
