@@ -4,15 +4,7 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import {
-  practiceId,
-  ROUND_LENGTH,
-  type Digits,
-  type Operation,
-  type PracticeId,
-  type PracticeKind,
-  type Problem,
-} from '@/domain/problem'
+import { type Digits, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
@@ -55,19 +47,6 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位']
 
 const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算' }
-
-// One fixed example per kind for the chooser's detail line.
-const EXAMPLE: Record<PracticeId, string> = {
-  'add:1': '7 + 8',
-  'add:2': '23 + 58',
-  'add:3': '472 + 385',
-  'sub:1': '9 − 4',
-  'sub:2': '81 − 36',
-  'sub:3': '634 − 258',
-  'mul:1': '7 × 8',
-  'mul:2': '47 × 36',
-  'mul:3': '472 × 385',
-}
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'まだ',
@@ -131,7 +110,6 @@ export const ja = {
 
   homeTitle: '今日の五分',
   start: 'はじめる',
-  startMinutes: '5分',
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
@@ -143,7 +121,6 @@ export const ja = {
   chooseDetail: (part: PracticePart, count: number) => CHOOSE_DETAIL[part](count),
   chooseEmpty: '今はありません',
   chooseClose: '閉じる',
-  mapPreviewTitle: '暗算できる動き',
   basicsTitle: '基礎の練習',
   basicsDetail: '1けたの動き・5分',
   homeHowTo: 'かけ算のやりかた',
@@ -207,7 +184,6 @@ export const ja = {
   opName: (op: Operation) => OP_NAME[op],
   digitsName: (digits: Digits) => `${digits}けた`,
   roundName,
-  roundDetail: (kind: PracticeKind) => `${EXAMPLE[practiceId(kind)]} など・${ROUND_LENGTH}問`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind: PracticeKind, stage: PracticeStage) => `${roundName(kind)}、${PRACTICE_STAGE[stage]}`,
 
@@ -233,7 +209,6 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
-  chooseHowTo: 'やりかた',
 }
 
 // The contract every catalog satisfies, derived from the catalog that ships

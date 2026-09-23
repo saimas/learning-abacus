@@ -4,7 +4,7 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import { practiceId, ROUND_LENGTH, type Operation, type PracticeId, type PracticeKind } from '@/domain/problem'
+import type { Operation, PracticeKind } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 import type { Strings } from './ja'
 
@@ -46,19 +46,6 @@ const PLACE: readonly string[] = [
 const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-thousands', 'Hundred-thousands']
 
 const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication' }
-
-// One fixed example per kind for the chooser's detail line.
-const EXAMPLE: Record<PracticeId, string> = {
-  'add:1': '7 + 8',
-  'add:2': '23 + 58',
-  'add:3': '472 + 385',
-  'sub:1': '9 − 4',
-  'sub:2': '81 − 36',
-  'sub:3': '634 − 258',
-  'mul:1': '7 × 8',
-  'mul:2': '47 × 36',
-  'mul:3': '472 × 385',
-}
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'not yet',
@@ -117,7 +104,6 @@ export const en: Strings = {
 
   homeTitle: "Today's five minutes",
   start: 'Start',
-  startMinutes: '5 min',
   notYetToday: 'Not practised yet today',
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
@@ -129,7 +115,6 @@ export const en: Strings = {
   chooseDetail: (part, count) => CHOOSE_DETAIL[part](count),
   chooseEmpty: 'Nothing right now',
   chooseClose: 'Close',
-  mapPreviewTitle: 'Moves you can do mentally',
   basicsTitle: 'Basics',
   basicsDetail: 'Single-rod moves · 5 min',
   homeHowTo: 'How multiplication works',
@@ -189,7 +174,6 @@ export const en: Strings = {
   opName: (op) => OP_NAME[op],
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
   roundName,
-  roundDetail: (kind) => `e.g. ${EXAMPLE[practiceId(kind)]} · ${ROUND_LENGTH} problems`,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind, stage) => `${roundName(kind)}, ${PRACTICE_STAGE[stage]}`,
 
@@ -214,5 +198,4 @@ export const en: Strings = {
   introPlacement:
     'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
-  chooseHowTo: 'How it works',
 }
