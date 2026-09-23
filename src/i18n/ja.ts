@@ -51,8 +51,8 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 }
 
 // A rod's name by its place, 0 being the ones rod. A 3-digit problem's
-// soroban has four rods.
-const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位']
+// soroban has four rods; a 3×3 multiplication's product can take six.
+const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位']
 
 const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算' }
 
@@ -94,6 +94,23 @@ function coachingLead(atom: Atom): string {
 
 function coaching(atom: Atom): string {
   return `${coachingLead(atom)}${describeSteps(atom)}`
+}
+
+// One line of a × problem's answer card: the 九九 with its product written
+// as two digits, as it is said (2×3 is ゼロロク), then where each non-zero
+// digit goes.
+function productLine(x: number, y: number, place: number, cascades: boolean): string {
+  const product = x * y
+  const digits = (
+    [
+      [Math.floor(product / 10), place + 1],
+      [product % 10, place],
+    ] as const
+  )
+    .filter(([digit]) => digit !== 0)
+    .map(([digit, at]) => `${PLACE[at] ?? at}に${digit}`)
+  const head = `${x}×${y}=${String(product).padStart(2, '0')}`
+  return `${digits.length === 0 ? head : `${head}　${digits.join('、')}`}${cascades ? '（さらに上の位へ繰り上がる）' : ''}`
 }
 
 // No plural branch — Japanese has none. The English catalog needs one.
@@ -174,6 +191,7 @@ export const ja = {
     `${PLACE[place] ?? place}　${coaching(atom)}${
       cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
     }`,
+  productLine,
   roundCount: (index: number, total: number) => `${index} / ${total}`,
   roundComplete: 'けたの練習おわり',
   roundSection: 'けたの練習',

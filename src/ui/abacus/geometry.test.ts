@@ -10,6 +10,7 @@ import {
   beadModeScale,
   beadTops,
   geometryFor,
+  scaleToFit,
 } from './geometry'
 
 describe('beadTops', () => {
@@ -104,5 +105,16 @@ describe('beadModeScale', () => {
   it('shrinks four rods to fit a 375 pt phone', () => {
     // 4 rods × 64 + 2 × (6 + 10) of deck and frame padding = 288 pt at scale 1.
     expect(beadModeScale(4, 335)).toBeCloseTo(335 / 288)
+  })
+})
+
+describe('scaleToFit', () => {
+  it('never draws larger than the cap', () => {
+    expect(scaleToFit(2, 335, 1)).toBe(1)
+  })
+
+  it('shrinks six rods to fit a 375 pt phone', () => {
+    // 6 × 64 + 2 × (6 + 10) = 416 pt at scale 1.
+    expect(scaleToFit(6, 335, 1)).toBeCloseTo(335 / 416)
   })
 })

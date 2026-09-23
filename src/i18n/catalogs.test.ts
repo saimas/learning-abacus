@@ -253,3 +253,19 @@ describe('multi-digit strings', () => {
     expect(en.roundName({ op: 'sub', digits: 3 })).toBe('3-digit subtraction')
   })
 })
+
+describe('multiplication strings', () => {
+  it('reads a 九九 as its product and where each digit goes', () => {
+    expect(ja.productLine(4, 3, 2, false)).toBe('4×3=12　千の位に1、百の位に2')
+    expect(ja.productLine(2, 3, 2, false)).toBe('2×3=06　百の位に6')
+    expect(ja.productLine(5, 4, 0, false)).toBe('5×4=20　十の位に2')
+    expect(ja.productLine(5, 0, 0, false)).toBe('5×0=00')
+    expect(ja.productLine(9, 9, 2, true)).toBe('9×9=81　千の位に8、百の位に1（さらに上の位へ繰り上がる）')
+    expect(en.productLine(4, 3, 2, false)).toBe('4 × 3 = 12: 1 on the thousands rod, 2 on the hundreds rod')
+  })
+
+  it('names six rods', () => {
+    expect([4, 5].map(ja.rodName)).toEqual(['万の位', '十万の位'])
+    expect([4, 5].map(en.rodName)).toEqual(['ten-thousands rod', 'hundred-thousands rod'])
+  })
+})

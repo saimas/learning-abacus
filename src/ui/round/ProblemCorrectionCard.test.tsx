@@ -21,4 +21,14 @@ describe('ProblemCorrectionCard', () => {
     expect(colorOf('correction-column-1')).toBe(colors.accent)
     expect(colorOf('correction-column-2')).not.toBe(colors.accent)
   })
+
+  it('gives a line per 九九 of a multiplication, highlighting the one replayed', () => {
+    render(
+      <ProblemCorrectionCard problem={{ op: 'mul', digits: 2, a: 47, b: 36 }} expected={1692} activeGroup={1} />,
+    )
+    expect(textOf(screen.getByTestId('correction-product-0'))).toBe('4×3=12　千の位に1、百の位に2')
+    expect(textOf(screen.getByTestId('correction-product-3'))).toBe('7×6=42　十の位に4、一の位に2')
+    expect(colorOf('correction-product-1')).toBe(colors.accent)
+    expect(colorOf('correction-product-0')).not.toBe(colors.accent)
+  })
 })

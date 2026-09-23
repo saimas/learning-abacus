@@ -5,9 +5,10 @@ import { Card } from '@/ui/kit/Card'
 import { colors, fonts, space } from '@/ui/theme'
 
 // The answer card for a missed problem: the answer, then how each group is
-// worked, highest place first, in the same words as a single move's card.
-// `activeGroup` indexes problemSteps(problem): the group a replay is in.
-// A product group (×) does not yet get a line here; that is Task 2's job.
+// worked, highest place first, in the same words as a single move's card. A
+// column group (＋ −) reads as its rod and move; a product group (×) reads
+// as the 九九 and where its digits land. `activeGroup` indexes
+// problemSteps(problem): the group a replay is in.
 export function ProblemCorrectionCard({
   problem,
   expected,
@@ -23,17 +24,21 @@ export function ProblemCorrectionCard({
       <Text testID="correction-answer" style={styles.answer}>
         {strings.correctionAnswer(expected)}
       </Text>
-      {problemSteps(problem).map((group, index) =>
-        group.kind !== 'column' || group.atom === null ? null : (
-          <Text
-            key={group.place}
-            testID={`correction-column-${group.place}`}
-            style={[styles.line, index === activeGroup && styles.activeLine]}
-          >
+      {problemSteps(problem).map((group, index) => {
+        const active = index === activeGroup
+        if (group.kind === 'product') {
+          return (
+            <Text key={index} testID={`correction-product-${index}`} style={[styles.line, active && styles.activeLine]}>
+              {strings.productLine(group.x, group.y, group.place, group.cascades)}
+            </Text>
+          )
+        }
+        return group.atom === null ? null : (
+          <Text key={index} testID={`correction-column-${group.place}`} style={[styles.line, active && styles.activeLine]}>
             {strings.columnLine(group.place, group.atom, group.cascades)}
           </Text>
-        ),
-      )}
+        )
+      })}
     </Card>
   )
 }
