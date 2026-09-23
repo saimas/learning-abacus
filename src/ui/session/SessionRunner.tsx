@@ -17,7 +17,9 @@ import { SessionSummary } from './SessionSummary'
 import { SessionTrack } from './SessionTrack'
 
 // latencyMs is null for an untimed attempt (answered with the beads).
-export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number | null }
+// `assisted` marks an answer given after 手順を見る (spec (core rounds) §5),
+// which is kept out of the move's record.
+export type AttemptResult = { atomId: string; correct: boolean; latencyMs: number | null; assisted: boolean }
 
 type RunnerState = { blockIndex: number; queue: SessionItem[] }
 
@@ -221,23 +223,30 @@ export function SessionRunner({
   // The session's side of an answer: the attempt, the tally, the streak and
   // the 〇. A right one moves straight on; a miss is held for review in
   // QuestionView, and advance() runs later, from つぎへ.
-  function submitted({ correct, latencyMs, t }: Submission) {
+  function submitted({ correct, latencyMs, t, assisted }: Submission) {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
     // does not carry a const's narrowing into a nested closure.
     if (block === undefined || current === undefined) return
 
-    onAttempt({ atomId: current.atomId, correct, latencyMs })
+    onAttempt({ atomId: current.atomId, correct, latencyMs, assisted })
+    // The tally counts every answer, with help or not: it is what the
+    // learner did this session.
     setTally((previous) => ({
       answered: previous.answered + 1,
       correct: previous.correct + (correct ? 1 : 0),
     }))
 
     // Extends the atom's streak on a right answer, breaks it on a wrong one.
-    streaks.current[current.atomId] = correct ? (streaks.current[current.atomId] ?? 0) + 1 : 0
+    // Spec (core rounds) §5: an answer after 手順を見る is not the learner's
+    // own, so it neither extends nor breaks the streak that brings in new
+    // moves and retires fade-rep moves.
+    if (!assisted) {
+      streaks.current[current.atomId] = correct ? (streaks.current[current.atomId] ?? 0) + 1 : 0
+    }
 
     if (correct) {
       setMaru((previous) => previous + 1)
-      advance(true, t)
+      advance(true, t, assisted)
       return
     }
 
@@ -249,9 +258,16 @@ export function SessionRunner({
   // refill, block end. A right answer runs it straight from submitted(); a miss
   // runs it from つぎへ, with `t` the moment つぎへ was pressed, so the
   // deadline is checked then and the review never counts toward the next
-  // answer's latency.
-  function advance(correct: boolean, t: number) {
+  // answer's latency. `assisted` is a right answer given after 手順を見る.
+  function advance(correct: boolean, t: number, assisted = false) {
     if (block === undefined || current === undefined) return
+
+    // Spec (core rounds) §5: only a right answer of the learner's own may
+    // bring in a reserve move or retire a fade-rep move. One with help has
+    // left the streaks alone, but everything in play can already be secure
+    // without it (when the one move short of five fails out, say), and the
+    // answer with help must not be the one that acts on that.
+    const own = correct && !assisted
 
     let queue = state.queue.slice(1)
 
@@ -271,7 +287,7 @@ export function SessionRunner({
     // a time: the item after this one only becomes "in play" once this one
     // has joined, so it cannot join on the same answer.
     let joinedNow = joined
-    if (correct && block.kind === 'focus') {
+    if (own && block.kind === 'focus') {
       const inPlay = dedupeByAtomId(liveItems([...block.items, ...joined], failures.current))
       const secure = inPlay.length > 0 && inPlay.every((it) => (streaks.current[it.atomId] ?? 0) >= FADE_PROMOTE_STREAK)
       const newcomer = plan.reserve?.[joined.length]
@@ -282,7 +298,7 @@ export function SessionRunner({
         queue = [newcomer, ...queue]
       }
     }
-    if (correct && block.kind === 'faderep' && (streaks.current[current.atomId] ?? 0) >= FADE_PROMOTE_STREAK) {
+    if (own && block.kind === 'faderep' && (streaks.current[current.atomId] ?? 0) >= FADE_PROMOTE_STREAK) {
       retired.current.add(current.atomId)
     }
     const deadline = effectiveDeadline(plan.blocks, deadlines, state.blockIndex, failures.current)

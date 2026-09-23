@@ -86,6 +86,15 @@ function answerCorrectly(getByTestId: ReturnType<typeof render>['getByTestId']) 
   answer(getByTestId, String(expectedFor(prompt)))
 }
 
+// Looks at the steps with 手順を見る first, then answers correctly: an
+// answer "with help" (spec (core rounds) §5).
+function answerWithHelp(getByTestId: ReturnType<typeof render>['getByTestId']) {
+  fireEvent.press(getByTestId('steps-open'))
+  fireEvent.press(getByTestId('step-next'))
+  fireEvent.press(getByTestId('steps-close'))
+  answerCorrectly(getByTestId)
+}
+
 // After a miss the question stays on screen for review until つぎへ. Tests
 // about what comes after a wrong answer press it, as the learner would.
 function moveOn() {
@@ -631,7 +640,7 @@ describe('SessionRunner answering with beads', () => {
   it('scores the value on the beads, untimed', () => {
     const { getByTestId, onAttempt } = renderRunner(basicPlan, autoClock())
     answer(getByTestId, '7')
-    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: true, latencyMs: null })
+    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: true, latencyMs: null, assisted: false })
   })
 
   it('sets the beads back to the start for the next question', () => {
@@ -716,6 +725,100 @@ describe('SessionRunner bringing in reserve atoms', () => {
       if (guard > 40) throw new Error('reserve atom never joined')
     }
     expect(guard).toBeGreaterThanOrEqual(5)
+  })
+
+  // Spec (core rounds) §5: an answer after 手順を見る is not the learner's
+  // own, so it counts in the tally but not toward the streak.
+  it('does not count an answer after 手順を見る toward bringing in a reserve atom', () => {
+    const plan = focusPlan([item('5+3')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    answerWithHelp(getByTestId)
+    expect(onAttempt).toHaveBeenLastCalledWith({ atomId: '3+4', correct: true, latencyMs: null, assisted: true })
+
+    // Five right each, but only four of 3+4's are the learner's own.
+    while (correctCount('3+4') < 5 || correctCount('2+3') < 5) answerCorrectly(getByTestId)
+    expect(getByTestId('prompt').props.children).not.toBe('5に3をたす。')
+
+    let guard = 0
+    while (getByTestId('prompt').props.children !== '5に3をたす。') {
+      answerCorrectly(getByTestId)
+      guard++
+      if (guard > 10) throw new Error('reserve atom never joined')
+    }
+    expect(correctCount('3+4')).toBe(6)
+  })
+
+  it('does not break a streak with a miss after 手順を見る', () => {
+    const plan = focusPlan([item('5+3')])
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const correctCount = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId && call[0].correct).length
+
+    // As in the reset test above: one atom has five in a row, and the one
+    // now current is due for its fifth.
+    while (correctCount('3+4') < 5 && correctCount('2+3') < 5) answerCorrectly(getByTestId)
+    fireEvent.press(getByTestId('steps-open'))
+    fireEvent.press(getByTestId('steps-close'))
+    answer(getByTestId, '99')
+    expect(onAttempt).toHaveBeenLastCalledWith(expect.objectContaining({ correct: false, assisted: true }))
+    moveOn()
+
+    // Its streak of four stands, so its next right answer brings in 5+3,
+    // where a miss of the learner's own would have cost five more.
+    let guard = 0
+    while (getByTestId('prompt').props.children !== '5に3をたす。') {
+      answerCorrectly(getByTestId)
+      guard++
+      if (guard > 40) throw new Error('reserve atom never joined')
+    }
+    expect(guard).toBeLessThan(5)
+  })
+
+  it('does not bring in a reserve atom on an answer after 手順を見る, even with everything else secure', () => {
+    // 2+3 misses twice early on, then fails out for good once 3+4 and 6+1
+    // have five in a row each. Everything left in play is then secure, so
+    // the next right answer of the learner's own brings in 5+3; one given
+    // with help must not.
+    const plan: SessionPlan = {
+      blocks: [
+        { kind: 'focus', seconds: 120, items: [item('3+4'), item('6+1'), item('2+3')] },
+        { kind: 'close', seconds: 30, items: [] },
+      ],
+      totalSeconds: 150,
+      reserve: [item('5+3')],
+    }
+    const { getByTestId, onAttempt } = renderRunner(plan, autoClock())
+    const answers = (atomId: string) =>
+      onAttempt.mock.calls.filter((call) => call[0].atomId === atomId).map((call) => call[0].correct as boolean)
+    const misses = (atomId: string) => answers(atomId).filter((correct) => !correct).length
+    const streak = (atomId: string) => {
+      const all = answers(atomId)
+      const lastMiss = all.lastIndexOf(false)
+      return all.length - lastMiss - 1
+    }
+    const prompt = () => getByTestId('prompt').props.children as string
+
+    let guard = 0
+    while (misses('2+3') < 3) {
+      if (++guard > 60) throw new Error('2+3 never failed out')
+      expect(prompt()).not.toBe('5に3をたす。')
+      const failNow = misses('2+3') < 2 || (streak('3+4') >= 5 && streak('6+1') >= 5)
+      if (prompt() === '2に3をたす。' && failNow) {
+        answer(getByTestId, '99')
+        moveOn()
+      } else {
+        answerCorrectly(getByTestId)
+      }
+    }
+
+    answerWithHelp(getByTestId)
+    expect(onAttempt).toHaveBeenLastCalledWith(expect.objectContaining({ correct: true, assisted: true }))
+    expect(prompt()).not.toBe('5に3をたす。')
+    answerCorrectly(getByTestId)
+    expect(prompt()).toBe('5に3をたす。')
   })
 
   it('joins the reserve one atom at a time', () => {
@@ -1088,7 +1191,7 @@ describe('SessionRunner reviewing a miss', () => {
     const { getByTestId, onAttempt } = renderRunner(beadPlan, autoClock())
     answer(getByTestId, '9')
     expect(onAttempt).toHaveBeenCalledTimes(1)
-    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: false, latencyMs: null })
+    expect(onAttempt).toHaveBeenCalledWith({ atomId: '3+4', correct: false, latencyMs: null, assisted: false })
     moveOn()
     expect(onAttempt).toHaveBeenCalledTimes(1)
   })
@@ -1102,7 +1205,7 @@ describe('SessionRunner reviewing a miss', () => {
     moveOn()
     clock.set(64_000)
     answer(getByTestId, '5')
-    expect(onAttempt).toHaveBeenLastCalledWith({ atomId: '2+3', correct: true, latencyMs: 3_000 })
+    expect(onAttempt).toHaveBeenLastCalledWith({ atomId: '2+3', correct: true, latencyMs: 3_000, assisted: false })
   })
 
   it('ends the block at つぎへ when its time ran out during the review', () => {
@@ -1207,6 +1310,18 @@ describe('SessionRunner retiring fade-rep moves', () => {
     answerCorrectly(getByTestId)
     expect(onAttempt).toHaveBeenCalledTimes(10)
     expect(onBlockEnd).toHaveBeenCalledWith('faderep')
+    expect(queryByTestId('session-summary')).not.toBeNull()
+  })
+
+  // Spec (core rounds) §5: an answer after 手順を見る does not count toward
+  // the level a fade-rep move earns.
+  it('needs five right of the learner’s own to retire a move, not counting one after 手順を見る', () => {
+    const { getByTestId, queryByTestId, onAttempt } = renderRunner(fadePlan, autoClock())
+    answerWithHelp(getByTestId)
+    expect(onAttempt).toHaveBeenLastCalledWith(expect.objectContaining({ atomId: '3+4', assisted: true }))
+    for (let i = 0; i < 9; i++) answerCorrectly(getByTestId)
+    expect(queryByTestId('session-summary')).toBeNull()
+    answerCorrectly(getByTestId)
     expect(queryByTestId('session-summary')).not.toBeNull()
   })
 

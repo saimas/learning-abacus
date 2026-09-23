@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 import { StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { FRAME_PADDING } from '@/ui/abacus/geometry'
+import { colors } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
 import { setBeads, textOf } from './testing'
 
@@ -56,14 +57,14 @@ describe('QuestionView with a 3-digit problem', () => {
     const { onSubmit } = renderView()
     setBeads(screen.getByTestId, 857, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: null, t: expect.any(Number) })
+    expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: null, t: expect.any(Number), assisted: false })
   })
 
   it('times a keypad answer from shownAt', () => {
     const { onSubmit } = renderView({ fade: 3, coaching: 'silent' })
     for (const digit of '857') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
-    expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: 2_000, t: 2_000 })
+    expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: 2_000, t: 2_000, assisted: false })
   })
 
   it('holds a miss for review, with the card up at a coaching level', () => {
@@ -153,6 +154,153 @@ describe('QuestionView with a 3-digit problem', () => {
     clock = 2_500
     fireEvent.press(screen.getByTestId('review-next'))
     expect(onMoveOn).toHaveBeenCalledWith(2_500)
+  })
+})
+
+// Spec (core rounds) §4: 手順を見る opens the same step panel before an
+// answer, without the answer, and とじる gives the question back as the
+// learner left it. §5: an answer given after it counts "with help".
+describe('QuestionView before an answer, with 手順を見る', () => {
+  const opacity = () => screen.getByTestId('fade-layer').props.style.opacity as number
+  const edge = () => StyleSheet.flatten(screen.getByTestId('step-panel').props.style).borderLeftColor
+
+  it('opens the steps before answering, without the answer', () => {
+    renderView()
+    const scroll = screen.getByTestId('question-scroll')
+    expect(within(scroll).getByTestId('steps-open')).toBeTruthy()
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(within(scroll).getByTestId('step-panel')).toBeTruthy()
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined false')
+    // Nothing has been got wrong, so the lines carry no correction edge.
+    expect(edge()).not.toBe(colors.accent)
+    expect(screen.queryByTestId('steps-open')).toBeNull()
+    // The answer waits until とじる, and the soroban shows the steps rather
+    // than taking taps.
+    expect(screen.queryByTestId('submit')).toBeNull()
+    expect(screen.queryByTestId('reset-beads')).toBeNull()
+    expect(screen.getByTestId('rod-1').props.accessibilityRole).toBeUndefined()
+    // The controls are pinned outside the scrolling text, with とじる.
+    expect(within(scroll).queryByTestId('step-next')).toBeNull()
+    expect(screen.getByTestId('steps-close')).toBeTruthy()
+
+    // The first ▶ shows the start, the next the first move: 472 + 385 begins
+    // with +5 on the hundreds rod.
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+    expect(rods()).toBe('0472')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(screen.getByTestId('step-count').props.children).toBe('1 / 5')
+    expect(rods()).toBe('0972')
+    expect(textOf(screen.getByTestId('card'))).toBe('0 false')
+  })
+
+  it('puts the keypad away while the steps are open, and draws them solid', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('key-1')).toBeNull()
+    expect(screen.queryByTestId('submit')).toBeNull()
+    expect(within(screen.getByTestId('question-scroll')).queryByTestId('step-next')).toBeNull()
+    expect(screen.getByTestId('steps-close')).toBeTruthy()
+    expect(opacity()).toBe(0.35)
+
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(opacity()).toBe(1)
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(rods()).toBe('0972')
+  })
+
+  it("closes the steps and gives back the learner's beads", () => {
+    renderView()
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(rods()).toBe('0972')
+
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.queryByTestId('step-panel')).toBeNull()
+    expect(screen.queryByTestId('steps-close')).toBeNull()
+    expect(rods()).toBe('0800')
+    expect(screen.getByTestId('rod-1').props.accessibilityRole).toBe('adjustable')
+    expect(screen.getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: false })
+    expect(screen.getByTestId('reset-beads')).toBeTruthy()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
+  })
+
+  it('closes the steps and gives back the typed answer', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    for (const digit of '85') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.getByTestId('answer-readout').props.children).toBe('85')
+    expect(screen.getByTestId('key-1')).toBeTruthy()
+    // Closing leaves the stepping behind: the soroban is the question's again.
+    expect(opacity()).toBe(0.35)
+  })
+
+  it('marks an answer after 手順を見る as with help', () => {
+    const helped = renderView()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('steps-close'))
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(helped.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, assisted: true }))
+
+    screen.unmount()
+    const unhelped = renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(unhelped.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, assisted: false }))
+  })
+
+  // とじる sits at the bottom right in keypad mode, and closing brings the
+  // pad back with こたえる right under it.
+  it('ignores こたえる in the moment after とじる, so a double tap cannot hand in the answer', () => {
+    let clock = 0
+    const { onSubmit } = renderView({ fade: 3, coaching: 'silent', now: () => clock })
+    for (const digit of '857') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('steps-open'))
+    clock = 1_000
+    fireEvent.press(screen.getByTestId('steps-close'))
+    clock = 1_200
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).not.toHaveBeenCalled()
+    clock = 1_500
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, assisted: true }))
+  })
+
+  it("starts the review of a miss after 手順を見る from the learner's beads", () => {
+    const { onSubmit } = renderView()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('step-next'))
+    fireEvent.press(screen.getByTestId('steps-close'))
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false, assisted: true }))
+
+    // The review's panel: the answer, the correction edge, no とじる, and
+    // nothing stepped yet.
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+    expect(edge()).toBe(colors.accent)
+    expect(screen.queryByTestId('steps-close')).toBeNull()
+    expect(screen.queryByTestId('steps-open')).toBeNull()
+    expect(screen.getByTestId('step-count').props.children).toBe(' ')
+    expect(rods()).toBe('0800')
+  })
+
+  it('offers 手順を見る under the demonstration at F0, which the open panel stands in for', () => {
+    renderView({ demonstration: '385は…' })
+    expect(screen.getByTestId('demonstration')).toBeTruthy()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('demonstration')).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.getByTestId('demonstration')).toBeTruthy()
   })
 })
 

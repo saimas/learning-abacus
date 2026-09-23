@@ -75,12 +75,14 @@ export function RoundRunner({
     setShownAt(t)
   }
 
-  function submitted({ correct, latencyMs, t }: Submission) {
+  function submitted({ correct, latencyMs, t, assisted }: Submission) {
     // Re-narrowed here rather than relied on from the enclosing scope: TS
     // does not carry a const's narrowing into a nested closure.
     if (problem === undefined) return
     const pace = latencyMs === null ? null : latencyMs / problemTargetMs(problem, calibrationMs)
-    onAttempt({ id: practiceId(kind), correct, pace })
+    // An answer with help counts in the tally below all the same; it is the
+    // record that leaves it out (spec (core rounds) §5).
+    onAttempt({ id: practiceId(kind), correct, pace, assisted })
     setTally((previous) => ({
       answered: previous.answered + 1,
       correct: previous.correct + (correct ? 1 : 0),

@@ -56,7 +56,23 @@ describe('RoundRunner', () => {
   it('records each answer against the kind, untimed on the beads', () => {
     const { onAttempt } = renderRound()
     answerBeads(81)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
+  })
+
+  // Spec (core rounds) §4–§5: 手順を見る opens the problem's steps without
+  // the answer, and an answer after it is recorded as with help.
+  it('records an answer after 手順を見る as with help, for that problem only', () => {
+    const { onAttempt } = renderRound()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.getByTestId('correction-column-1')).toBeTruthy()
+    expect(screen.queryByTestId('correction-answer')).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    answerBeads(81)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true })
+
+    // The next problem starts afresh.
+    answerBeads(100)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
   })
 
   it('records a keypad answer’s pace against the problem’s target', () => {

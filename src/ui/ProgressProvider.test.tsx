@@ -60,7 +60,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500 }))
+    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
     expect(mockSave).not.toHaveBeenCalled()
   })
 
@@ -78,10 +78,54 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null }))
+    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: false }))
     await waitFor(() => {
       expect(api?.progress?.practices['sub:3']).toBeDefined()
       expect(api?.progress?.daysPracticed).toBe(1)
+    })
+  })
+
+  // Spec (core rounds) §5: an answer after 手順を見る counts "with help". It
+  // is still practice, so the day is stamped, but the ladder does not move.
+  it('attempt with help marks the day practised and leaves the moves as they were', async () => {
+    mockLoad.mockResolvedValue(emptyProgress())
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: true }))
+    await waitFor(() => {
+      expect(api?.progress?.daysPracticed).toBe(1)
+      expect(api?.progress?.atoms).toEqual({})
+    })
+  })
+
+  it('practise with help marks the day practised and leaves the practice records as they were', async () => {
+    mockLoad.mockResolvedValue(emptyProgress())
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: true }))
+    await waitFor(() => {
+      expect(api?.progress?.daysPracticed).toBe(1)
+      expect(api?.progress?.practices).toEqual({})
     })
   })
 
@@ -162,7 +206,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500 }))
+    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
     expect(mockSave).not.toHaveBeenCalled()
 
     await act(async () => {
@@ -223,7 +267,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500 }))
+    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
 
     await act(async () => {
       unmount()
@@ -263,7 +307,7 @@ describe('ProgressProvider', () => {
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
     await act(async () => {
-      api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500 })
+      api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false })
       await api?.flush()
     })
     const call = mockSave.mock.calls[0]

@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import type { Exercise } from '@/domain/exercise'
 import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
@@ -17,8 +17,9 @@ import { useStepper } from './useStepper'
 
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
 // the moment of the answer, which the runner uses as the next question's
-// start and to check its deadline.
-export type Submission = { correct: boolean; latencyMs: number | null; t: number }
+// start and to check its deadline. `assisted` says the learner looked at the
+// steps with 手順を見る before answering (spec (core rounds) §5).
+export type Submission = { correct: boolean; latencyMs: number | null; t: number; assisted: boolean }
 
 // A missed question held on screen until つぎへ: only whether its step panel
 // is open needs keeping — open at once where coaching still speaks (F0–F1),
@@ -28,7 +29,9 @@ type Review = { cardShown: boolean }
 // A tap on つぎへ this soon after a miss is the second half of a double tap
 // on こたえる, which sits in the same place. It must not skip a review the
 // learner has not seen yet. The same goes for こたえを見る: once it opens the
-// panel, つぎへ widens into its place.
+// panel, つぎへ widens into its place. And for とじる before an answer: it
+// gives way to the answer controls, with こたえる under it, and a second tap
+// must not hand in an answer the learner has not chosen to give.
 const NEXT_GUARD_MS = 450
 
 // One question, from the prompt to the answer and, after a miss, its review.
@@ -76,14 +79,23 @@ export function QuestionView({
   const [answer, setAnswer] = useState('')
   // Non-null while a missed question is held on screen for review.
   const [review, setReview] = useState<Review | null>(null)
+  // Whether the learner has the step panel open before answering, from
+  // 手順を見る.
+  const [stepsOpen, setStepsOpen] = useState(false)
+  // Spec (core rounds) §5: an answer given after 手順を見る is "with help".
+  // It counts in the tally and stamps the day, but it is not evidence the
+  // learner can do the move alone, so it must not move the fade ladder. Once
+  // opened, the question stays assisted even after とじる: the learner has
+  // seen the way. A ref, since only submit() reads it.
+  const assisted = useRef(false)
   // The step panel's walk through the move, one bead move at a time, on the
   // same soroban.
   const stepper = useStepper(exercise.states)
   // The soroban as the learner has moved it in bead mode. null means
   // untouched: it shows the question's starting value.
   const [beads, setBeads] = useState<Soroban | null>(null)
-  // When the last press that つぎへ can sit under landed (the miss, or
-  // こたえを見る), for NEXT_GUARD_MS.
+  // When the last press that つぎへ or こたえる can sit under landed (the
+  // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
   const guardFrom = useRef<number | null>(null)
 
   const mode = answerModeForFade(fade)
@@ -109,6 +121,7 @@ export function QuestionView({
     if (given === null) return
 
     const t = now()
+    if (guarded(t)) return
     // Bead answers are untimed: speed only counts once the work is mental.
     const latencyMs = mode === 'beads' ? null : Math.max(0, t - shownAt)
     const correct = given === exercise.expected
@@ -118,12 +131,31 @@ export function QuestionView({
     } else {
       guardFrom.current = t
       AccessibilityInfo.announceForAccessibility(strings.wrong)
+      // The review starts from the learner's own beads, with nothing
+      // stepped, whatever was stepped through before the answer.
+      stepper.clear()
       // The number alone teaches nothing. Where coaching still speaks, the
       // panel with the substitution comes up with the ✕; at silent levels it
       // waits to be asked for.
       setReview({ cardShown: coaching !== 'silent' })
     }
-    onSubmit({ correct, latencyMs, t })
+    onSubmit({ correct, latencyMs, t, assisted: assisted.current })
+  }
+
+  // Spec (core rounds) §4: the same step panel as after a miss, before the
+  // answer and without it, for a learner who wants to see the way first.
+  function openSteps() {
+    assisted.current = true
+    setStepsOpen(true)
+  }
+
+  // Back to the question as the learner left it: the panel never touched
+  // their beads or typed answer, only the stepper, which goes back to not
+  // stepping. こたえる comes back under とじる, hence the guard.
+  function closeSteps() {
+    guardFrom.current = now()
+    stepper.clear()
+    setStepsOpen(false)
   }
 
   // Opens the step panel. Nothing plays by itself: the learner steps
@@ -136,28 +168,57 @@ export function QuestionView({
 
   function moveOn() {
     const t = now()
-    if (guardFrom.current !== null && t - guardFrom.current < NEXT_GUARD_MS) return
+    if (guarded(t)) return
     onMoveOn(t)
   }
 
+  function guarded(t: number): boolean {
+    return guardFrom.current !== null && t - guardFrom.current < NEXT_GUARD_MS
+  }
+
   const demonstrationLine =
-    demonstration !== null && review === null ? (
+    demonstration !== null && review === null && !stepsOpen ? (
       // Spec §4: F0 is where the app demonstrates the move, so the
       // substitution is shown *before* the answer, not after a miss. Under
-      // review the step panel says it instead.
+      // review, or with the steps open before answering, the step panel says
+      // it instead.
       <Text testID="demonstration" style={styles.demonstration}>
         {demonstration}
       </Text>
+    ) : null
+  // Offered under the prompt (and the demonstration) until the question is
+  // answered, and hidden while the panel it opens is up.
+  const stepsOpenButton =
+    review === null && !stepsOpen ? (
+      <Pressable
+        testID="steps-open"
+        accessibilityRole="button"
+        accessibilityLabel={strings.stepsOpen}
+        onPress={openSteps}
+        style={({ pressed }) => [styles.stepsOpen, pressed && styles.pressed]}
+      >
+        <Text maxFontSizeMultiplier={1.3} style={styles.stepsOpenLabel}>
+          {strings.stepsOpen}
+        </Text>
+      </Pressable>
     ) : null
   // The move just played: state k is the soroban after k moves, so after
   // stepping to k the highlighted move is k − 1. At the start or before the
   // first step nothing is highlighted.
   const activeStep = stepper.index !== null && stepper.index > 0 ? stepper.index - 1 : undefined
-  const panelOpen = review !== null && review.cardShown
+  // The panel is open either after a miss, where it gives the answer and
+  // stays until つぎへ, or before an answer, where it keeps the answer back
+  // and closes with とじる.
+  const reviewing = review !== null && review.cardShown
+  const beforeAnswer = review === null && stepsOpen
+  const panelOpen = reviewing || beforeAnswer
   // The step panel in its two places: the lines scroll with the prompt, and
   // the controls sit in the fixed area just above the bottom buttons, where
-  // the thumb is, so ◀ ▶ cannot scroll off a short phone.
-  const stepLines = panelOpen ? <StepLines>{renderSteps({ activeStep, showAnswer: true })}</StepLines> : null
+  // the thumb is, so ◀ ▶ cannot scroll off a short phone. Before an answer
+  // nothing has been got wrong, so the lines carry no correction edge.
+  const stepLines = panelOpen ? (
+    <StepLines accent={reviewing}>{renderSteps({ activeStep, showAnswer: reviewing })}</StepLines>
+  ) : null
   const stepControls = panelOpen ? (
     <StepControls
       index={stepper.index}
@@ -165,6 +226,7 @@ export function QuestionView({
       onBack={stepper.back}
       onNext={stepper.next}
       onRestart={stepper.restart}
+      onClose={beforeAnswer ? closeSteps : undefined}
     />
   ) : null
   // Stepping takes the soroban over, drawn solid whatever the fade level, so
@@ -209,6 +271,9 @@ export function QuestionView({
     // thumb reach. Only the prompt and the step panel's lines above it
     // scroll, so the soroban, the step controls under it and the buttons
     // stay on screen even on a 375 × 667 phone.
+    // The beads take no taps while the question is answered (under review)
+    // or while they show the steps before an answer.
+    const locked = review !== null || beforeAnswer
     return (
       <View style={styles.practice}>
         {track}
@@ -217,6 +282,7 @@ export function QuestionView({
             {prompt}
           </Text>
           {demonstrationLine}
+          {stepsOpenButton}
           {stepLines}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
@@ -225,32 +291,34 @@ export function QuestionView({
               new question mounts a new view with `beads` back at null. Under
               review the beads stay as the learner left them and take no
               taps: the answer is in. Stepping through the move draws each
-              step over them instead, until the next question. */}
+              step over them instead, until the next question, or before an
+              answer until とじる, which leaves `beads` as it was. */}
           <Abacus
             soroban={stepper.soroban ?? shownBeads}
             fade={shownFade}
             scale={beadScale}
             onTapBead={
-              review !== null
+              locked
                 ? undefined
                 : (rodIndex, bead) => setBeads((previous) => tapSoroban(previous ?? start, rodIndex, bead))
             }
             onAdjustRod={
-              review !== null
+              locked
                 ? undefined
                 : (rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))
             }
           />
           {stamp(140)}
         </View>
-        {/* Under review the hint gives way to the step controls. Until
-            こたえを見る opens the panel at a silent level, an empty space of
-            the controls' height holds their place, so the soroban moves
-            once, as the ✕ lands, and not again when the controls appear. */}
-        {review === null ? (
-          <Text style={styles.hint}>{strings.beadHint}</Text>
-        ) : panelOpen ? (
+        {/* With the panel open the hint gives way to the step controls.
+            Until こたえを見る opens the panel at a silent level, an empty
+            space of the controls' height holds their place, so the soroban
+            moves once, as the ✕ lands, and not again when the controls
+            appear. */}
+        {panelOpen ? (
           stepControls
+        ) : review === null ? (
+          <Text style={styles.hint}>{strings.beadHint}</Text>
         ) : (
           <View style={styles.controlsPlace} />
         )}
@@ -263,9 +331,11 @@ export function QuestionView({
             gives way, keeping the soroban, hint (or step controls) and
             buttons on screen. */}
         <View style={styles.beadSpacer} />
+        {/* Before an answer, the steps' とじる stands in for もどす and
+            こたえる: the learner answers once they have closed the steps. */}
         {review !== null ? (
           reviewButtons
-        ) : (
+        ) : beforeAnswer ? null : (
           <View style={styles.buttonRow}>
             <View style={styles.resetSlot}>
               <Button
@@ -290,7 +360,9 @@ export function QuestionView({
       {/* R9: the keypad below is always fully visible, pinned at the bottom.
           Everything here that can grow scrolls instead of pushing the keypad
           off a short screen. Under review the review buttons take its place,
-          with the step controls above them once the panel is open. */}
+          with the step controls above them once the panel is open. With the
+          steps open before an answer, the step controls take its place
+          alone, and the keypad comes back, with what was typed, at とじる. */}
       <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.soroban}>
           <Abacus soroban={stepper.soroban ?? start} fade={shownFade} scale={keypadScale} />
@@ -300,6 +372,7 @@ export function QuestionView({
           {prompt}
         </Text>
         {demonstrationLine}
+        {stepsOpenButton}
         {stepLines}
       </ScrollView>
       {review !== null ? (
@@ -307,6 +380,8 @@ export function QuestionView({
           {stepControls}
           {reviewButtons}
         </>
+      ) : beforeAnswer ? (
+        stepControls
       ) : (
         <AnswerPad
           value={answer}
@@ -360,6 +435,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // A small outline button, centred: an offer, not the main action, so it
+  // stays quieter than こたえる, but still a full 44 pt tap target.
+  stepsOpen: {
+    alignSelf: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: space.sm,
+    paddingHorizontal: space.lg,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: radius.key,
+  },
+  stepsOpenLabel: { fontSize: fontSizes.small, fontWeight: '600', color: colors.accent },
+  pressed: { opacity: 0.6 },
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
