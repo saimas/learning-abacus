@@ -1,6 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AppState } from 'react-native'
-import { dayKey, emptyProgress, markDayPracticed, recordAttempt, type Progress } from '@/domain/progress'
+import type { PracticeAttempt } from '@/domain/practice'
+import {
+  dayKey,
+  emptyProgress,
+  markDayPracticed,
+  recordAttempt,
+  recordPracticeAttempt,
+  type Progress,
+} from '@/domain/progress'
 import { loadProgress, saveProgress } from '@/storage/progressStore'
 import type { AttemptResult } from '@/ui/session/SessionRunner'
 
@@ -8,6 +16,7 @@ type ProgressApi = {
   progress: Progress
   hydrated: boolean
   attempt: (result: AttemptResult) => void
+  practise: (attempt: PracticeAttempt) => void
   flush: () => Promise<void>
   reset: () => Promise<void>
   completeTutorial: () => Promise<void>
@@ -72,6 +81,15 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setProgress(next)
   }, [])
 
+  const practise = useCallback((attempt: PracticeAttempt) => {
+    const now = Date.now()
+    const withAttempt = recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, now)
+    // A round of problems is practice too, so it stamps the day's seal.
+    const next = markDayPracticed(withAttempt, dayKey(now))
+    latest.current = next
+    setProgress(next)
+  }, [])
+
   const flush = useCallback(async () => {
     await saveProgress(latest.current)
   }, [])
@@ -92,7 +110,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   return (
     <ProgressContext.Provider
-      value={{ progress, hydrated, attempt, flush, reset, completeTutorial }}
+      value={{ progress, hydrated, attempt, practise, flush, reset, completeTutorial }}
     >
       {children}
     </ProgressContext.Provider>
