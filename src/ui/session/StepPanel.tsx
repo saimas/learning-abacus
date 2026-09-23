@@ -1,24 +1,103 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useStrings } from '@/i18n'
 import { Card } from '@/ui/kit/Card'
 import { colors, fontSizes, radius, space } from '@/ui/theme'
+import { ActiveLayoutContext } from './useActiveLineLayout'
 
 // Spec (core rounds) §3: one step panel explains a move wherever the app
 // explains one, after a miss and before an answer. It comes in two
 // parts because they live in different places on the question screen. The
-// lines scroll with the prompt above the soroban. The controls stay pinned
-// in the fixed area just above the bottom buttons, where the thumb is, so
-// ◀ ▶ can never scroll off a short phone.
+// controls stay pinned in the fixed area just above the bottom buttons,
+// where the thumb is, so ◀ ▶ can never scroll off a short phone. In keypad
+// mode the lines scroll with the prompt above the soroban. In bead mode
+// they fill the space below the controls and scroll there on their own
+// (ScrollingStepLines), since above the soroban they only had room for two
+// lines while the screen below ◀ ▶ stood empty (the owner, 2026-09-23).
 
 // The explanation lines the caller draws, with the move on show
 // highlighted. `accent` is the correction edge, right after a miss; before
-// an answer nothing has been got wrong, so the caller turns it off.
-export function StepLines({ children, accent = true }: { children: ReactNode; accent?: boolean }) {
+// an answer nothing has been got wrong, so the caller turns it off. `fill`
+// grows the card to fill the space it is given, top to bottom, rather than
+// sitting below the text before it.
+export function StepLines({
+  children,
+  accent = true,
+  fill = false,
+}: {
+  children: ReactNode
+  accent?: boolean
+  fill?: boolean
+}) {
   return (
-    <Card accent={accent} testID="step-panel" style={styles.card}>
+    <Card accent={accent} testID="step-panel" style={fill ? styles.fillCard : styles.card}>
       {children}
     </Card>
+  )
+}
+
+// Bead mode's lines, below the controls: the card fills the space it is
+// given and scrolls within it, so a 3×3 product's long list still reads to
+// the end. Each time the highlight moves, the card's line stepped to reports
+// where it sits (useActiveLineLayout), and the lines scroll just far enough
+// to show it. They stay still while it is already on show, so stepping never
+// jolts what the learner is reading.
+export function ScrollingStepLines({ accent, children }: { accent: boolean; children: ReactNode }) {
+  const scroll = useRef<ScrollView>(null)
+  // The stretch of the lines on show: from `top`, `height` tall. 0 tall
+  // until the scroll is laid out, when there is nothing to scroll yet.
+  const shown = useRef({ top: 0, height: 0 })
+  // Where the card's lines start in the scroll, below its edge and padding.
+  // The card itself sits at the very top of the scroll (fillCard has no
+  // margin), so this is all that comes before them.
+  const linesTop = useRef(0)
+
+  function reveal(y: number, height: number) {
+    const view = shown.current
+    if (view.height === 0) return
+    const top = linesTop.current + y
+    const bottom = top + height
+    let to: number
+    if (top < view.top) {
+      to = top
+    } else if (bottom > view.top + view.height) {
+      // Its bottom at the bottom of the space, unless it is taller than the
+      // space: then its start.
+      to = Math.min(top, bottom - view.height)
+    } else {
+      return
+    }
+    scroll.current?.scrollTo({ y: to, animated: true })
+    // Counted as there at once: a second step before the scroll has landed
+    // and reported back must be measured from where it is going.
+    view.top = to
+  }
+
+  return (
+    <ScrollView
+      testID="step-lines-scroll"
+      ref={scroll}
+      style={styles.linesScroll}
+      contentContainerStyle={styles.linesContent}
+      onLayout={(event) => {
+        shown.current.height = event.nativeEvent.layout.height
+      }}
+      onScroll={(event) => {
+        shown.current.top = event.nativeEvent.contentOffset.y
+      }}
+      scrollEventThrottle={16}
+    >
+      <StepLines accent={accent} fill>
+        <View
+          testID="step-lines-content"
+          onLayout={(event) => {
+            linesTop.current = event.nativeEvent.layout.y
+          }}
+        >
+          <ActiveLayoutContext.Provider value={reveal}>{children}</ActiveLayoutContext.Provider>
+        </View>
+      </StepLines>
+    </ScrollView>
   )
 }
 
@@ -140,6 +219,13 @@ export const STEP_CONTROLS_HEIGHT = TAP
 
 const styles = StyleSheet.create({
   card: { marginTop: space.md, paddingVertical: space.sm },
+  // No margin: ScrollingStepLines counts on the card starting at the top of
+  // its scroll.
+  fillCard: { flexGrow: 1, paddingVertical: space.sm },
+  // Clear of the controls it sits under.
+  linesScroll: { flex: 1, marginTop: space.sm },
+  // Lets a card shorter than the space still grow to fill it.
+  linesContent: { flexGrow: 1 },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
