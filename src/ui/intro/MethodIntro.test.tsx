@@ -165,4 +165,51 @@ describe('MethodIntro for ×', () => {
     expect(screen.getByText('かけ算のやりかた')).toBeTruthy()
     expect(screen.getByText('47 × 36')).toBeTruthy()
   })
+
+  // The owner's request (2026-09-24): a way back through the walkthrough,
+  // not just forward.
+  describe('◀', () => {
+    it('is not shown on the first page', () => {
+      renderMultiply('はじめる', jest.fn())
+      expect(screen.queryByTestId('intro-back')).toBeNull()
+    })
+
+    it('returns from the placement page to the method page', () => {
+      renderMultiply('はじめる', jest.fn())
+      fireEvent.press(screen.getByTestId('intro-next'))
+      expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
+      fireEvent.press(screen.getByTestId('intro-back'))
+      expect(screen.getByTestId('intro-text').props.children).toContain('両落とし')
+    })
+
+    it('returns from a group page, played out, to the empty soroban on the placement page', () => {
+      renderMultiply('はじめる', jest.fn())
+      fireEvent.press(screen.getByTestId('intro-next'))
+      fireEvent.press(screen.getByTestId('intro-next'))
+      playOut()
+      expect([0, 1, 2, 3].map(rod)).toEqual(['1', '2', '0', '0'])
+      fireEvent.press(screen.getByTestId('intro-back'))
+      expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
+      expect([0, 1, 2, 3].map(rod)).toEqual(['0', '0', '0', '0'])
+    })
+
+    it('replays the first group again when ◀ from the second group returns to it', () => {
+      renderMultiply('はじめる', jest.fn())
+      fireEvent.press(screen.getByTestId('intro-next'))
+      fireEvent.press(screen.getByTestId('intro-next'))
+      playOut()
+      fireEvent.press(screen.getByTestId('intro-next'))
+      playOut()
+      // 4×6 = 24 lands on top of 4×3's 1200: 1440.
+      expect([0, 1, 2, 3].map(rod)).toEqual(['1', '4', '4', '0'])
+      fireEvent.press(screen.getByTestId('intro-back'))
+      // Back on the first group, its replay starts over from its own first
+      // state (nothing moved yet), not the second group's soroban.
+      expect([0, 1, 2, 3].map(rod)).toEqual(['0', '0', '0', '0'])
+      act(() => {
+        jest.advanceTimersByTime(REPLAY_STEP_MS)
+      })
+      expect([0, 1, 2, 3].map(rod)).toEqual(['1', '0', '0', '0'])
+    })
+  })
 })

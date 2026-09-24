@@ -86,6 +86,21 @@ export function MethodIntro({
     setPage(page + 1)
   }
 
+  // The owner's request (2026-09-24): a way back through the walkthrough,
+  // not just forward. Landing on a group page replays it from its own start,
+  // same as opening it going forward; landing on the method or placement
+  // page just stops the replay, so `shown` falls back to that page's first
+  // state (the empty soroban). page 0 has no ◀ to press, but the guard
+  // matches next()'s in case that changes.
+  function back() {
+    if (page === 0) return
+    const target = pages[page - 1]
+    if (target === undefined) return
+    if (target.kind === 'group') replay.play(groupStates(target.index))
+    else replay.stop()
+    setPage(page - 1)
+  }
+
   // The owner's request (2026-09-23), as when stepping a question: the page's
   // group is the operation, so the beads it has moved so far are red, the
   // latest step's the deepest. The replay's step is its index into the
@@ -144,11 +159,25 @@ export function MethodIntro({
           {text}
         </Text>
       </ScrollView>
-      {current.kind === 'result' ? (
-        <Button testID="intro-finish" label={finishLabel} onPress={onFinish} />
-      ) : (
-        <Button testID="intro-next" label={strings.next} onPress={next} />
-      )}
+      {/* The outline ◀ sits beside the primary button rather than pinned on
+          its own, so the pair reads as one control; it takes a fixed width
+          and the primary the rest, so はじめる/つぎへ stays the prominent
+          one. Page 0 has nowhere to go back to, so it is left out rather
+          than shown disabled. */}
+      <View style={styles.controls}>
+        {page > 0 && (
+          <View style={styles.back}>
+            <Button testID="intro-back" variant="outline" label={strings.introBack} onPress={back} />
+          </View>
+        )}
+        <View style={styles.primary}>
+          {current.kind === 'result' ? (
+            <Button testID="intro-finish" label={finishLabel} onPress={onFinish} />
+          ) : (
+            <Button testID="intro-next" label={strings.next} onPress={next} />
+          )}
+        </View>
+      </View>
     </View>
   )
 }
@@ -176,4 +205,7 @@ const styles = StyleSheet.create({
   text: { marginTop: space.lg, fontSize: fontSizes.body, lineHeight: 24, color: colors.ink },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: space.sm },
+  controls: { flexDirection: 'row', gap: space.sm },
+  back: { width: 110 },
+  primary: { flex: 1 },
 })
