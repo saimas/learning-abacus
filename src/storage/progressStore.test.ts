@@ -115,7 +115,7 @@ describe('practices', () => {
   it('keeps known kinds and drops unknown ids and malformed records', async () => {
     const good = { fade: 2, consecutiveCorrect: 1, consecutiveWrong: 0, lastPractisedAt: 5 }
     mockGetItem.mockResolvedValue(
-      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'div:1': good, 'sub:1': { fade: 'x' } } }),
+      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'pow:1': good, 'sub:1': { fade: 'x' } } }),
     )
     expect((await loadProgress()).practices).toEqual({ 'add:2': good })
   })

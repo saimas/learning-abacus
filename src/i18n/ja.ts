@@ -46,7 +46,7 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 // soroban has four rods; a 3×3 multiplication's product can take six.
 const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位']
 
-const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算' }
+const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算' }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'まだ',
@@ -164,12 +164,18 @@ export const ja = {
   stepRestart: '最初から',
   stepsClose: 'とじる',
   rodName: (place: number): string => PLACE[place] ?? `${place}`,
-  problemPrompt: (problem: Problem) =>
-    problem.op === 'add'
-      ? `${problem.a}に${problem.b}をたす。`
-      : problem.op === 'sub'
-        ? `${problem.a}から${problem.b}をひく。`
-        : `${problem.a}に${problem.b}をかける。`,
+  problemPrompt: (problem: Problem) => {
+    switch (problem.op) {
+      case 'add':
+        return `${problem.a}に${problem.b}をたす。`
+      case 'sub':
+        return `${problem.a}から${problem.b}をひく。`
+      case 'mul':
+        return `${problem.a}に${problem.b}をかける。`
+      case 'div':
+        return `${problem.a}を${problem.b}でわる。`
+    }
+  },
   // One line of a problem's answer card: the rod, then the move worked on
   // it, read exactly as a single move's card reads it.
   columnLine: (place: number, atom: Atom, cascades: boolean) =>

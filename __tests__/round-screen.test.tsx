@@ -59,7 +59,7 @@ describe('Round screen', () => {
   })
 
   it('goes home for a kind it does not know', async () => {
-    mockParams.current = { kind: 'div:1' }
+    mockParams.current = { kind: 'pow:1' }
     const { queryByTestId } = renderRound()
     await waitFor(() => expect(mockRedirect).toHaveBeenCalledWith('/'))
     expect(queryByTestId('prompt')).toBeNull()

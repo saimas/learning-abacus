@@ -45,7 +45,12 @@ const PLACE: readonly string[] = [
 ]
 const PLACE_TITLE: readonly string[] = ['Ones', 'Tens', 'Hundreds', 'Thousands', 'Ten-thousands', 'Hundred-thousands']
 
-const OP_NAME: Record<Operation, string> = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication' }
+const OP_NAME: Record<Operation, string> = {
+  add: 'Addition',
+  sub: 'Subtraction',
+  mul: 'Multiplication',
+  div: 'Division',
+}
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'not yet',
@@ -154,10 +159,16 @@ export const en: Strings = {
   stepRestart: 'From the start',
   stepsClose: 'Close',
   rodName: (place): string => PLACE[place] ?? `rod ${place}`,
-  problemPrompt: (problem) =>
-    problem.op === 'mul'
-      ? `Multiply ${problem.a} by ${problem.b}.`
-      : `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`,
+  problemPrompt: (problem) => {
+    switch (problem.op) {
+      case 'mul':
+        return `Multiply ${problem.a} by ${problem.b}.`
+      case 'div':
+        return `Divide ${problem.a} by ${problem.b}.`
+      default:
+        return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
+    }
+  },
   columnLine: (place, atom, cascades) =>
     `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
       cascades

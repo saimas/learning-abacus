@@ -56,6 +56,14 @@ describe('ProblemCorrectionCard', () => {
     render(<ProblemCorrectionCard problem={{ op: 'mul', digits: 1, a: 2, b: 3 }} expected={6} />)
     expect(textOf(screen.getByTestId('correction-product-0'))).toBe('2×3=06　一の位に6')
   })
+
+  // The ÷ step lines come with the ÷ screens; until then a division's card
+  // must still render its answer rather than fail on the new kinds of group.
+  it('gives the answer of a division, and no lines for its groups yet', () => {
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+    expect(screen.queryAllByTestId(/^correction-(column|product)-/)).toEqual([])
+  })
 })
 
 // The owner's request (2026-09-23): in bead mode the lines scroll below the

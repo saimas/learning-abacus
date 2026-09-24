@@ -7,7 +7,9 @@ import { colors, fonts } from '@/ui/theme'
 // The explanation of a problem, as the step panel shows it: the answer, then
 // how each group is worked, highest place first, in the same words as a
 // single move's card. A column group (＋ −) reads as its rod and move; a
-// product group (×) reads as the 九九 and where its digits land.
+// product group (×) reads as the 九九 and where its digits land. A ÷
+// problem's groups (quotient, subtract) have no lines yet: their wording
+// comes with the ÷ screens, and until then the card still gives the answer.
 // `activeGroup` indexes problemSteps(problem): the group the learner has
 // stepped into. The panel draws the card around these lines. `showAnswer`
 // is false before an answer, where the lines explain the problem without
@@ -49,7 +51,8 @@ export function ProblemCorrectionCard({
             </Text>
           )
         }
-        return group.atom === null ? null : (
+        if (group.kind !== 'column' || group.atom === null) return null
+        return (
           <Text
             key={index}
             testID={`correction-column-${group.place}`}

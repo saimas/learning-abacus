@@ -9,11 +9,18 @@ export type Exercise = {
   rods: number
   start: number
   expected: number
+  // What the soroban reads when the question is done, where that is not
+  // `expected`. Spec (division) §2: 商除法 leaves the quotient on the rods
+  // followed by N + 1 zeros (1692 ÷ 36 ends at 47000), while the keypad
+  // takes the quotient itself (47). Absent everywhere else, since the beads
+  // end at the answer.
+  expectedBeads?: number
   // The soroban at the start, then after each step, for the replay.
   states: Soroban[]
   // Where each operation begins in `states`, ascending from 0: a column of a
-  // ＋ − problem, a 九九 of a × problem, or the whole of a single move. The
-  // stepping soroban colours one operation's beads at a time.
+  // ＋ − problem, a 九九 of a × problem, a quotient digit or a 九九 taken off
+  // in a ÷ problem, or the whole of a single move. The stepping soroban
+  // colours one operation's beads at a time.
   groupStarts: number[]
 }
 
@@ -29,18 +36,21 @@ export function exerciseForAtom(atom: Atom): Exercise {
 }
 
 export function exerciseForProblem(problem: Problem): Exercise {
-  // A column that adds 0 (or a 九九 of 0) moves no bead, so there is nothing
-  // of it to colour, and its start would be the next group's start again.
+  // A column that adds 0 (or a 九九 of 0, or a quotient digit of 0) moves no
+  // bead, so there is nothing of it to colour, and its start would be the
+  // next group's start again.
   const groupStarts: number[] = []
   let at = 0
   for (const group of problemSteps(problem)) {
     if (group.steps.length > 0) groupStarts.push(at)
     at += group.steps.length
   }
+  const expected = answerOf(problem)
   return {
     rods: rodsFor(problem),
     start: startOf(problem),
-    expected: answerOf(problem),
+    expected,
+    ...(problem.op === 'div' ? { expectedBeads: expected * 10 ** (problem.digits + 1) } : {}),
     states: problemStates(problem),
     groupStarts,
   }

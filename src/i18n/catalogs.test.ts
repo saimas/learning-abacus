@@ -236,6 +236,8 @@ describe('multi-digit strings', () => {
     expect(ja.problemPrompt({ op: 'add', digits: 3, a: 472, b: 385 })).toBe('472に385をたす。')
     expect(ja.problemPrompt({ op: 'sub', digits: 2, a: 81, b: 36 })).toBe('81から36をひく。')
     expect(ja.problemPrompt({ op: 'mul', digits: 2, a: 47, b: 36 })).toBe('47に36をかける。')
+    expect(ja.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('1692を36でわる。')
+    expect(en.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('Divide 1692 by 36.')
   })
 
   it('reads a column as its rod and its move', () => {
@@ -254,6 +256,8 @@ describe('multi-digit strings', () => {
   it('names a kind', () => {
     expect(ja.practiceCellLabel({ op: 'add', digits: 2 }, 'unseen')).toBe('2けたのたし算、まだ')
     expect(en.practiceCellLabel({ op: 'sub', digits: 3 }, 'unseen')).toBe('3-digit subtraction, not yet')
+    expect(ja.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2けたのわり算、まだ')
+    expect(en.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2-digit division, not yet')
   })
 })
 
