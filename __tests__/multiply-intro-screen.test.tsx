@@ -108,4 +108,15 @@ describe('Multiply intro screen', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockReplace).not.toHaveBeenCalled()
   })
+
+  // The screen leaves only once progress is saved; a second tap in the
+  // meantime (the guard now lives in IntroScreen, shared with ÷) must not
+  // save twice.
+  it('finishes once even when intro-finish is tapped twice quickly', async () => {
+    await renderToLastPage()
+    fireEvent.press(screen.getByTestId('intro-finish'))
+    fireEvent.press(screen.getByTestId('intro-finish'))
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockSave).toHaveBeenCalledTimes(1)
+  })
 })

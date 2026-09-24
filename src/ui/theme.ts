@@ -14,6 +14,9 @@ export const colors = {
   accentShadow: '#8E3322',
   // Behind the step of an explanation that the learner has just stepped to.
   accentSoft: '#F6DDD6',
+  // A sum that comes off in the division walkthrough shows ✓ in it, as one
+  // that won't shows ✗ in the accent. The app had no green.
+  ok: '#3F7D4E',
   onAccent: '#FFF8F0',
   frameTop: '#6E4A2F',
   frameBottom: '#4E3220',

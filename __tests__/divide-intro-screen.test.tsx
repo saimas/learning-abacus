@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+import { divisionWalk } from '@/domain/divisionWalk'
+import type { Problem } from '@/domain/problem'
 import { emptyProgress } from '@/domain/progress'
+import { ja } from '@/i18n/ja'
 import * as store from '@/storage/progressStore'
 import DivideIntroScreen from '../app/divide-intro'
+import { textOf } from '@/ui/session/testing'
 import { ProgressProvider } from '@/ui/ProgressProvider'
 
 jest.mock('@/storage/progressStore')
@@ -39,6 +43,18 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
+const text = (testID: string) => textOf(screen.getByTestId(testID))
+
+// The route's example, and step k's words for it in the default locale.
+// src/i18n/divideWalk.test.ts pins the wording itself.
+const PROBLEM: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const WALK = divisionWalk(PROBLEM)
+function what(k: number): string {
+  const step = WALK[k]
+  if (step === undefined) throw new Error(`no step ${k}`)
+  return ja.divideWalk(PROBLEM, step).what
+}
+
 // Renders the screen once progress has loaded.
 async function renderScreen() {
   render(
@@ -49,15 +65,16 @@ async function renderScreen() {
   await act(async () => {})
 }
 
-// Pages through to the last page: the method, the guess, the placement, and
-// the six groups of 1692 ÷ 36 (a digit placed and two 九九 taken off, twice).
+// Steps through the walkthrough's 23 frames (spec: division walkthrough §2)
+// to the last one, where intro-finish shows in place of ▶.
 async function renderToLastPage() {
   await renderScreen()
-  for (let i = 0; i < 9; i++) fireEvent.press(screen.getByTestId('intro-next'))
+  for (let i = 0; i < 22; i++) fireEvent.press(screen.getByTestId('walk-next'))
 }
 
-// Spec (division) §3: shown before the first ÷ round, with that round's
-// kind, and from Home's わり算のやりかた link, without one.
+// Spec (division) §3, (division walkthrough) §4: shown before the first ÷
+// round, with that round's kind, and from Home's わり算のやりかた link,
+// without one.
 describe('Divide intro screen', () => {
   it('shows a loading state before progress has hydrated, so finishing cannot save over it', () => {
     mockParams.current = { kind: 'div:2' }
@@ -70,20 +87,20 @@ describe('Divide intro screen', () => {
       </ProgressProvider>,
     )
     expect(screen.getByTestId('hydrating')).toBeTruthy()
-    expect(screen.queryByTestId('intro-next')).toBeNull()
+    expect(screen.queryByTestId('walk-next')).toBeNull()
   })
 
-  it('walks through 1692 ÷ 36 by 商除法', async () => {
+  it('walks through 1692 ÷ 36 a bead at a time', async () => {
     await renderScreen()
     expect(screen.getByText('わり算のやりかた')).toBeTruthy()
-    expect(screen.getByText('1692 ÷ 36')).toBeTruthy()
-    expect(screen.getByTestId('intro-text').props.children).toContain('商除法')
-    // The owner (2026-09-24): how each digit is guessed by 九九, before
-    // where it is placed.
-    fireEvent.press(screen.getByTestId('intro-next'))
-    expect(screen.getByTestId('intro-text').props.children).toContain('商の見当は九九でつけます')
-    for (let i = 0; i < 8; i++) fireEvent.press(screen.getByTestId('intro-next'))
-    expect(screen.getByTestId('intro-text').props.children).toBe('1692÷36 = 47')
+    expect(text('walk-problem')).toContain('1692')
+    // The divisor's digits are nested Texts of their own, underlined a digit
+    // at a time as each 九九 uses it.
+    expect(screen.getByTestId('walk-divisor-1').props.children).toBe('3')
+    expect(screen.getByTestId('walk-divisor-0').props.children).toBe('6')
+    expect(text('walk-what')).toBe(what(0))
+    for (let i = 0; i < 22; i++) fireEvent.press(screen.getByTestId('walk-next'))
+    expect(text('walk-what')).toBe(what(WALK.length - 1))
   })
 
   it('starts the round it was shown before, once the walkthrough is marked seen', async () => {
@@ -127,5 +144,16 @@ describe('Divide intro screen', () => {
     fireEvent.press(screen.getByTestId('intro-finish'))
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  // The screen leaves only once progress is saved; a second tap in the
+  // meantime (the guard now lives in IntroScreen, shared with ×) must not
+  // save twice.
+  it('finishes once even when intro-finish is tapped twice quickly', async () => {
+    await renderToLastPage()
+    fireEvent.press(screen.getByTestId('intro-finish'))
+    fireEvent.press(screen.getByTestId('intro-finish'))
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockSave).toHaveBeenCalledTimes(1)
   })
 })

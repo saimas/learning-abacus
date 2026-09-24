@@ -4,9 +4,10 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import type { Operation, PracticeKind } from '@/domain/problem'
+import { answerOf, digitAt, divisorFirstDigit, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
-import type { Strings } from './ja'
+import type { WalkStep } from '@/domain/divisionWalk'
+import type { Strings, WalkCaption } from './ja'
 
 const CELL_STATE: Record<CellState, string> = {
   unseen: 'unseen',
@@ -45,6 +46,11 @@ const PLACE: readonly string[] = [
   'hundred-thousands rod',
   'millions rod',
 ]
+// A rod's name in a few characters, for the row under the division
+// walkthrough's soroban.
+const PLACE_SHORT: readonly string[] = ['1', '10', '100', '1000', '10k', '100k', '1M']
+// A quotient digit named by its place, for the division walkthrough.
+const DIGIT_NAME: readonly string[] = ['ones', 'tens', 'hundreds']
 const PLACE_TITLE: readonly string[] = [
   'Ones',
   'Tens',
@@ -150,6 +156,103 @@ function quotientLine(
   // named alongside ja's wording fix so the two stay in step.
   const placed = q === 0 ? ' Quotient 0: nothing to place.' : ` Place ${q} ${split ? 'two rods' : 'one rod'} left of the head.`
   return `${estimate}${lowered}${placed}`
+}
+
+// The division walkthrough's words for one step, as ja's (spec: division
+// walkthrough §3).
+function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+  const { a, b } = problem
+  const n = problem.digits
+  const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
+  const d0 = divisorFirstDigit(problem)
+  const listed = (items: string[]) =>
+    items.length <= 2 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] ?? ''}`
+  // The digit's times tables with each divisor digit, from the top: a digit
+  // is right once they all come off.
+  const nineNines = (digit: number) =>
+    listed(Array.from({ length: n }, (_, k) => `${digit} × ${digitAt(b, n - 1 - k)}`))
+  const all = n === 1 ? '' : n === 2 ? 'both ' : 'all '
+  switch (step.kind) {
+    case 'set':
+      return {
+        ...none,
+        what: `Set ${a} on the soroban`,
+        note: `How many ${b}s fit into ${a}? The answer is found one digit at a time, from the top. The leftmost rod stays empty: the answer grows there.`,
+      }
+    case 'guess': {
+      const word = DIGIT_NAME[step.p] ?? `place ${step.p}`
+      if (step.remainderZero) {
+        return { ...none, what: `The ${word} digit: nothing is left`, note: 'Nothing is left, so this digit is 0 (nothing to place).' }
+      }
+      const product = d0 * step.guess
+      const note =
+        step.guess === 0
+          ? `${d0} doesn't go into ${step.partial}, so this digit is 0 (nothing to place).`
+          : n === 1
+            ? `Times tables: ${d0} × ${step.guess} = ${product} fits in ${step.partial}.`
+            : `Pretend ${b} is ${d0 * 10 ** (n - 1)} and use the times tables: ${d0} × ${step.guess} = ${product} fits in ${step.partial}.`
+      return {
+        ...none,
+        what: `The ${word} digit: how many ${b}s fit into ${step.chunk}?`,
+        math: `Guess ${step.partial} ÷ ${d0} → ${step.raw > 9 ? '10 or more, so 9' : step.guess}`,
+        note,
+      }
+    }
+    case 'try':
+      return {
+        ...none,
+        what: `Try ${step.digit} (${step.digit * 10 ** step.p} × ${b})`,
+        note: `The head of what's left, ${step.lead}, is ${
+          step.split ? `${b} or more, so it goes two rods left of the head` : `smaller than ${b}, so it goes one rod left of the head`
+        }. If ${nineNines(step.digit)} ${all}come${n === 1 ? 's' : ''} off, ${step.digit} is right.`,
+      }
+    case 'take':
+      return {
+        what: `${step.resumed ? 'Carry on: take' : 'Take'} away ${step.digit * 10 ** step.p} × ${step.y * 10 ** step.j} = ${step.amount}`,
+        math: `${step.before} − ${step.amount} = ${step.left}${step.last ? ' ✓' : ''}`,
+        note: step.last ? `${nineNines(step.digit)} ${all}came off, so ${step.digit} is right.` : '',
+        rods: `On the rods: ${subtractLine(step.digit, step.y, step.p + step.j, step.cascades)}`,
+      }
+    case 'stuck':
+      return {
+        ...none,
+        what: `Take away ${step.digit * 10 ** step.p} × ${step.y * 10 ** step.j} = ${step.amount} … it won't go`,
+        math: `${step.left} − ${step.amount} ✗`,
+        note: `Only ${step.left} is left, less than ${step.amount}. ${step.digit} is too big.`,
+      }
+    case 'fix': {
+      const to = step.from - 1
+      const unit = 10 ** step.p
+      const putBack = listed(
+        step.putBack.map(({ digit, place }) => `${digit} back on the ${PLACE[place] ?? `rod ${place}`}`),
+      )
+      const note =
+        to === 0
+          ? `Even ${step.from * unit} × ${step.taken} was too much. Put all ${step.back} back. This digit is 0 (nothing to place).`
+          : `You took away ${step.from * unit} × ${step.taken}, but only ${to * unit} × ${step.taken} was due. Put back the extra ${
+            step.p > 0 ? `${unit} × ${step.taken} = ${step.back}` : step.back
+          }. No need to start over: it's the same ${step.left} as going back to ${step.laneStart} and taking away ${to * unit} × ${step.taken}.`
+      return {
+        what: `Fix it: ${step.from} → ${to}, and put back ${step.back}`,
+        math: `${step.before} + ${step.back} = ${step.left}`,
+        note,
+        // A put-back digit can carry into a rod that is already 9, said as
+        // the product line says it.
+        rods: `On the rods: take 1 off the answer, and put ${putBack}${
+          step.cascades ? ' (and carries again into the next rod)' : ''
+        }`,
+      }
+    }
+    case 'done': {
+      const quotient = answerOf(problem)
+      return {
+        ...none,
+        what: 'Read the answer on the left',
+        math: `${a} ÷ ${b} = ${quotient}`,
+        note: `${quotient} on the left, and 0 on every rod to its right.`,
+      }
+    }
+  }
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver
@@ -286,14 +389,17 @@ export const en: Strings = {
   introPlacement:
     'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  // The owner's request (2026-09-24): a way back through the walkthrough,
+  // not just forward.
+  introBack: 'Back',
+  // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'How to divide',
-  divideIntroMethod:
-    'Division finds how many times the divisor goes into the number being divided. On the soroban, set the number being divided, then decide the answer (the quotient) one digit at a time, from the highest, taking each digit’s times-table answers with the divisor’s digits off the rods (商除法).',
-  divideIntroGuess:
-    'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
-  divideIntroPlacement:
-    'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
-  divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,
+  divideWalk,
+  // Its words, then its sum, as two sentences.
+  divideWalkSpoken: (what, math) => (math === '' ? what : `${what}. ${math}`),
+  divideWalkLeft: 'left',
+  divideWalkAnswer: 'Answer',
+  rodShortName: (place) => PLACE_SHORT[place] ?? `${place}`,
   operandBoardLabel: (a, b) => `${a} × ${b}`,
   divisorBoardLabel: (b) => `Divisor ${b}`,
 }

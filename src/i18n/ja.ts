@@ -4,8 +4,17 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import { type Digits, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
+import {
+  answerOf,
+  digitAt,
+  divisorFirstDigit,
+  type Digits,
+  type Operation,
+  type PracticeKind,
+  type Problem,
+} from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
+import type { WalkStep } from '@/domain/divisionWalk'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
 // `both` names the two substitutions in the order they are performed: a
@@ -47,6 +56,9 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 // 3けた division works on seven: the dividend's six and the quotient's
 // highest digit left of them.
 const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位', '百万の位']
+// A rod's name in one or two characters, for the row under the division
+// walkthrough's soroban.
+const PLACE_SHORT: readonly string[] = ['一', '十', '百', '千', '万', '十万', '百万']
 
 const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算' }
 
@@ -154,6 +166,100 @@ function quotientLine(
         : ''
   const placed = q === 0 ? zero : `商${q}を頭の${split ? 2 : 1}つ左に立てる`
   return `${estimate}${lowered}${placed}`
+}
+
+// The division walkthrough's words for one step (spec: division walkthrough
+// §3): what the step does, its sum, a note, and what it does on the rods,
+// each empty where the step has none. The owner (2026-09-24) found the old
+// walkthrough's sentences "hard to process as image", so these stay short
+// and every number in them is one the screen shows.
+export type WalkCaption = { what: string; math: string; note: string; rods: string }
+
+function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+  const { a, b } = problem
+  const n = problem.digits
+  const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
+  const d0 = divisorFirstDigit(problem)
+  // The digit's 九九 with each divisor digit, from the top (5×3も5×6も): a
+  // digit is right once they all come off (the owner: the candidate "has to
+  // pass through each digit").
+  const nineNines = (digit: number) =>
+    Array.from({ length: n }, (_, k) => `${digit}×${digitAt(b, n - 1 - k)}`).join('も') + (n === 1 ? 'が' : 'も')
+  switch (step.kind) {
+    case 'set':
+      return {
+        ...none,
+        what: `${a}をそろばんに置く`,
+        note: `${a}の中に${b}がいくつ入るかを、答えの大きい位から1けたずつ決めていく。左はしのけたは空けておく。答えはそこにできていく。`,
+      }
+    case 'guess': {
+      const place = PLACE[step.p] ?? `${step.p}`
+      if (step.remainderZero) {
+        return { ...none, what: `答えの${place}：のこりは0`, note: 'のこりが0なので、この位は0（置かない）。' }
+      }
+      const product = d0 * step.guess
+      const note =
+        step.guess === 0
+          ? `${d0}は${step.partial}に入らないので、この位は0（置かない）。`
+          : n === 1
+            ? `九九：${d0}×${step.guess}=${product}は${step.partial}に入る。`
+            : `${b}を${d0 * 10 ** (n - 1)}と思って九九：${d0}×${step.guess}=${product}は${step.partial}に入る。`
+      return {
+        ...none,
+        what: `答えの${place}：${step.chunk}の中に${b}はいくつ？`,
+        // A digit is at most 9, so "32÷3 → 9" would be wrong arithmetic.
+        math: `見当 ${step.partial}÷${d0} → ${step.raw > 9 ? '10以上なので9' : step.guess}`,
+        note,
+      }
+    }
+    case 'try':
+      return {
+        ...none,
+        what: `${step.digit}を置いてみる（${step.digit * 10 ** step.p}×${b}）`,
+        note: `のこりの頭${step.lead}は${b}${step.split ? '以上なので、頭の2つ左' : 'より小さいので、頭の1つ左'}に置く。${nineNines(step.digit)}引けたら、${step.digit}で決まり。`,
+      }
+    case 'take':
+      return {
+        what: `${step.resumed ? 'つづけて' : ''}${step.digit * 10 ** step.p}×${step.y * 10 ** step.j}=${step.amount}を引く`,
+        math: `${step.before}−${step.amount}=${step.left}${step.last ? ' ✓' : ''}`,
+        note: step.last ? `${nineNines(step.digit)}引けたので、${step.digit}で決まり。` : '',
+        rods: `そろばんでは：${subtractLine(step.digit, step.y, step.p + step.j, step.cascades)}`,
+      }
+    case 'stuck':
+      return {
+        ...none,
+        what: `${step.digit * 10 ** step.p}×${step.y * 10 ** step.j}=${step.amount}を引く……引けない`,
+        math: `${step.left}−${step.amount} ✗`,
+        note: `のこりの${step.left}は${step.amount}より小さい。${step.digit}は大きすぎた。`,
+      }
+    case 'fix': {
+      const to = step.from - 1
+      const unit = 10 ** step.p
+      // The divisor digits taken off so far go back where they came off.
+      const putBack = step.putBack.map(({ digit, place }) => `${PLACE[place] ?? place}に${digit}`).join('、')
+      // The owner's own picture of the fix (2026-09-24): "go back to the
+      // point of the current lane then adjust the number and try again".
+      // Putting back only the extra lands on that same number.
+      const note =
+        to === 0
+          ? `${step.from * unit}×${step.taken}も多すぎた。引いた${step.back}を全部戻す。この位は0（置かない）。`
+          : `${step.from * unit}×${step.taken}を引いたが、${to * unit}×${step.taken}でよかった。多く引いた${
+            step.p > 0 ? `${unit}×${step.taken}=${step.back}` : step.back
+          }を戻す。やり直さなくていい：${step.laneStart}に戻して${to * unit}×${step.taken}を引いたのと同じ${step.left}になる。`
+      return {
+        what: `戻す：${step.from}を${to}にして、${step.back}を足し戻す`,
+        math: `${step.before}+${step.back}=${step.left}`,
+        note,
+        // A put-back digit can carry into a rod that is already 9, as a ×
+        // round's 九九 can, so it says so as the product line does.
+        rods: `そろばんでは：答えのけたから1を引き、${putBack}を足す${step.cascades ? '（さらに上の位へ繰り上がる）' : ''}`,
+      }
+    }
+    case 'done': {
+      const quotient = answerOf(problem)
+      return { ...none, what: '答えを読む', math: `${a}÷${b}=${quotient}`, note: `左に${quotient}。右はすべて0。` }
+    }
+  }
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver
@@ -294,21 +400,20 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
-  // The division walkthrough (spec: division §3). The owner found it hard to
-  // follow (2026-09-24: "it says 商4を立てる but I have no idea where that 4
-  // comes from"), so the method page first says what division is, and a
-  // guess page says how each digit is found by 九九 before the placement
-  // page. The placement page gives both halves of placing: where the
-  // quotient digit goes (割れる / 割れない), and where its 九九 come off,
-  // which each 九九's own page then names rod by rod.
+  // The owner's request (2026-09-24): a way back through the walkthrough,
+  // not just forward.
+  introBack: 'もどる',
+  // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'わり算のやりかた',
-  divideIntroMethod:
-    'わり算は、わられる数の中にわる数がいくつ入るかを調べます。そろばんでは、わられる数を置き、答え（商）を大きい位から一けたずつ決めて、商×わる数の九九を引いていきます（商除法（しょうじょほう））。',
-  divideIntroGuess:
-    '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
-  divideIntroPlacement:
-    '残りの頭から、わる数と同じけた数をとって、わる数とくらべます。わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
-  divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,
+  // The division walkthrough, guess by guess (spec: division walkthrough §3).
+  divideWalk,
+  // What VoiceOver reads as a walkthrough step opens: its words, then its
+  // sum if it has one, with the pause a Japanese sentence takes between two
+  // clauses.
+  divideWalkSpoken: (what: string, math: string) => (math === '' ? what : `${what}、${math}`),
+  divideWalkLeft: 'のこり',
+  divideWalkAnswer: '答え',
+  rodShortName: (place: number): string => PLACE_SHORT[place] ?? `${place}`,
   // What VoiceOver reads for the operand board under a × problem's soroban:
   // the two numbers, as the board shows them.
   operandBoardLabel: (a: number, b: number) => `${a} × ${b}`,

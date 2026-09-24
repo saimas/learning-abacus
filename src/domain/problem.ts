@@ -212,7 +212,9 @@ export function applyPlacedStep(s: Soroban, step: PlacedStep): Soroban {
   return { rods }
 }
 
-function digitAt(n: number, place: number): number {
+// The digit of `n` at `place` (0 = ones). The division walkthrough reads the
+// divisor and quotient digit by digit too, so it shares this one.
+export function digitAt(n: number, place: number): number {
   return Math.floor(n / 10 ** place) % 10
 }
 
@@ -290,7 +292,7 @@ function columnSteps(problem: Problem, direction: Direction): StepGroup[] {
 
 // Plays each digit, in order, on the rod at its place (0 = ones), as the one
 // atom it is from what that rod shows by then. A digit of 0 is not a move.
-function playDigits(
+export function playDigits(
   soroban: Soroban,
   digits: readonly (readonly [digit: number, place: number])[],
   direction: Direction,
@@ -317,7 +319,7 @@ function movesGroup(moves: Move[]): { moves: Move[]; steps: PlacedStep[]; cascad
 }
 
 // A 九九's two digits, tens first, the ones digit at `place`.
-function productDigits(product: number, place: number): [digit: number, place: number][] {
+export function productDigits(product: number, place: number): [digit: number, place: number][] {
   return [
     [Math.floor(product / 10), place + 1],
     [product % 10, place],

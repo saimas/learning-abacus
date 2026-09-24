@@ -434,32 +434,12 @@ describe('division strings', () => {
     expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
   })
 
-  it('gives the walkthrough its title, its explanations and its result', () => {
+  // The walkthrough's own explanations and result now come from divideWalk,
+  // one step at a time (spec: division walkthrough §3); see divisionWalk's
+  // and DivideWalkthrough's own tests.
+  it('gives the walkthrough its title', () => {
     expect(ja.divideIntroTitle).toBe('わり算のやりかた')
     expect(en.divideIntroTitle).toBe('How to divide')
-    expect(ja.divideIntroMethod).toContain('商除法')
-    expect(en.divideIntroMethod).toContain('商除法')
-    // The owner found the walkthrough hard to follow (2026-09-24), so it
-    // says what division is before how the soroban does it.
-    expect(ja.divideIntroMethod).toMatch(/^わり算は、わられる数の中にわる数がいくつ入るかを調べます。/)
-    expect(en.divideIntroMethod).toMatch(/^Division finds how many times the divisor goes into the number being divided\./)
-    // Where each digit comes from: a 九九 on the head of what is left, and
-    // lowering it when the divisor's next digit will not come off too.
-    expect(ja.divideIntroGuess).toBe(
-      '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
-    )
-    expect(en.divideIntroGuess).toBe(
-      'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
-    )
-    // The 割れる / 割れない rule compares as many leading digits as the
-    // divisor has, taken from the remainder's head each round — not just
-    // the dividend's head digit, which is only true of the first round.
-    expect(ja.divideIntroPlacement).toContain('残りの頭から、わる数と同じけた数をとって、わる数とくらべます')
-    expect(ja.divideIntroPlacement).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
-    expect(en.divideIntroPlacement).toContain('as many digits from the head of what’s left as the divisor has')
-    expect(en.divideIntroPlacement).toContain('two rods left of the head')
-    expect(ja.divideIntroResult(1692, 36, 47)).toBe('1692÷36 = 47')
-    expect(en.divideIntroResult(1692, 36, 47)).toBe('1692 ÷ 36 = 47')
   })
 
   it('names Home’s link to the walkthrough beside the × one', () => {
