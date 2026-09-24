@@ -125,6 +125,18 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
   })
 
+  // Spec (division) §3: a わり算のやりかた link beside かけ算のやりかた.
+  it('opens the division walkthrough from the home わり算のやりかた link', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
+    expect(getByTestId('home-howto-div')).toHaveTextContent('わり算のやりかた')
+    expect(getByTestId('home-howto')).toHaveTextContent('かけ算のやりかた')
+    fireEvent.press(getByTestId('home-howto-div'))
+    expect(mockPush).toHaveBeenCalledWith('/divide-intro')
+    expect(mockPush).toHaveBeenCalledTimes(1)
+  })
+
   // /round has no swipe-back (app/_layout.tsx), so a double tap that pushed
   // twice would leave the child stacked on a second round once it finishes
   // the first. `leaving` guards a second push before Home regains focus.
@@ -144,6 +156,27 @@ describe('Home', () => {
     fireEvent.press(getByTestId('home-howto'))
     fireEvent.press(getByTestId('home-howto'))
     expect(mockPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('pushes only once when the わり算のやりかた link is tapped twice quickly', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
+    fireEvent.press(getByTestId('home-howto-div'))
+    fireEvent.press(getByTestId('home-howto-div'))
+    expect(mockPush).toHaveBeenCalledTimes(1)
+  })
+
+  // The two links sit side by side, so a quick second tap can land on the
+  // other one; that must not stack a second walkthrough either.
+  it('pushes only once when both やりかた links are tapped quickly', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
+    fireEvent.press(getByTestId('home-howto'))
+    fireEvent.press(getByTestId('home-howto-div'))
+    expect(mockPush).toHaveBeenCalledTimes(1)
+    expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
   })
 
   it('offers today’s session to a learner who has not practised today', async () => {
@@ -230,6 +263,12 @@ describe('Home choosing what to practise', () => {
     const { getByTestId } = await openChooser()
     fireEvent.press(getByTestId('practice-cell-add:2'))
     fireEvent.press(getByTestId('home-howto'))
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('ignores the わり算のやりかた link while the sheet is open', async () => {
+    const { getByTestId } = await openChooser()
+    fireEvent.press(getByTestId('home-howto-div'))
     expect(mockPush).not.toHaveBeenCalled()
   })
 

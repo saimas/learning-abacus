@@ -115,7 +115,7 @@ describe('practices', () => {
   it('keeps known kinds and drops unknown ids and malformed records', async () => {
     const good = { fade: 2, consecutiveCorrect: 1, consecutiveWrong: 0, lastPractisedAt: 5 }
     mockGetItem.mockResolvedValue(
-      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'div:1': good, 'sub:1': { fade: 'x' } } }),
+      JSON.stringify({ ...emptyProgress(), practices: { 'add:2': good, 'pow:1': good, 'sub:1': { fade: 'x' } } }),
     )
     expect((await loadProgress()).practices).toEqual({ 'add:2': good })
   })
@@ -140,6 +140,32 @@ describe('multiplyIntroDone', () => {
   it.each([['yes'], [1], [null]])('discards a multiplyIntroDone of %p in favour of false', async (multiplyIntroDone) => {
     mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone }))
     expect((await loadProgress()).multiplyIntroDone).toBe(false)
+  })
+})
+
+// Spec (division) §3: the ÷ walkthrough's flag, added exactly like
+// multiplyIntroDone.
+describe('divideIntroDone', () => {
+  it('loads a document written before the flag existed as not yet seen', async () => {
+    const { divideIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5, multiplyIntroDone: true }
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    const result = await loadProgress()
+    expect(result.divideIntroDone).toBe(false)
+    expect(result.multiplyIntroDone).toBe(true)
+    expect(result.daysPracticed).toBe(5)
+  })
+
+  it('keeps a stored true', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone: true }))
+    const result = await loadProgress()
+    expect(result.divideIntroDone).toBe(true)
+    // The two walkthroughs are seen separately.
+    expect(result.multiplyIntroDone).toBe(false)
+  })
+
+  it.each([['yes'], [1], [null]])('discards a divideIntroDone of %p in favour of false', async (divideIntroDone) => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone }))
+    expect((await loadProgress()).divideIntroDone).toBe(false)
   })
 })
 

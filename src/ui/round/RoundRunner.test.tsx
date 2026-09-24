@@ -258,3 +258,114 @@ describe('RoundRunner with ×', () => {
     expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * operands)
   })
 })
+
+// Spec (division) §3: a ÷ problem shows its divisor on a board under the
+// soroban, which holds the dividend, and stepping through a miss points at
+// the divisor digit of each 九九 taken off.
+describe('RoundRunner with ÷', () => {
+  const divide: Partial<Parameters<typeof RoundRunner>[0]> = {
+    kind: { op: 'div', digits: 2 },
+    problems: [{ op: 'div', digits: 2, a: 1692, b: 36 }],
+  }
+  // The working soroban's rods only: the divisor board has rods of its own.
+  const onSoroban: typeof screen.getByTestId = (id, options) =>
+    within(screen.getByTestId('soroban-wrap')).getByTestId(id, options)
+  const lit = () =>
+    [0, 1].filter((i) => within(screen.getByTestId('operand-b')).queryByTestId(`rod-highlight-${i}`) !== null)
+
+  it('shows the divisor under the soroban, which starts at the dividend', () => {
+    renderRound(divide)
+    expect(screen.getByTestId('prompt').props.children).toBe('1692を36でわる。')
+    expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('わる数 36')
+    expect(screen.queryByTestId('operand-a')).toBeNull()
+    expect(lit()).toEqual([])
+    expect([0, 1, 2, 3, 4].map((i) => onSoroban(`rod-${i}`).props.accessibilityValue.text).join('')).toBe('01692')
+  })
+
+  it('takes the final reading on the beads: the quotient followed by zeros', () => {
+    const { onAttempt } = renderRound(divide)
+    setBeads(onSoroban, 47000, 5)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false })
+    expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
+  })
+
+  it('takes the quotient on the keypad', () => {
+    const { onAttempt } = renderRound({ ...divide, fade: 3 })
+    for (const digit of '47') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'div:2', correct: true }))
+  })
+
+  // A keypad answer is checked against the quotient alone, so its review
+  // must read exactly as it always has, with no beads reading appended.
+  it('leaves the keypad review’s answer line to the quotient alone', () => {
+    renderRound({ ...divide, fade: 3 })
+    for (const digit of '48') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+  })
+
+  it('moves the highlight to the divisor digit of each 九九 as a miss is stepped through', () => {
+    renderRound(divide)
+    // 47 on the lowest rods is not where 商除法 leaves the quotient.
+    setBeads(onSoroban, 47, 5)
+    fireEvent.press(screen.getByTestId('submit'))
+    // Bead mode's beads were checked against the final soroban reading
+    // (spec (division) §2), so the review names that reading too, not just
+    // the quotient.
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
+    expect(lit()).toEqual([])
+
+    const total = Number(String(screen.getByTestId('step-count').props.children).split(' / ')[1])
+    // What each step lights, and which line, one entry per group stepped
+    // into.
+    const seen: string[] = []
+    for (let i = 0; i < total; i++) {
+      fireEvent.press(screen.getByTestId('step-next'))
+      const line = screen
+        .getAllByTestId(/^correction-(quotient|subtract)-/)
+        .find((node) => StyleSheet.flatten(node.props.style)?.color === colors.accent)
+      const entry = `${String(line?.props.testID)} ${JSON.stringify(lit())}`
+      if (seen[seen.length - 1] !== entry) seen.push(entry)
+    }
+    // Placing 4 and 7 lights no divisor digit; each 九九 lights its own.
+    expect(seen).toEqual([
+      'correction-quotient-0 []',
+      'correction-subtract-1 [0]',
+      'correction-subtract-2 [1]',
+      'correction-quotient-3 []',
+      'correction-subtract-4 [0]',
+      'correction-subtract-5 [1]',
+    ])
+    // The last state is the final reading the beads are checked against.
+    expect([0, 1, 2, 3, 4].map((i) => onSoroban(`rod-${i}`).props.accessibilityValue.text).join('')).toBe('47000')
+  })
+
+  // Spec (division) §1: beads at every size, scaled to fit, including
+  // 3けた's seven rods, with the board at the × boards' size.
+  let restoreWindow = () => {}
+  afterEach(() => {
+    restoreWindow()
+    restoreWindow = () => {}
+  })
+
+  it.each([
+    ['a short window', 375, 667, OPERAND_SHORT_WINDOW_SCALE],
+    ['a tall window', 402, 874, OPERAND_MAX_SCALE],
+  ])('fits a 3けた problem’s seven rods and the board to %s', (_window, width, height, board) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
+    const reactNative = require('react-native')
+    const spy = jest
+      .spyOn(reactNative, 'useWindowDimensions')
+      .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    restoreWindow = () => spy.mockRestore()
+    renderRound({ kind: { op: 'div', digits: 3 }, problems: [{ op: 'div', digits: 3, a: 202032, b: 976 }] })
+    const padding = (container: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
+    expect(onSoroban('rod-6')).toBeTruthy()
+    expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * beadModeScale(7, width - 40))
+    expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * board)
+  })
+})

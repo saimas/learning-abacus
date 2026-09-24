@@ -36,14 +36,15 @@ export default function Home() {
   // Built when the basics card is pressed, never during render.
   const [chooser, setChooser] = useState<{ plan: SessionPlan; open: boolean } | null>(null)
 
-  // A grid cell or the やりかた link pushes straight to router.push, with no
-  // sheet to guard the second tap the way choose() does. /round and
-  // /multiply-intro both disable the swipe-back gesture (app/_layout.tsx),
-  // so a double tap that slips through lands the child in a second round or
-  // walkthrough on top of the first, only reachable by leaving it. A ref
-  // (not state) is enough: nothing needs to re-render while it is set, only
-  // read at the next press. It clears when Home regains focus, alongside
-  // refreshToday, since by then any push it was guarding has resolved.
+  // A grid cell or a やりかた link pushes straight to router.push, with no
+  // sheet to guard the second tap the way choose() does. /round and a
+  // walkthrough opened for a round disable the swipe-back gesture
+  // (app/_layout.tsx), so a double tap that slips through lands the child in
+  // a second round or walkthrough on top of the first, only reachable by
+  // leaving it. A ref (not state) is enough: nothing needs to re-render
+  // while it is set, only read at the next press. It clears when Home
+  // regains focus, alongside refreshToday, since by then any push it was
+  // guarding has resolved.
   const leaving = useRef(false)
 
   const refreshToday = useCallback(() => {
@@ -91,7 +92,7 @@ export default function Home() {
     closeChooser()
     router.push(choice === 'all' ? '/session' : { pathname: '/session', params: { part: choice } })
   }
-  // The grid cell and the やりかた link sit on Home itself, not inside the
+  // The grid cell and the やりかた links sit on Home itself, not inside the
   // sheet, so there is no fade-out to guard against — only the sheet being
   // open at all, since its backdrop should otherwise catch the tap, and
   // `leaving`, since a second push before the first has navigated away
@@ -101,10 +102,10 @@ export default function Home() {
     leaving.current = true
     router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
   }
-  const openHowTo = () => {
+  const openHowTo = (pathname: '/multiply-intro' | '/divide-intro') => {
     if (chooser?.open || leaving.current) return
     leaving.current = true
-    router.push('/multiply-intro')
+    router.push(pathname)
   }
 
   return (
@@ -139,9 +140,28 @@ export default function Home() {
         </View>
 
         <PracticeTable progress={progress} onChoose={startRound} />
-        <Pressable testID="home-howto" accessibilityRole="link" onPress={openHowTo} hitSlop={12} style={styles.howTo}>
-          <Text style={styles.howToText}>{strings.homeHowTo}</Text>
-        </Pressable>
+        {/* Spec (division) §3: each walkthrough can be replayed from here,
+            in the grid's order, × then ÷. */}
+        <View style={styles.howTos}>
+          <Pressable
+            testID="home-howto"
+            accessibilityRole="link"
+            onPress={() => openHowTo('/multiply-intro')}
+            hitSlop={HOW_TO_SLOP}
+            style={styles.howTo}
+          >
+            <Text style={styles.howToText}>{strings.homeHowTo}</Text>
+          </Pressable>
+          <Pressable
+            testID="home-howto-div"
+            accessibilityRole="link"
+            onPress={() => openHowTo('/divide-intro')}
+            hitSlop={HOW_TO_SLOP}
+            style={styles.howTo}
+          >
+            <Text style={styles.howToText}>{strings.homeHowToDivide}</Text>
+          </Pressable>
+        </View>
         <Pressable
           testID="home-basics"
           accessibilityRole="button"
@@ -168,6 +188,9 @@ export default function Home() {
   )
 }
 
+// How far past its text each やりかた link still takes a tap.
+const HOW_TO_SLOP = 12
+
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
   title: {
@@ -186,11 +209,22 @@ const styles = StyleSheet.create({
   // it off the bottom of the screen.
   scroll: { flex: 1 },
   content: { paddingBottom: space.xl },
-  // The caption text stays small, but padding plus hitSlop above give the
-  // link a tap target close to the platforms' ~44pt minimum. marginTop has
-  // to be at least the top hitSlop (12), or that hitSlop reaches up past
-  // the grid's own bottom edge and steals taps meant for its last row.
-  howTo: { alignSelf: 'flex-end', marginTop: space.md, paddingVertical: space.sm },
+  // The caption text stays small, but padding plus hitSlop give each link a
+  // tap target close to the platforms' ~44pt minimum. marginTop has to be at
+  // least the top hitSlop, or that hitSlop reaches up past the grid's own
+  // bottom edge and steals taps meant for its last row. The gap between the
+  // links is twice the hitSlop, so the two slops meet rather than overlap
+  // and a tap between them goes to the nearer link. At the largest text
+  // sizes the two may not fit one line, so the second wraps under the first
+  // rather than running off the screen.
+  howTos: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 2 * HOW_TO_SLOP,
+    marginTop: space.md,
+  },
+  howTo: { paddingVertical: space.sm },
   howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
   basics: { marginTop: space.xl },
   // Same pressed feedback as the chooser's own rows (PartChooser's Row).

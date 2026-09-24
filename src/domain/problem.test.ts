@@ -3,6 +3,7 @@ import { latencyTargetMs } from './fluency'
 import {
   answerOf,
   applyPlacedStep,
+  DIVIDE_ESTIMATE_MS,
   generateProblems,
   groupOfStep,
   isPracticeId,
@@ -20,8 +21,9 @@ import {
   type Digits,
   type Operation,
   type Problem,
+  type StepGroup,
 } from './problem'
-import { readRod, readValue } from './soroban'
+import { readRod, readValue, type Soroban } from './soroban'
 
 // A small seeded generator (mulberry32), so generation tests are repeatable.
 function seeded(seed: number): () => number {
@@ -58,7 +60,7 @@ function expectReplaysTo(p: Problem) {
 }
 
 describe('practice ids', () => {
-  it('names the nine kinds', () => {
+  it('names the twelve kinds', () => {
     expect(PRACTICE_KINDS.map(practiceId)).toEqual([
       'add:1',
       'add:2',
@@ -69,6 +71,9 @@ describe('practice ids', () => {
       'mul:1',
       'mul:2',
       'mul:3',
+      'div:1',
+      'div:2',
+      'div:3',
     ])
   })
 
@@ -79,15 +84,17 @@ describe('practice ids', () => {
     expect(parsePracticeId(undefined)).toBeNull()
     expect(isPracticeId('add:3')).toBe(true)
     expect(isPracticeId('mul:2')).toBe(true)
-    expect(isPracticeId('div:1')).toBe(false)
+    expect(isPracticeId('div:1')).toBe(true)
+    expect(isPracticeId('pow:1')).toBe(false)
   })
 })
 
 describe('answerOf and rodsFor', () => {
-  it('adds, subtracts or multiplies', () => {
+  it('adds, subtracts, multiplies or divides', () => {
     expect(answerOf(problem('add', 472, 385))).toBe(857)
     expect(answerOf(problem('sub', 472, 385))).toBe(87)
     expect(answerOf(problem('mul', 47, 36))).toBe(1692)
+    expect(answerOf({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe(47)
   })
 
   it('keeps one rod spare for the carry, and gives a product twice the digits', () => {
@@ -95,6 +102,12 @@ describe('answerOf and rodsFor', () => {
     expect(rodsFor({ op: 'sub', digits: 3 })).toBe(4)
     expect(rodsFor({ op: 'mul', digits: 1 })).toBe(2)
     expect(rodsFor({ op: 'mul', digits: 3 })).toBe(6)
+  })
+
+  it('gives a division room for the quotient left of the dividend', () => {
+    expect(rodsFor({ op: 'div', digits: 1 })).toBe(3)
+    expect(rodsFor({ op: 'div', digits: 2 })).toBe(5)
+    expect(rodsFor({ op: 'div', digits: 3 })).toBe(7)
   })
 })
 
@@ -106,7 +119,19 @@ describe('generateProblems', () => {
     for (const p of problems) {
       expect(p.op).toBe(kind.op)
       expect(p.digits).toBe(kind.digits)
-      if (kind.op === 'mul' && kind.digits === 1) {
+      if (kind.op === 'div') {
+        // × run backwards: an N-digit quotient times an N-digit divisor,
+        // always exact.
+        expect(p.a % p.b).toBe(0)
+        const q = p.a / p.b
+        if (kind.digits === 1) {
+          // ÷ 1 teaches nothing either, so 1けた draws both from 2..9.
+          expect(q).toBeGreaterThanOrEqual(2)
+          expect(p.b).toBeGreaterThanOrEqual(2)
+        }
+        expect(String(q)).toHaveLength(kind.digits)
+        expect(String(p.b)).toHaveLength(kind.digits)
+      } else if (kind.op === 'mul' && kind.digits === 1) {
         // × 1 teaches nothing, so 1×1 draws from the 九九 range instead.
         expect(p.a).toBeGreaterThanOrEqual(2)
         expect(p.b).toBeGreaterThanOrEqual(2)
@@ -306,7 +331,227 @@ describe('multiplication', () => {
     expect(problemTargetMs(p, 900)).toBe(moves + 4 * MULTIPLY_RECALL_MS + 4 * TYPING_ALLOWANCE_MS)
   })
 
+  // ÷ written as its code point, since a look-alike would pass by eye.
   it('has a symbol for every operation', () => {
-    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×' })
+    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×', div: '\u00F7' })
+  })
+})
+
+// Spec (division) §2: 商除法. The dividend is set on the soroban, each
+// quotient digit is placed to its left, and each 九九 of that digit and the
+// divisor is taken off the dividend, until only the quotient is left.
+describe('division', () => {
+  // A ÷ problem is × run backwards, so it is named by its quotient and
+  // divisor, and its size is the divisor's (and the quotient's) digits.
+  function division(q: number, d: number): Problem {
+    return { op: 'div', digits: String(d).length as Digits, a: q * d, b: d }
+  }
+
+  // What each group says it does, without its bead steps.
+  function outline(group: StepGroup) {
+    switch (group.kind) {
+      case 'quotient':
+        return { kind: group.kind, q: group.q, place: group.place, lead: group.lead, split: group.split }
+      case 'subtract':
+        return { kind: group.kind, q: group.q, y: group.y, yPlace: group.yPlace, place: group.place }
+      default:
+        return { kind: group.kind }
+    }
+  }
+
+  function lastOf(states: Soroban[]): Soroban {
+    const last = states[states.length - 1]
+    if (last === undefined) throw new Error('last state is missing')
+    return last
+  }
+
+  // Every way a ÷ problem's replay can break the spec's invariants, as
+  // messages, so an exhaustive run reports every problem that fails rather
+  // than stopping at the first (and runs faster than an expect per rod).
+  function divisionFaults(p: Problem): string[] {
+    const faults: string[] = []
+    const name = `${p.a} ÷ ${p.b}`
+    const rods = rodsFor(p)
+    const q = p.a / p.b
+    const groups = problemSteps(p)
+    const states = problemStates(p)
+    const first = states[0]
+    if (first === undefined || readValue(first) !== p.a) faults.push(`${name}: does not start at the dividend`)
+    // Every rod stays on the soroban at every state, so the remainder never
+    // goes below zero.
+    states.forEach((state, index) => {
+      if (state.rods.length !== rods) faults.push(`${name}: state ${index} has ${state.rods.length} rods`)
+      if (state.rods.some((rod) => readRod(rod) < 0 || readRod(rod) > 9)) faults.push(`${name}: state ${index} off the rods`)
+    })
+    // The quotient on the left, zeros to its right.
+    const expected = q * 10 ** (p.digits + 1)
+    if (readValue(lastOf(states)) !== expected) {
+      faults.push(`${name}: ends at ${readValue(lastOf(states))}, not ${expected}`)
+    }
+    const allSteps = groups.flatMap((group) => group.steps)
+    let at = 0
+    for (const group of groups) {
+      if (group.kind === 'quotient') {
+        const index = rods - 1 - group.place
+        const before = states[at]?.rods[index]
+        if (before === undefined || readRod(before) !== 0) faults.push(`${name}: quotient rod ${group.place} not empty`)
+        // Nothing after the digit is placed, borrows included, reaches its
+        // rod or any rod left of it.
+        const later = allSteps.slice(at + group.steps.length)
+        if (later.some((step) => step.rodIndex <= index)) faults.push(`${name}: a later step touches place ${group.place}`)
+        // The 割れる / 割れない rule the card reads: a quotient digit lands two
+        // rods left of the remainder's head exactly when the head's leading
+        // N digits are at least the divisor.
+        if (group.q > 0 && group.split !== group.lead >= p.b) {
+          faults.push(`${name}: split ${group.split} but lead ${group.lead} against ${p.b}`)
+        }
+        // A 0 digit is not placed, so it never claims 割れる, whatever the
+        // rods' geometry says.
+        if (group.q === 0 && group.split) faults.push(`${name}: a 0 digit at place ${group.place} claims split`)
+      }
+      at += group.steps.length
+    }
+    return faults
+  }
+
+  it('sets the dividend on the soroban', () => {
+    expect(startOf(division(47, 36))).toBe(1692)
+  })
+
+  it('places each quotient digit, then takes off its 九九 with each divisor digit from the highest', () => {
+    // 1692 ÷ 36: 16 is under 36 (割れない), so 4 goes one rod left of the
+    // head; 1692 − 4×36×10 = 252, and 25 is under 36 again, so 7 does too.
+    expect(problemSteps(division(47, 36)).map(outline)).toEqual([
+      { kind: 'quotient', q: 4, place: 4, lead: 16, split: false },
+      { kind: 'subtract', q: 4, y: 3, yPlace: 1, place: 2 },
+      { kind: 'subtract', q: 4, y: 6, yPlace: 0, place: 1 },
+      { kind: 'quotient', q: 7, place: 3, lead: 25, split: false },
+      { kind: 'subtract', q: 7, y: 3, yPlace: 1, place: 1 },
+      { kind: 'subtract', q: 7, y: 6, yPlace: 0, place: 0 },
+    ])
+  })
+
+  it('places a quotient digit as one addition on its empty rod', () => {
+    const [first] = problemSteps(division(47, 36))
+    if (first?.kind !== 'quotient') throw new Error('expected a quotient group')
+    expect(first.moves.map((m) => [m.place, m.atom.id])).toEqual([[4, atomId(0, 4, 'add')]])
+    expect(first.steps).toEqual([{ rodIndex: 0, delta: 4 }])
+  })
+
+  it('subtracts the tens digit of a 九九 one place above its ones digit', () => {
+    // 4×3 = 12 off 41692: 1 from the thousands, then 2 from the hundreds.
+    const second = problemSteps(division(47, 36))[1]
+    if (second?.kind !== 'subtract') throw new Error('expected a subtract group')
+    expect(second.moves.map((m) => [m.place, m.atom.id])).toEqual([
+      [3, atomId(1, 1, 'sub')],
+      [2, atomId(6, 2, 'sub')],
+    ])
+  })
+
+  it('leaves only the quotient, followed by zeros', () => {
+    const p = division(47, 36)
+    expect(readValue(lastOf(problemStates(p)))).toBe(47000)
+    expect(divisionFaults(p)).toEqual([])
+  })
+
+  it('places the quotient two rods left of the head when the head divides (割れる)', () => {
+    // 432 ÷ 36: 43 is at least 36, so 1 goes two rods left of the 4.
+    const [first] = problemSteps(division(12, 36))
+    expect(first === undefined ? undefined : outline(first)).toEqual({
+      kind: 'quotient',
+      q: 1,
+      place: 4,
+      lead: 43,
+      split: true,
+    })
+    expect(divisionFaults(division(12, 36))).toEqual([])
+  })
+
+  it('keeps a group for a 0 quotient digit, which places nothing and takes nothing off', () => {
+    // 202032 ÷ 976 = 207: the tens digit is 0, so nothing is multiplied.
+    const p = division(207, 976)
+    const groups = problemSteps(p)
+    const kinds = groups.map((g) => g.kind)
+    expect(kinds).toEqual([
+      'quotient',
+      'subtract',
+      'subtract',
+      'subtract',
+      'quotient',
+      'quotient',
+      'subtract',
+      'subtract',
+      'subtract',
+    ])
+    // Its remainder's head, 683, sits three places below it, which would
+    // read as 割れる by position alone; a digit that is never placed claims
+    // neither rule.
+    expect(groups[4]).toMatchObject({
+      kind: 'quotient',
+      q: 0,
+      place: 5,
+      split: false,
+      moves: [],
+      steps: [],
+      cascades: false,
+    })
+    expect(readValue(lastOf(problemStates(p)))).toBe(207 * 10 ** 4)
+    expect(divisionFaults(p)).toEqual([])
+  })
+
+  it('keeps a group for a 0 divisor digit, which takes nothing off', () => {
+    // 12915 ÷ 105 = 123: the tens digit of 105 is 0.
+    const groups = problemSteps(division(123, 105))
+    expect(groups[2]).toMatchObject({ kind: 'subtract', q: 1, y: 0, yPlace: 1, moves: [], steps: [] })
+    expect(divisionFaults(division(123, 105))).toEqual([])
+  })
+
+  it('works every 1けた and 2けた problem down to its quotient', () => {
+    const faults: string[] = []
+    for (let q = 2; q <= 9; q++) for (let d = 2; d <= 9; d++) faults.push(...divisionFaults(division(q, d)))
+    for (let q = 10; q <= 99; q++) for (let d = 10; d <= 99; d++) faults.push(...divisionFaults(division(q, d)))
+    expect(faults).toEqual([])
+  })
+
+  // No 1けた or 2けた problem borrows through a 0 rod; 3けた ones can.
+  it('borrows through a 0 rod the way ＋ − do: 28158 ÷ 247', () => {
+    // After 1 and 1 are placed, 1101058 − 1×7 on the tens: the tens rod's 5
+    // is short, and the hundreds rod it borrows from is 0, so the borrow
+    // comes from the thousands and the hundreds becomes 9 (1100058 →
+    // 1100558 → 1100958), then the tens takes +3 (1100988).
+    const p = division(114, 247)
+    const seventh = problemSteps(p)[7]
+    expect(seventh).toMatchObject({ kind: 'subtract', q: 1, y: 7, yPlace: 0, place: 1, cascades: true })
+    expect(seventh?.steps).toEqual([
+      { rodIndex: 3, delta: -1 },
+      { rodIndex: 4, delta: 5 },
+      { rodIndex: 4, delta: 4 },
+      { rodIndex: 5, delta: 3 },
+    ])
+    expect(divisionFaults(p)).toEqual([])
+  })
+
+  it('works a large sample of 3けた problems down to their quotients', () => {
+    const faults = generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(17)).flatMap(divisionFaults)
+    expect(faults).toEqual([])
+  })
+
+  it('allows time to recall each 九九 and to estimate each quotient digit', () => {
+    const moveTargets = (p: Problem) =>
+      problemSteps(p).reduce(
+        (sum, g) =>
+          g.kind === 'column' ? sum : sum + g.moves.reduce((s, m) => s + latencyTargetMs(classify(m.atom), 900), 0),
+        0,
+      )
+    const p = division(47, 36)
+    expect(problemTargetMs(p, 900)).toBe(
+      moveTargets(p) + 4 * MULTIPLY_RECALL_MS + 2 * DIVIDE_ESTIMATE_MS + 2 * TYPING_ALLOWANCE_MS,
+    )
+    // 202032 ÷ 976 = 207: the 0 digit is placed without an estimate, and
+    // has no 九九 to recall, so only 2 and 7 count.
+    const zero = division(207, 976)
+    expect(problemTargetMs(zero, 900)).toBe(
+      moveTargets(zero) + 6 * MULTIPLY_RECALL_MS + 2 * DIVIDE_ESTIMATE_MS + 3 * TYPING_ALLOWANCE_MS,
+    )
   })
 })

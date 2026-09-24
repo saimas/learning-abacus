@@ -40,6 +40,29 @@ describe('exerciseForProblem', () => {
     })
   })
 
+  // Spec (division) §2: 商除法 leaves the quotient on the soroban followed
+  // by zeros, so the beads are checked against that reading, while the
+  // keypad takes the quotient itself.
+  it('sets the dividend for a division, and expects the quotient on the keypad and q × 10^(N+1) on the beads', () => {
+    const problem = { op: 'div', digits: 2, a: 1692, b: 36 } as const
+    expect(exerciseForProblem(problem)).toEqual({
+      rods: 5,
+      start: 1692,
+      expected: 47,
+      expectedBeads: 47000,
+      states: problemStates(problem),
+      // Place 4 (+4); 4×3 is −1 then −2 as −5 +3; 4×6 is −2 −4; place 7 as
+      // +5 +2; 7×3 is −2 then −1 as −5 +4; 7×6 is −4 −2.
+      groupStarts: [0, 1, 4, 6, 8, 11],
+    })
+  })
+
+  it('gives ＋ − × no separate bead answer', () => {
+    for (const op of ['add', 'sub', 'mul'] as const) {
+      expect(exerciseForProblem({ op, digits: 2, a: 47, b: 36 })).not.toHaveProperty('expectedBeads')
+    }
+  })
+
   it('starts no operation at a column with nothing to add', () => {
     // 472 + 305: the tens column adds 0, so it moves no bead and there is
     // nothing of it to colour.

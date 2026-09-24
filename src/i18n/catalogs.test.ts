@@ -134,6 +134,16 @@ describe('correctionAnswer', () => {
   })
 })
 
+// Spec (division) §2: 商除法 leaves the final soroban reading (the quotient
+// followed by zeros), which is what a bead answer is actually checked
+// against, so a bead-mode miss must say that too, not just the quotient.
+describe('correctionAnswerOnBeads', () => {
+  it('states the answer and what the beads themselves needed to read', () => {
+    expect(ja.correctionAnswerOnBeads(47, 47000)).toBe('こたえは 47（そろばんは 47000）')
+    expect(en.correctionAnswerOnBeads(47, 47000)).toBe('The answer is 47 (the soroban reads 47000)')
+  })
+})
+
 describe('cellStateName', () => {
   it('uses the same names as the cell labels', () => {
     expect(ja.cellStateName('mental')).toBe('暗算')
@@ -236,6 +246,8 @@ describe('multi-digit strings', () => {
     expect(ja.problemPrompt({ op: 'add', digits: 3, a: 472, b: 385 })).toBe('472に385をたす。')
     expect(ja.problemPrompt({ op: 'sub', digits: 2, a: 81, b: 36 })).toBe('81から36をひく。')
     expect(ja.problemPrompt({ op: 'mul', digits: 2, a: 47, b: 36 })).toBe('47に36をかける。')
+    expect(ja.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('1692を36でわる。')
+    expect(en.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('Divide 1692 by 36.')
   })
 
   it('reads a column as its rod and its move', () => {
@@ -254,6 +266,8 @@ describe('multi-digit strings', () => {
   it('names a kind', () => {
     expect(ja.practiceCellLabel({ op: 'add', digits: 2 }, 'unseen')).toBe('2けたのたし算、まだ')
     expect(en.practiceCellLabel({ op: 'sub', digits: 3 }, 'unseen')).toBe('3-digit subtraction, not yet')
+    expect(ja.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2けたのわり算、まだ')
+    expect(en.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2-digit division, not yet')
   })
 })
 
@@ -283,5 +297,86 @@ describe('multiplication strings', () => {
   it('reads the operand board as the problem', () => {
     expect(ja.operandBoardLabel(472, 385)).toBe('472 × 385')
     expect(en.operandBoardLabel(472, 385)).toBe('472 × 385')
+  })
+})
+
+// Spec (division) §3: the answer card's lines for 商除法, and the board
+// that shows the divisor.
+describe('division strings', () => {
+  it('says where a quotient digit goes, by the 割れる / 割れない rule', () => {
+    expect(ja.quotientLine(4, 16, 36, false)).toBe('商4を立てる（16は36より小さいので、頭の1つ左）')
+    expect(ja.quotientLine(1, 43, 36, true)).toBe('商1を立てる（43は36以上なので、頭の2つ左）')
+    expect(en.quotientLine(4, 16, 36, false)).toBe('Quotient 4: 16 is less than 36, so one rod left of the head')
+    expect(en.quotientLine(1, 43, 36, true)).toBe('Quotient 1: 43 is at least 36, so two rods left of the head')
+  })
+
+  // A 0 is not placed, so its line compares nothing, whatever the group's
+  // lead says. The wording stays neutral about what follows, since a 0 can
+  // be the quotient's last digit (q = 20, 350, …), with no next digit to
+  // move to.
+  it('moves on from a 0 quotient digit without placing it', () => {
+    expect(ja.quotientLine(0, 683, 976, false)).toBe('商0（立てない）')
+    expect(en.quotientLine(0, 683, 976, false)).toBe('Quotient 0: nothing to place')
+  })
+
+  it('reads a 九九 taken off as its product and the rod each digit comes from', () => {
+    expect(ja.subtractLine(4, 3, 2, false)).toBe('4×3=12　千の位から1、百の位から2を引く')
+    expect(ja.subtractLine(2, 3, 2, false)).toBe('2×3=06　百の位から6を引く')
+    expect(ja.subtractLine(5, 4, 0, false)).toBe('5×4=20　十の位から2を引く')
+    expect(en.subtractLine(4, 3, 2, false)).toBe('4 × 3 = 12: take 1 from the thousands rod, 2 from the hundreds rod')
+    expect(en.subtractLine(2, 3, 2, false)).toBe('2 × 3 = 06: take 6 from the hundreds rod')
+  })
+
+  // A 0 digit of the divisor still has its 九九 to recall, though nothing
+  // comes off.
+  it('keeps the 九九 of a 0 divisor digit, with nothing to take off', () => {
+    expect(ja.subtractLine(1, 0, 1, false)).toBe('1×0=00')
+    expect(en.subtractLine(1, 0, 1, false)).toBe('1 × 0 = 00')
+  })
+
+  it('says when a borrow ripples on', () => {
+    expect(ja.subtractLine(1, 7, 1, true)).toBe('1×7=07　十の位から7を引く（さらに上の位から繰り下がる）')
+    expect(en.subtractLine(1, 7, 1, true)).toBe('1 × 7 = 07: take 7 from the tens rod (borrowing from a rod further left)')
+  })
+
+  // 3けた ÷ takes 九九 off as high as the hundred-thousands rod.
+  it('names the highest rods a 九九 comes off', () => {
+    expect(ja.subtractLine(9, 9, 4, false)).toBe('9×9=81　十万の位から8、万の位から1を引く')
+    expect(en.subtractLine(9, 9, 4, false)).toBe(
+      '9 × 9 = 81: take 8 from the hundred-thousands rod, 1 from the ten-thousands rod',
+    )
+  })
+
+  // 3けた ÷ works on seven rods, and VoiceOver names each.
+  it('names the seventh rod', () => {
+    expect(ja.rodName(6)).toBe('百万の位')
+    expect(en.rodName(6)).toBe('millions rod')
+  })
+
+  it('reads the divisor board as the divisor', () => {
+    expect(ja.divisorBoardLabel(36)).toBe('わる数 36')
+    expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
+  })
+
+  it('gives the walkthrough its title, its explanations and its result', () => {
+    expect(ja.divideIntroTitle).toBe('わり算のやりかた')
+    expect(en.divideIntroTitle).toBe('How to divide')
+    expect(ja.divideIntroMethod).toContain('商除法')
+    expect(en.divideIntroMethod).toContain('商除法')
+    // The 割れる / 割れない rule compares as many leading digits as the
+    // divisor has, taken from the remainder's head each round — not just
+    // the dividend's head digit, which is only true of the first round.
+    expect(ja.divideIntroPlacement).toContain('残りの頭から、わる数と同じけた数をとって、わる数とくらべます')
+    expect(ja.divideIntroPlacement).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
+    expect(en.divideIntroPlacement).toContain('as many digits from the head of what’s left as the divisor has')
+    expect(en.divideIntroPlacement).toContain('two rods left of the head')
+    expect(ja.divideIntroResult(1692, 36, 47)).toBe('1692÷36 = 47')
+    expect(en.divideIntroResult(1692, 36, 47)).toBe('1692 ÷ 36 = 47')
+  })
+
+  it('names Home’s link to the walkthrough beside the × one', () => {
+    expect(ja.homeHowToDivide).toBe('わり算のやりかた')
+    expect(en.homeHowToDivide).toBe('How division works')
+    expect(ja.homeHowTo).toBe('かけ算のやりかた')
   })
 })

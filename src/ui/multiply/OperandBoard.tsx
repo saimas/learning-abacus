@@ -16,6 +16,12 @@ import { colors, fontSizes, space } from '@/ui/theme'
 // They are the problem, not the picture the fade ladder takes away, so they
 // are always drawn solid, and nothing on them moves. While the learner steps
 // through the answer, the rods of the 九九 on show are highlighted.
+//
+// A ÷ problem (商除法) sets the dividend on the soroban itself, so its board
+// shows only the divisor (spec (division) §3), at the same sizes as the ×
+// boards, and points at the divisor digit of the 九九 being taken off. A ÷
+// before it, drawn as the × between the × boards, says what the number is
+// for, so the board reads "÷ 36" (the controller's ruling, 2026-09-24).
 
 // Small enough to stay clearly second to the product soroban above.
 export const OPERAND_MAX_SCALE = 0.65
@@ -23,29 +29,64 @@ export const OPERAND_MAX_SCALE = 0.65
 // phone keeps the prompt above the soroban and 手順を見る below the board
 // with the board present.
 export const OPERAND_SHORT_WINDOW_SCALE = 0.5
-// The × between the boards, with its gap on either side. It is text, so it
-// does not scale with the boards.
+// The × between the boards (or the ÷ before the divisor), with its gap on
+// either side. It is text, so it does not scale with the boards.
 export const TIMES_WIDTH = 32
+
+function maxScale(windowHeight: number): number {
+  return windowHeight < SHORT_WINDOW_HEIGHT ? OPERAND_SHORT_WINDOW_SCALE : OPERAND_MAX_SCALE
+}
 
 // The largest scale, up to OPERAND_MAX_SCALE (OPERAND_SHORT_WINDOW_SCALE on
 // a window under SHORT_WINDOW_HEIGHT tall), at which both boards and the ×
 // between them fit `room`: each board gets half of what the × leaves.
 export function operandScale(digits: Digits, room: number, windowHeight: number): number {
-  const max = windowHeight < SHORT_WINDOW_HEIGHT ? OPERAND_SHORT_WINDOW_SCALE : OPERAND_MAX_SCALE
-  return scaleToFit(digits, (room - TIMES_WIDTH) / 2, max)
+  return scaleToFit(digits, (room - TIMES_WIDTH) / 2, maxScale(windowHeight))
+}
+
+// The ÷ board's scale: the × boards' limits, so the board under the soroban
+// is the same size whichever the operation, but its one board has all that
+// the ÷ before it leaves of `room`, with no second board beside it.
+export function divisorScale(digits: Digits, room: number, windowHeight: number): number {
+  return scaleToFit(digits, room - TIMES_WIDTH, maxScale(windowHeight))
 }
 
 // `activeGroup` is the group of the move the learner has just stepped to, if
-// any. A 九九 names the places of its two digits, and the rods count from the
+// any. A 九九 names the places of its digits, and the rods count from the
 // highest place, so place p is rod digits − 1 − p.
 export function OperandBoard({ problem, activeGroup }: { problem: Problem; activeGroup?: StepGroup }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
   // The screen's gutters are space.xl on each side (Screen).
-  const scale = operandScale(problem.digits, width - 2 * space.xl, height)
-  const g = geometryFor(scale)
-  const product = activeGroup?.kind === 'product' ? activeGroup : undefined
+  const room = width - 2 * space.xl
   const last = problem.digits - 1
+
+  if (problem.op === 'div') {
+    // Only a 九九 taken off multiplies a divisor digit; placing a quotient
+    // digit points at nothing.
+    const subtract = activeGroup?.kind === 'subtract' ? activeGroup : undefined
+    const divisor = divisorScale(problem.digits, room, height)
+    return (
+      <View
+        testID="operand-board"
+        accessible
+        accessibilityLabel={strings.divisorBoardLabel(problem.b)}
+        style={styles.board}
+      >
+        <Sign symbol={OPERATION_SYMBOL.div} scale={divisor} />
+        <Operand
+          testID="operand-b"
+          value={problem.b}
+          digits={problem.digits}
+          scale={divisor}
+          active={subtract === undefined ? undefined : last - subtract.yPlace}
+        />
+      </View>
+    )
+  }
+
+  const scale = operandScale(problem.digits, room, height)
+  const product = activeGroup?.kind === 'product' ? activeGroup : undefined
 
   return (
     <View
@@ -61,15 +102,7 @@ export function OperandBoard({ problem, activeGroup }: { problem: Problem; activ
         scale={scale}
         active={product === undefined ? undefined : last - product.xPlace}
       />
-      {/* As tall as the soroban beside it, so the × sits level with the
-          beads rather than with the digits over them. */}
-      <View style={[styles.times, { height: g.columnHeight + 2 * g.framePadding }]}>
-        {/* Capped like the digits, so at the largest text sizes the ×
-            still fits its fixed-width box. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.timesLabel}>
-          {OPERATION_SYMBOL.mul}
-        </Text>
-      </View>
+      <Sign symbol={OPERATION_SYMBOL.mul} scale={scale} />
       <Operand
         testID="operand-b"
         value={problem.b}
@@ -81,8 +114,26 @@ export function OperandBoard({ problem, activeGroup }: { problem: Problem; activ
   )
 }
 
+// The × between the × boards, or the ÷ before the divisor, in a box
+// TIMES_WIDTH wide. The box is as tall as the boards' sorobans at `scale`,
+// so the sign sits level with the beads rather than with the digits over
+// them.
+function Sign({ symbol, scale }: { symbol: string; scale: number }) {
+  const g = geometryFor(scale)
+  return (
+    <View style={[styles.times, { height: g.columnHeight + 2 * g.framePadding }]}>
+      {/* Capped like the digits, so at the largest text sizes the sign
+          still fits its fixed-width box. */}
+      <Text maxFontSizeMultiplier={1.3} style={styles.timesLabel}>
+        {symbol}
+      </Text>
+    </View>
+  )
+}
+
 // One number: its digits in a row, each over its rod, then the beads.
-// `active` is the rod of the digit the 九九 on show multiplies.
+// `active` is the rod of the digit the 九九 on show multiplies (or, for ÷,
+// the divisor digit whose 九九 is being taken off).
 function Operand({
   testID,
   value,

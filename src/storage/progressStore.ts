@@ -63,6 +63,9 @@ export async function loadProgress(): Promise<Progress> {
       // before it existed has not seen the walkthrough.
       multiplyIntroDone:
         typeof candidate.multiplyIntroDone === 'boolean' ? candidate.multiplyIntroDone : base.multiplyIntroDone,
+      // Added without a schema bump, like multiplyIntroDone.
+      divideIntroDone:
+        typeof candidate.divideIntroDone === 'boolean' ? candidate.divideIntroDone : base.divideIntroDone,
     }
   } catch {
     return emptyProgress()

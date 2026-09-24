@@ -29,6 +29,10 @@ export type Progress = {
   // Whether the learner has seen how 両落とし multiplication works (spec:
   // multiplication §4). Added without a schema bump, like highestStage.
   multiplyIntroDone: boolean
+  // Whether the learner has seen how 商除法 division works (spec: division
+  // §3), apart from the × walkthrough since each is shown before its own
+  // operation's first round. Added without a schema bump, like highestStage.
+  divideIntroDone: boolean
 }
 
 export function emptyProgress(): Progress {
@@ -42,6 +46,7 @@ export function emptyProgress(): Progress {
     highestStage: 1,
     practices: {},
     multiplyIntroDone: false,
+    divideIntroDone: false,
   }
 }
 
