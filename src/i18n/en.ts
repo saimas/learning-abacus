@@ -4,9 +4,10 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import type { Operation, PracticeKind } from '@/domain/problem'
+import type { Operation, PracticeKind, Problem } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
-import type { Strings } from './ja'
+import type { WalkStep } from '@/domain/divisionWalk'
+import type { Strings, WalkCaption } from './ja'
 
 const CELL_STATE: Record<CellState, string> = {
   unseen: 'unseen',
@@ -45,6 +46,11 @@ const PLACE: readonly string[] = [
   'hundred-thousands rod',
   'millions rod',
 ]
+// A rod's name in a few characters, for the row under the division
+// walkthrough's soroban.
+const PLACE_SHORT: readonly string[] = ['1', '10', '100', '1000', '10k', '100k', '1M']
+// A quotient digit named by its place, for the division walkthrough.
+const DIGIT_NAME: readonly string[] = ['ones', 'tens', 'hundreds']
 const PLACE_TITLE: readonly string[] = [
   'Ones',
   'Tens',
@@ -150,6 +156,100 @@ function quotientLine(
   // named alongside ja's wording fix so the two stay in step.
   const placed = q === 0 ? ' Quotient 0: nothing to place.' : ` Place ${q} ${split ? 'two rods' : 'one rod'} left of the head.`
   return `${estimate}${lowered}${placed}`
+}
+
+// The division walkthrough's words for one step, as ja's (spec: division
+// walkthrough §3).
+function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+  const { a, b } = problem
+  const n = problem.digits
+  const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
+  const d0 = Math.floor(b / 10 ** (n - 1))
+  const listed = (items: string[]) =>
+    items.length <= 2 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] ?? ''}`
+  // The digit's times tables with each divisor digit, from the top: a digit
+  // is right once they all come off.
+  const nineNines = (digit: number) =>
+    listed(Array.from({ length: n }, (_, k) => `${digit} × ${Math.floor(b / 10 ** (n - 1 - k)) % 10}`))
+  const all = n === 1 ? '' : n === 2 ? 'both ' : 'all '
+  switch (step.kind) {
+    case 'set':
+      return {
+        ...none,
+        what: `Set ${a} on the soroban`,
+        note: `How many ${b}s fit into ${a}? The answer is found one digit at a time, from the top. The leftmost rod stays empty: the answer grows there.`,
+      }
+    case 'guess': {
+      const word = DIGIT_NAME[step.p] ?? `place ${step.p}`
+      if (step.remainderZero) {
+        return { ...none, what: `The ${word} digit: nothing is left`, note: 'Nothing is left, so this digit is 0 (nothing to place).' }
+      }
+      const product = d0 * step.guess
+      const note =
+        step.guess === 0
+          ? `${d0} doesn't go into ${step.partial}, so this digit is 0 (nothing to place).`
+          : n === 1
+            ? `Times tables: ${d0} × ${step.guess} = ${product} fits in ${step.partial}.`
+            : `Pretend ${b} is ${d0 * 10 ** (n - 1)} and use the times tables: ${d0} × ${step.guess} = ${product} fits in ${step.partial}.`
+      return {
+        ...none,
+        what: `The ${word} digit: how many ${b}s fit into ${step.chunk}?`,
+        math: `Guess ${step.partial} ÷ ${d0} → ${step.raw > 9 ? '10 or more, so 9' : step.guess}`,
+        note,
+      }
+    }
+    case 'try':
+      return {
+        ...none,
+        what: `Try ${step.digit} (${step.digit * 10 ** step.p} × ${b})`,
+        note: `The head of what's left, ${step.lead}, is ${
+          step.split ? `${b} or more, so it goes two rods left of the head` : `smaller than ${b}, so it goes one rod left of the head`
+        }. If ${nineNines(step.digit)} ${all}come${n === 1 ? 's' : ''} off, ${step.digit} is right.`,
+      }
+    case 'take':
+      return {
+        what: `${step.resumed ? 'Carry on: take' : 'Take'} away ${step.digit * 10 ** step.p} × ${step.y * 10 ** step.j} = ${step.amount}`,
+        math: `${step.before} − ${step.amount} = ${step.left}${step.last ? ' ✓' : ''}`,
+        note: step.last ? `${nineNines(step.digit)} ${all}came off, so ${step.digit} is right.` : '',
+        rods: `On the rods: ${subtractLine(step.digit, step.y, step.p + step.j, step.cascades)}`,
+      }
+    case 'stuck':
+      return {
+        ...none,
+        what: `Take away ${step.digit * 10 ** step.p} × ${step.y * 10 ** step.j} = ${step.amount} … it won't go`,
+        math: `${step.left} − ${step.amount} ✗`,
+        note: `Only ${step.left} is left, less than ${step.amount}. ${step.digit} is too big.`,
+      }
+    case 'fix': {
+      const to = step.from - 1
+      const unit = 10 ** step.p
+      const putBack = listed(
+        Array.from({ length: n }, (_, k) => n - 1 - k)
+          .map((j) => [Math.floor(step.taken / 10 ** j) % 10, step.p + j] as const)
+          .filter(([digit]) => digit !== 0)
+          .map(([digit, at]) => `${digit} back on the ${PLACE[at] ?? `rod ${at}`}`),
+      )
+      const note =
+        to === 0
+          ? `Even ${step.from * unit} × ${step.taken} was too much. Put all ${step.back} back. This digit is 0 (nothing to place).`
+          : `You took away ${step.from * unit} × ${step.taken}, but only ${to * unit} × ${step.taken} was due. Put back the extra ${
+            step.p > 0 ? `${unit} × ${step.taken} = ${step.back}` : step.back
+          }. No need to start over: it's the same ${step.left} as going back to ${step.laneStart} and taking away ${to * unit} × ${step.taken}.`
+      return {
+        what: `Fix it: ${step.from} → ${to}, and put back ${step.back}`,
+        math: `${step.before} + ${step.back} = ${step.left}`,
+        note,
+        rods: `On the rods: take 1 off the answer, and put ${putBack}`,
+      }
+    }
+    case 'done':
+      return {
+        ...none,
+        what: 'Read the answer on the left',
+        math: `${a} ÷ ${b} = ${a / b}`,
+        note: `${a / b} on the left, and 0 on every rod to its right.`,
+      }
+  }
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver
@@ -294,6 +394,10 @@ export const en: Strings = {
   divideIntroPlacement:
     'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
   divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,
+  divideWalk,
+  divideWalkLeft: 'left',
+  divideWalkAnswer: 'Answer',
+  rodShortName: (place) => PLACE_SHORT[place] ?? `${place}`,
   operandBoardLabel: (a, b) => `${a} × ${b}`,
   divisorBoardLabel: (b) => `Divisor ${b}`,
 }
