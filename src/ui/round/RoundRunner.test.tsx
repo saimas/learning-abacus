@@ -107,12 +107,11 @@ describe('RoundRunner', () => {
         (place) =>
           StyleSheet.flatten(screen.getByTestId(`correction-column-${place}`).props.style)?.color === colors.accent,
       )
+    // Open at the start, so the first ▶ plays the first move.
+    expect(count()).toBe('0 / 3')
     expect(lit()).toEqual([])
 
     // 23 + 58: +5 on the tens rod, then the ones' 8 as +10 − 2.
-    fireEvent.press(screen.getByTestId('step-next'))
-    expect(count()).toBe('0 / 3')
-    expect(lit()).toEqual([])
     fireEvent.press(screen.getByTestId('step-next'))
     expect(count()).toBe('1 / 3')
     expect(lit()).toEqual([1])
@@ -177,11 +176,9 @@ describe('RoundRunner with ×', () => {
     renderRound(multiply)
     setBeads(onProduct, 407, 4)
     fireEvent.press(screen.getByTestId('submit'))
+    // The panel opens at the start, with no 九九 yet.
     expect([lit('a'), lit('b')]).toEqual([[], []])
 
-    // The first ▶ shows the start, with no 九九 yet.
-    fireEvent.press(screen.getByTestId('step-next'))
-    expect([lit('a'), lit('b')]).toEqual([[], []])
     // 1 × 3: the tens of each.
     fireEvent.press(screen.getByTestId('step-next'))
     expect([lit('a'), lit('b')]).toEqual([[0], [0]])
@@ -215,8 +212,9 @@ describe('RoundRunner with ×', () => {
       layout('step-lines-scroll', 0, 60)
       for (const [index, y] of [20, 38, 56, 74].entries()) layout(`correction-product-${index}`, y, 16)
 
-      // The start, 1 × 3 and 1 × 4 are all on show.
-      for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('step-next'))
+      // 1 × 3 and 1 × 4 are both on show, as the start the panel opens at
+      // was.
+      for (let i = 0; i < 2; i++) fireEvent.press(screen.getByTestId('step-next'))
       expect(scrollTo).not.toHaveBeenCalled()
       // 2 × 3 reaches past the bottom, and 2 × 4 further still.
       fireEvent.press(screen.getByTestId('step-next'))

@@ -63,11 +63,11 @@ export function QuestionView({
   demonstration: string | null
   // The step panel's explanation lines. `activeStep` is the bead move the
   // learner has just stepped to, counted from 0, or undefined at the start
-  // or before the first step. `showAnswer` says whether the lines give the
-  // answer, which they do only once the question has been answered. In bead
-  // mode the lines scroll on their own, and the card's highlighted line
-  // reports where it sits so it can be scrolled into view (see
-  // useActiveLineLayout).
+  // (where the panel opens) or when not stepping. `showAnswer` says whether
+  // the lines give the answer, which they do only once the question has
+  // been answered. In bead mode the lines scroll on their own, and the
+  // card's highlighted line reports where it sits so it can be scrolled into
+  // view (see useActiveLineLayout).
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
   // leaves off the soroban, following the same `activeStep` as the step
@@ -145,13 +145,18 @@ export function QuestionView({
       AccessibilityInfo.announceForAccessibility(strings.correct)
     } else {
       guardFrom.current = t
-      // The review starts from the learner's own beads, with nothing
-      // stepped, whatever was stepped through before the answer.
-      stepper.clear()
       // The number alone teaches nothing. Where coaching still speaks, the
       // panel with the substitution comes up with the ✕; at silent levels it
       // waits to be asked for.
       const cardShown = coaching !== 'silent'
+      // An open panel starts at the start (see openSteps), whatever was
+      // stepped through before the answer. One still to be asked for
+      // leaves the learner's own beads under the ✕ until then.
+      if (cardShown) {
+        stepper.restart()
+      } else {
+        stepper.clear()
+      }
       setReview({ cardShown })
       // At F0–F1 the panel opens on its own, so showAnswer() — the only
       // other place that announces the answer — never runs for this miss.
@@ -167,8 +172,15 @@ export function QuestionView({
 
   // Spec (core rounds) §4: the same step panel as after a miss, before the
   // answer and without it, for a learner who wants to see the way first.
+  // Wherever the panel opens, here, on a miss, and at こたえを見る, it opens
+  // at the start, drawn solid, so the first ▶ plays the first move. The
+  // owner (2026-09-24) had to press ▶ twice to kick off the first move when
+  // it opened on the learner's own beads, and asked for the steps to be
+  // ready as soon as they are shown. Set in the same press that opens the
+  // panel, so the controls appear at the start and VoiceOver hears no step.
   function openSteps() {
     assisted.current = true
+    stepper.restart()
     setStepsOpen(true)
   }
 
@@ -181,11 +193,12 @@ export function QuestionView({
     setStepsOpen(false)
   }
 
-  // Opens the step panel. Nothing plays by itself: the learner steps
-  // through the move with ▶ at their own pace.
+  // Opens the step panel, at the start (see openSteps). Nothing plays by
+  // itself: the learner steps through the move with ▶ at their own pace.
   function showAnswer() {
     guardFrom.current = now()
     AccessibilityInfo.announceForAccessibility(strings.correctionAnswer(exercise.expected))
+    stepper.restart()
     setReview({ cardShown: true })
   }
 
@@ -230,8 +243,8 @@ export function QuestionView({
       </Pressable>
     ) : null
   // The move just played: state k is the soroban after k moves, so after
-  // stepping to k the highlighted move is k − 1. At the start or before the
-  // first step nothing is highlighted.
+  // stepping to k the highlighted move is k − 1. At the start, or when not
+  // stepping, nothing is highlighted.
   const activeStep = stepper.index !== null && stepper.index > 0 ? stepper.index - 1 : undefined
   // The panel is open either after a miss, where it gives the answer and
   // stays until つぎへ, or before an answer, where it keeps the answer back
