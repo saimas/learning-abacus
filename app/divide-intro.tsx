@@ -19,6 +19,7 @@ export default function DivideIntroScreen() {
       intro={{
         title: strings.divideIntroTitle,
         method: strings.divideIntroMethod,
+        guess: strings.divideIntroGuess,
         placement: strings.divideIntroPlacement,
         result: strings.divideIntroResult,
       }}

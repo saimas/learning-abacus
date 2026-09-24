@@ -49,11 +49,12 @@ Invariants, tested exhaustively:
   - quotient group: `quotientLine(q, partial, d0, guess, split)`: the guess by 九九, why it was lowered if it was too big, then where q goes, e.g. "16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる", "4÷3で見当をつけると1。商1を頭の2つ左に立てる". A 0 digit reads "6÷9で見当をつけると0。商0（立てない）". (en: "Estimate 16 ÷ 3 = 5. 5 is too big to take away, so use 4. Place 4 one rod left of the head.", "… Quotient 0: nothing to place.") A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
 - **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた:
-  1. what 商除法 does;
-  2. the 割れる / 割れない rule;
-  3. one page per group, with its bead steps playing and coloured, and the divisor board lit;
-  4. the result.
-  - Build it by generalising the × walkthrough (`MultiplyIntro`) rather than copying it.
+  1. what division is (how many times the divisor goes into the dividend), then what 商除法 does (`divideIntroMethod`);
+  2. how each digit is guessed by 九九 (`divideIntroGuess`, added after build 19): the head of what is left ÷ the divisor's first digit, 1692 ÷ 36 → 16 ÷ 3 = 5, lowered to 4 because the 6 has to come off too;
+  3. the 割れる / 割れない rule (`divideIntroPlacement`);
+  4. one page per group, with its bead steps playing and coloured, and the divisor board lit; a quotient page reads the new guess line;
+  5. the result.
+  - Build it by generalising the × walkthrough (`MultiplyIntro`) rather than copying it. The guess page is optional in `IntroTexts`: × gives none, so its walkthrough is unchanged (method → placement → 九九 → result).
 - **Home:** the grid gains a ÷ row automatically (from `OPERATIONS`). (Per-kind examples such as 56 ÷ 8 were planned here, but Home no longer shows examples for any operation since the chooser's round row was replaced by the grid, so none were added.)
 
 ## 4. Testing
@@ -64,7 +65,7 @@ Invariants, tested exhaustively:
   - no step touches a quotient rod after its digit is placed;
   - named cases: 1692 ÷ 36 = 47 (groups, places, split = false twice); 432 ÷ 36 = 12 (a 3-digit dividend: split = true, the quotient two rods left of the head, lead 43); 202032 ÷ 976 = 207 (a 0 quotient digit: a group with no moves);
   - the guess: those three problems' `partial` and `guess`; exhaustively, `q ≤ guess ≤ 9`, `partial ≤ 99`, and `guess = q` for a 1-digit divisor.
-- Exercise (`expectedBeads`), the target, the strings, the card lines, the divisor board highlight, a ÷ round answered on the beads (final reading) and on the keypad (q), the walkthrough pages, the redirect, and the Home link.
+- Exercise (`expectedBeads`), the target, the strings, the card lines, the divisor board highlight, a ÷ round answered on the beads (final reading) and on the keypad (q), the walkthrough pages (÷ goes method → guess → placement; × has no guess page), the redirect, and the Home link.
 - On the simulator: the walkthrough, and a 3けた round's 7 rods (tapping, stepping, the board).
 
 ## 5. Build order
