@@ -402,15 +402,26 @@ export function QuestionView({
             place (see beadStepLines). Until then 手順を見る sits at its
             top, where the lines will start. Inside the spacer the button
             counts for nothing in the share-out, so the soroban stays where
-            it was when the button sat above it, in the scroll. It still
-            fits: the spacer's share is the same as the scroll's, which had
-            to show the prompt and the button both. A minimum height here
-            would not do instead: Yoga counts it before the share-out, like
-            a flex basis, and the soroban would move up by half of it. */}
+            it was when the button sat above it, in the scroll. Most phones
+            give the spacer more than the button's height, but a phone
+            whose spare height leaves it less (the owner's is 375 × 667)
+            must not have the button spill over もどす and こたえる, which
+            are drawn after it and would take its taps. So the spacer
+            scrolls: there a small scroll reaches the button, and elsewhere
+            there is nothing to scroll and it looks as a plain spacer
+            would. A minimum height would not do instead: Yoga counts it
+            before the share-out, like a flex basis, and the soroban would
+            move up by half of it on every phone. */}
         {beadStepLines ?? (
-          <View testID="bead-spacer" style={styles.beadSpacer}>
+          <ScrollView
+            testID="bead-spacer"
+            style={styles.beadSpacer}
+            contentContainerStyle={styles.beadSpacerContent}
+            showsVerticalScrollIndicator={false}
+            alwaysBounceVertical={false}
+          >
             {stepsOpenButton}
-          </View>
+          </ScrollView>
         )}
         {/* Before an answer, the steps' とじる stands in for もどす and
             こたえる: the learner answers once they have closed the steps.
@@ -547,6 +558,9 @@ const styles = StyleSheet.create({
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
+  // Lets the content fill the spacer, with 手順を見る at its top, as a
+  // plain spacer would hold it.
+  beadSpacerContent: { flexGrow: 1 },
   // In beadSpacer's place, with the same flex and nothing else: a padding or
   // margin here would count before the share-out and move the soroban (a
   // flex basis is never less than the padding). The gap under the controls

@@ -407,6 +407,25 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
     expect(within(screen.getByTestId('bead-spacer')).getByTestId('steps-open')).toBeTruthy()
   })
 
+  // Where the spare height leaves the space shorter than the button, the
+  // button must not spill over もどす and こたえる, which are drawn after it
+  // and would take its taps. The space scrolls instead, so a small scroll
+  // reaches it. Its outer style is still the spacer's flex alone, so the
+  // soroban does not move for it.
+  it('lets the button be scrolled to where the space is shorter than it', () => {
+    renderView()
+    const place = screen.getByTestId('bead-spacer')
+    expect(screen.UNSAFE_getAllByType(ScrollView).map((scroll) => scroll.props.testID)).toContain('bead-spacer')
+    expect(StyleSheet.flatten(place.props.style)).toEqual({ flex: 1 })
+    expect(StyleSheet.flatten(place.props.contentContainerStyle)).toEqual({ flexGrow: 1 })
+    expect(place.props.showsVerticalScrollIndicator).toBe(false)
+    // On a screen with room there is nothing to scroll, so nothing bounces.
+    expect(place.props.alwaysBounceVertical).toBe(false)
+
+    fireEvent.press(within(place).getByTestId('steps-open'))
+    expect(screen.getByTestId('step-lines')).toBeTruthy()
+  })
+
   // Under review there is nothing to offer, and the space goes back to
   // being just a spacer.
   it('leaves the space empty under review in bead mode', () => {
