@@ -123,9 +123,18 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // guess by times table (the head of what is left ÷ the divisor's first
 // digit), why a guess too big to take away was lowered to q, then where q
 // goes. A 0 is not placed at all, so its line names no rod.
-function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
-  // Nothing left can only give a 0; said directly, as ja does.
-  if (partial === 0) return 'Nothing is left here: quotient 0, nothing to place.'
+function quotientLine(
+  q: number,
+  partial: number,
+  d0: number,
+  guess: number,
+  split: boolean,
+  remainderZero: boolean,
+): string {
+  // Nothing left at all can only give a 0, and a head too small for the
+  // first digit guesses 0; both are said directly, as ja does.
+  if (remainderZero) return 'Nothing is left here: quotient 0, nothing to place.'
+  if (guess === 0) return `${d0} doesn't go into the head: quotient 0, nothing to place.`
   // A digit is at most 9, so "Estimate 32 ÷ 3 = 9" would be wrong
   // arithmetic; the capped guess says why it is 9.
   const estimate =

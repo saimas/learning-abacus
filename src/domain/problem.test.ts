@@ -418,6 +418,13 @@ describe('division', () => {
         }
         // The walkthrough says the head is one or two digits.
         if (group.partial > 99) faults.push(`${name}: head ${group.partial} at place ${group.place}`)
+        // The card says "nothing is left" only when the rods below the
+        // quotient's read 0, not whenever the head does (10815 ÷ 105).
+        const state = states[at]
+        const remainder = state === undefined ? undefined : readValue(state) % 10 ** group.place
+        if (group.remainderZero !== (remainder === 0)) {
+          faults.push(`${name}: remainderZero ${group.remainderZero} but ${remainder} left at place ${group.place}`)
+        }
         // A 1-digit divisor has no lower digit to come off as well, so its
         // guess is always the digit.
         if (p.digits === 1 && group.guess !== group.q) faults.push(`${name}: guess ${group.guess} is not ${group.q}`)
@@ -482,6 +489,19 @@ describe('division', () => {
       { q: 1, partial: 3, guess: 1 },
       { q: 0, partial: 0, guess: 0 },
     ])
+  })
+
+  // A head of 0 does not mean nothing is left: 10815 ÷ 105, after the 1,
+  // leaves 315, whose head above the tens is 0. Only 360 ÷ 36, after the
+  // 1, leaves nothing at all.
+  it('says whether anything is left when a digit is decided, apart from its head', () => {
+    const zeros = (q: number, d: number) =>
+      problemSteps(division(q, d)).flatMap((group) =>
+        group.kind === 'quotient' && group.q === 0 ? [{ partial: group.partial, remainderZero: group.remainderZero }] : [],
+      )
+    expect(zeros(103, 105)).toEqual([{ partial: 0, remainderZero: false }])
+    expect(zeros(10, 36)).toEqual([{ partial: 0, remainderZero: true }])
+    expect(zeros(207, 976)).toEqual([{ partial: 6, remainderZero: false }])
   })
 
   it('names the divisor’s first digit, which each guess divides by', () => {

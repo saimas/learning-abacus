@@ -120,13 +120,26 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // take away was lowered to q (the beads play only q), then where q goes by
 // the 割れる / 割れない rule. A 0 is not placed at all, so its line names no
 // rod.
-function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
+function quotientLine(
+  q: number,
+  partial: number,
+  d0: number,
+  guess: number,
+  split: boolean,
+  remainderZero: boolean,
+): string {
   // "立てずに次へ" reads wrong when the 0 is the quotient's last digit (there
   // is no next digit to move to), so this stays neutral about what follows.
   const zero = '商0（立てない）'
-  // Nothing left (360 ÷ 36 = 10 after the 1) can only give a 0, and
-  // "0÷3で見当をつけると0" reads oddly, so it says why directly.
-  if (partial === 0) return `残りは0なので、${zero}`
+  // Nothing left at all (360 ÷ 36 = 10, after the 1) can only give a 0, and
+  // "0÷3で見当をつけると0" reads oddly, so it says why directly. A head of 0
+  // is not enough: 10815 ÷ 105, after the 1, leaves 315, whose head above
+  // the tens is 0, and the next digit is read from it.
+  if (remainderZero) return `残りは0なので、${zero}`
+  // A head smaller than the divisor's first digit (0 included, with
+  // something left below it) guesses 0: said as the digit not going in, not
+  // as a sum ("6÷9で見当をつけると0").
+  if (guess === 0) return `頭に${d0}は入らないので、${zero}`
   // A digit is at most 9, so a head ÷ first digit of 10 or more guesses 9;
   // "32÷3で見当をつけると9" would be wrong arithmetic.
   const estimate =

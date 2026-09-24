@@ -598,7 +598,10 @@ const styles = StyleSheet.create({
   // row wraps to a second line, and must grow the slot rather than spill
   // over the lines below, which would take its taps. The soroban above
   // stays put, unless the prompt's scroll is already giving way at that
-  // text size, when it gives way by the second line too.
+  // text size, when it gives way by the second line too. At about AX4 and
+  // up, the Button's label and the step count (neither capped) can outgrow
+  // their rows as well, so the soroban can shift a few pt there, while the
+  // prompt is already scrolling.
   controlsSlot: { minHeight: space.sm + STEP_CONTROLS_HEIGHT, justifyContent: 'center' },
   // The space under the controls' slot in bead mode, holding 手順を見る
   // (`bead-spacer`) or, with the panel open, the step lines (`step-lines`).

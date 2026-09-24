@@ -93,7 +93,7 @@ describe('ProblemCorrectionCard', () => {
   // keeps its line, and the next digit follows it at once.
   it('gives a 0 quotient digit its line, with no 九九 after it', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a: 202032, b: 976 }} expected={207} />)
-    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('6÷9で見当をつけると0。商0（立てない）')
+    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('頭に9は入らないので、商0（立てない）')
     expect(textOf(screen.getByTestId('correction-quotient-5'))).toBe('68÷9で見当をつけると7。商7を頭の1つ左に立てる')
   })
 
@@ -108,6 +108,26 @@ describe('ProblemCorrectionCard', () => {
   ])('explains the guess for the second digit of %p ÷ %p', (a, b, expected, line) => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a, b }} expected={expected} />)
     expect(textOf(screen.getByTestId('correction-quotient-3'))).toBe(line)
+  })
+
+  // A 3けた 0 digit, as a real problem reads it: after the 1 of 10815 ÷ 105,
+  // 315 is left, whose head above the tens is 0, yet it is not nothing left,
+  // and the next digit is read from it; after the 1 of 17702 ÷ 167, 1 ÷ 1
+  // guesses 1, which does not come off, so it is lowered to 0.
+  it.each([
+    [10815, 105, 103, ['頭に1は入らないので、商0（立てない）', '3÷1で見当をつけると3。商3を頭の2つ左に立てる']],
+    [
+      17702,
+      167,
+      106,
+      [
+        '1÷1で見当をつけると1。1だと引ききれないので0にする。商0（立てない）',
+        '10÷1は10以上なので、見当は9。9だと引ききれないので、引けるまで下げて6にする。商6を頭の1つ左に立てる',
+      ],
+    ],
+  ])('explains the 0 digit of %p ÷ %p and the digit after it', (a, b, expected, lines) => {
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a, b }} expected={expected} />)
+    expect([4, 5].map((i) => textOf(screen.getByTestId(`correction-quotient-${i}`)))).toEqual(lines)
   })
 
   it('still gives a line for a 九九 of a 0 divisor digit, since recalling it is still a step', () => {

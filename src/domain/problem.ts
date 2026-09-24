@@ -157,6 +157,10 @@ export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: b
 // capped at 9. The divisor's lower digits come off too, so the guess can be
 // too big (1692 ÷ 36: 16 ÷ 3 is 5, but only 4 takes off), never too small.
 // The beads play only q; the card says why the guess was lowered.
+// `remainderZero` says nothing at all is left below the quotient's rods, so
+// the card can say that is why the digit is 0 (360 ÷ 36 = 10). A `partial`
+// of 0 does not mean so: 10815 ÷ 105, after the 1, leaves 315, whose head
+// above the tens is 0, and the next digit is read from it.
 // `subtract` takes the 九九 q × y off the remainder, where y is the
 // divisor's digit at `yPlace`, so the divisor board can point at it; `place`
 // is where its ones digit comes off, and its tens digit comes off one place
@@ -182,6 +186,7 @@ export type StepGroup =
     split: boolean
     partial: number
     guess: number
+    remainderZero: boolean
     moves: Move[]
     steps: PlacedStep[]
     cascades: boolean
@@ -381,7 +386,8 @@ function quotientSteps(problem: Problem): StepGroup[] {
     soroban = placed.soroban
     // A 0 is never placed, so it claims no 割れる (see StepGroup).
     const split = q > 0 && place - head === 2
-    groups.push({ kind: 'quotient', q, place, lead, split, partial, guess, ...movesGroup(placed.moves) })
+    const remainderZero = remainder === 0
+    groups.push({ kind: 'quotient', q, place, lead, split, partial, guess, remainderZero, ...movesGroup(placed.moves) })
     // Nothing is multiplied by a 0, so there is no 九九 to take off.
     if (q === 0) continue
     for (let j = n - 1; j >= 0; j--) {

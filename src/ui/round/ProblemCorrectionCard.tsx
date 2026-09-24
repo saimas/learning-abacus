@@ -82,7 +82,14 @@ export function groupLine(strings: Strings, problem: Problem, group: StepGroup):
     case 'product':
       return strings.productLine(group.x, group.y, group.place, group.cascades)
     case 'quotient':
-      return strings.quotientLine(group.q, group.partial, divisorFirstDigit(problem), group.guess, group.split)
+      return strings.quotientLine(
+        group.q,
+        group.partial,
+        divisorFirstDigit(problem),
+        group.guess,
+        group.split,
+        group.remainderZero,
+      )
     case 'subtract':
       return strings.subtractLine(group.q, group.y, group.place, group.cascades)
   }
