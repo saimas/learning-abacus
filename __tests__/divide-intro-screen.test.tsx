@@ -1,5 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+import { divisionWalk } from '@/domain/divisionWalk'
+import type { Problem } from '@/domain/problem'
 import { emptyProgress } from '@/domain/progress'
+import { ja } from '@/i18n/ja'
 import * as store from '@/storage/progressStore'
 import DivideIntroScreen from '../app/divide-intro'
 import { textOf } from '@/ui/session/testing'
@@ -41,6 +44,16 @@ afterEach(() => {
 })
 
 const text = (testID: string) => textOf(screen.getByTestId(testID))
+
+// The route's example, and step k's words for it in the default locale.
+// src/i18n/divideWalk.test.ts pins the wording itself.
+const PROBLEM: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const WALK = divisionWalk(PROBLEM)
+function what(k: number): string {
+  const step = WALK[k]
+  if (step === undefined) throw new Error(`no step ${k}`)
+  return ja.divideWalk(PROBLEM, step).what
+}
 
 // Renders the screen once progress has loaded.
 async function renderScreen() {
@@ -85,9 +98,9 @@ describe('Divide intro screen', () => {
     // at a time as each 九九 uses it.
     expect(screen.getByTestId('walk-divisor-1').props.children).toBe('3')
     expect(screen.getByTestId('walk-divisor-0').props.children).toBe('6')
-    expect(text('walk-what')).toBe('1692をそろばんに置く')
+    expect(text('walk-what')).toBe(what(0))
     for (let i = 0; i < 22; i++) fireEvent.press(screen.getByTestId('walk-next'))
-    expect(text('walk-what')).toBe('答えを読む')
+    expect(text('walk-what')).toBe(what(WALK.length - 1))
   })
 
   it('starts the round it was shown before, once the walkthrough is marked seen', async () => {

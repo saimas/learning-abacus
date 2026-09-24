@@ -64,17 +64,33 @@ export function DivideWalkthrough({
   // keeping the step before it red.
   const tinted = step.steps.length > 0 ? tintsFor(stepColouring(states, groupStarts, frame.state)) : undefined
 
-  // What is left must be the number on the rods: until a step's last bead
-  // lands, it is what was left before the step, and only then the step's
-  // own. A step without beads is a single frame, which is its last. The set
-  // step has none before it.
+  // のこり and the answer boxes never run ahead of the beads: they change
+  // when the step's last bead lands, and until then show what they did
+  // before the step. They do not follow the rods bead by bead, since a
+  // take's first bead leaves only part of its 九九 off. A step without beads
+  // is a single frame, which is its last; the set step has none before it,
+  // so it shows its own.
   const stepDone = frames[index + 1]?.step !== frame.step
-  const left = stepDone ? step.left : (walk[frame.step - 1] ?? step).left
+  const settled = stepDone ? step : (walk[frame.step - 1] ?? step)
+  const left = settled.left
+  const answer = settled.answer
+
+  // A learner who scrolled down to read a long note starts the next step
+  // from its top, where its words and the soroban are. Only a new step
+  // scrolls: the same step's beads leave the words where they were, and the
+  // walkthrough opens at the top anyway.
+  const scroll = useRef<ScrollView>(null)
+  const scrolledFor = useRef(frame.step)
+  useEffect(() => {
+    if (frame.step === scrolledFor.current) return
+    scrolledFor.current = frame.step
+    scroll.current?.scrollTo({ y: 0, animated: false })
+  }, [frame.step])
 
   // The beads' slide is silent to VoiceOver, so each ▶ or ◀ is read out: a
   // new step's words, or just the count while the same step's beads move.
   // Only a change is: nothing is read as the walkthrough opens.
-  const spoken = [caption.what, caption.math].filter((part) => part !== '').join('、')
+  const spoken = strings.divideWalkSpoken(caption.what, caption.math)
   const count = strings.replayStep(index + 1, frames.length)
   const announced = useRef({ index, step: frame.step })
   useEffect(() => {
@@ -89,7 +105,7 @@ export function DivideWalkthrough({
     .map((digit, k, all) => ({ digit, place: all.length - 1 - k }))
   const answerLabel = [
     strings.divideWalkAnswer,
-    ...step.answer.flatMap((entry) => (entry === null ? [] : [answerText(entry)])),
+    ...answer.flatMap((entry) => (entry === null ? [] : [answerText(entry)])),
   ].join(' ')
 
   return (
@@ -115,13 +131,16 @@ export function DivideWalkthrough({
       {/* As in MethodIntro, the controls stay pinned at the bottom and
           everything above them scrolls, so a short phone still reaches the
           note. */}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.problemRow}>
           {/* The divisor's digits the step uses are underlined: a guess is
-              made with the first alone, and each 九九 with one of them. */}
+              made with the first alone, and each 九九 with one of them. The
+              size is capped as the answer boxes' is, so both boxes stay on
+              the row at a larger text size. */}
           <Text
             testID="walk-problem"
             accessibilityLabel={`${problem.a} ${OPERATION_SYMBOL[problem.op]} ${problem.b}`}
+            maxFontSizeMultiplier={1.3}
             style={styles.problem}
           >
             {`${problem.a} ${OPERATION_SYMBOL[problem.op]} `}
@@ -139,7 +158,7 @@ export function DivideWalkthrough({
             <Text maxFontSizeMultiplier={1.3} style={styles.answerLabel}>
               {strings.divideWalkAnswer}
             </Text>
-            {step.answer.map((entry, k) => (
+            {answer.map((entry, k) => (
               <AnswerBox key={k} testID={`walk-answer-${k}`} entry={entry} />
             ))}
           </View>
@@ -203,7 +222,7 @@ export function DivideWalkthrough({
             {String(left)}
           </Text>
           {caption.math === '' ? null : (
-            <Text testID="walk-math" style={[styles.math, { color: mathColour(caption.math) }]}>
+            <Text testID="walk-math" style={[styles.math, { color: mathColour(step) }]}>
               {caption.math}
             </Text>
           )}
@@ -254,6 +273,10 @@ export function DivideWalkthrough({
 // a rod, and indented by the frame's and the deck's padding as Abacus lays
 // out its rods. Abacus centres itself, and so does the row, so the columns
 // line up.
+//
+// Both rows, the readings with their badges and the rod names, are hidden
+// from VoiceOver: each of Abacus's rods already reads out its value, and the
+// words carry the step's numbers, so the rows would only add a stop per rod.
 function RodRow({
   testID,
   scale,
@@ -267,7 +290,12 @@ function RodRow({
 }) {
   const g = geometryFor(scale)
   return (
-    <View testID={testID} style={[styles.rodRow, { paddingHorizontal: g.framePadding + g.deckPadding }]}>
+    <View
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[styles.rodRow, { paddingHorizontal: g.framePadding + g.deckPadding }]}
+    >
       {Array.from({ length: rods }, (_, i) => (
         <View key={i} testID={`${testID}-cell-${i}`} style={[styles.rodCell, { width: g.rodWidth }]}>
           {cell(i)}
@@ -305,11 +333,13 @@ function markLabel(step: WalkStep, amount: number): string {
   return step.kind === 'stuck' ? `${signed}?` : signed
 }
 
-// A sum that comes off ends in ✓ and one that will not in ✗; the rest are
-// plain working.
-function mathColour(math: string): string {
-  if (math.endsWith('✓')) return colors.ok
-  if (math.endsWith('✗')) return colors.accent
+// The sum of a digit's last 九九, the one that settles it, is in green (its
+// words end in ✓), and a 九九 that will not come off in the accent (✗); the
+// rest are plain working. Read off the step, not the words, so no locale's
+// wording can change the colour.
+function mathColour(step: WalkStep): string {
+  if (step.kind === 'take' && step.last) return colors.ok
+  if (step.kind === 'stuck') return colors.accent
   return colors.ink
 }
 
