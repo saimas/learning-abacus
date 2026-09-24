@@ -135,6 +135,7 @@ describe('divisionWalk', () => {
       back: 300,
       before: 192,
       laneStart: 1692,
+      putBack: [{ digit: 3, place: 2 }],
       steps: [
         { rodIndex: 0, delta: -5 },
         { rodIndex: 0, delta: 4 },
@@ -233,6 +234,11 @@ describe('divisionWalk', () => {
       before: 66,
       laneStart: 24066,
       left: 12066,
+      putBack: [
+        { digit: 1, place: 4 },
+        { digit: 2, place: 3 },
+      ],
+      focus: [0, 2, 3],
       marks: [
         { rodIndex: 0, amount: -1 },
         { rodIndex: 2, amount: 1 },
@@ -241,6 +247,29 @@ describe('divisionWalk', () => {
       divisorPlaces: [2, 1],
     })
     expect(walkFaults(division(191, 126))).toEqual([])
+  })
+
+  // 8 × 1 and 8 × 0 are off when 8 × 4 sticks. Only the 1 moves a bead going
+  // back, so only it is put back, badged and underlined.
+  it('leaves a 0 divisor digit out of what a fix puts back: 82992 ÷ 104', () => {
+    const walk = divisionWalk(division(798, 104))
+    expect(walk.find((step) => step.kind === 'fix' && step.p === 2)).toMatchObject({
+      from: 8,
+      taken: 100,
+      back: 10000,
+      putBack: [{ digit: 1, place: 4 }],
+      steps: [
+        { rodIndex: 0, delta: -1 },
+        { rodIndex: 2, delta: 1 },
+      ],
+      focus: [0, 2],
+      marks: [
+        { rodIndex: 0, amount: -1 },
+        { rodIndex: 2, amount: 1 },
+      ],
+      divisorPlaces: [2],
+    })
+    expect(walkFaults(division(798, 104))).toEqual([])
   })
 
   it('never needs a fix for a 1-digit divisor: 56 ÷ 8', () => {

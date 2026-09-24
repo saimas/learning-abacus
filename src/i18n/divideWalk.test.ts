@@ -160,6 +160,15 @@ describe('the division walkthrough, in Japanese', () => {
     })
   })
 
+  // Putting 990 back on 万 and 千 carries out of 千 into a 万 that is 9 by
+  // then, and on into 十万: said as a × round's 九九 says it.
+  it('says when a fix carries on up the rods: 797402 ÷ 998', () => {
+    const problem = division(799, 998)
+    expect(ja.divideWalk(problem, stepOf(problem, (s) => s.kind === 'fix' && s.p === 2)).rods).toBe(
+      'そろばんでは：答えのけたから1を引き、万の位に9、千の位に9を足す（さらに上の位へ繰り上がる）',
+    )
+  })
+
   it('names rods briefly for the row under the soroban', () => {
     expect([4, 3, 2, 1, 0].map(ja.rodShortName)).toEqual(['万', '千', '百', '十', '一'])
   })
@@ -191,5 +200,29 @@ describe('the division walkthrough, in English', () => {
     expect(en.divideWalk(problem, stepOf(problem, (s) => s.kind === 'try')).note).toContain(
       'If 2 × 9, 2 × 7 and 2 × 6 all come off, 2 is right.',
     )
+  })
+
+  it('says when a fix carries on up the rods: 797402 ÷ 998', () => {
+    const problem = division(799, 998)
+    expect(en.divideWalk(problem, stepOf(problem, (s) => s.kind === 'fix' && s.p === 2)).rods).toBe(
+      'On the rods: take 1 off the answer, and put 9 back on the ten-thousands rod and 9 back on the thousands rod' +
+        ' (and carries again into the next rod)',
+    )
+  })
+})
+
+// VoiceOver hears a new step's words and its sum as one announcement, with
+// the pause each language takes between them.
+describe('the division walkthrough, spoken', () => {
+  it('joins the words and the sum with 、 in Japanese', () => {
+    expect(ja.divideWalkSpoken('50×30=1500を引く', '1692−1500=192')).toBe('50×30=1500を引く、1692−1500=192')
+    expect(ja.divideWalkSpoken('5を置いてみる（50×36）', '')).toBe('5を置いてみる（50×36）')
+  })
+
+  it('joins them as two sentences in English', () => {
+    expect(en.divideWalkSpoken('Take away 50 × 30 = 1500', '1692 − 1500 = 192')).toBe(
+      'Take away 50 × 30 = 1500. 1692 − 1500 = 192',
+    )
+    expect(en.divideWalkSpoken('Try 5 (50 × 36)', '')).toBe('Try 5 (50 × 36)')
   })
 })

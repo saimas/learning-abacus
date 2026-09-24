@@ -4,7 +4,7 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import type { Operation, PracticeKind, Problem } from '@/domain/problem'
+import { answerOf, digitAt, divisorFirstDigit, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 import type { WalkStep } from '@/domain/divisionWalk'
 import type { Strings, WalkCaption } from './ja'
@@ -164,13 +164,13 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
-  const d0 = Math.floor(b / 10 ** (n - 1))
+  const d0 = divisorFirstDigit(problem)
   const listed = (items: string[]) =>
     items.length <= 2 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] ?? ''}`
   // The digit's times tables with each divisor digit, from the top: a digit
   // is right once they all come off.
   const nineNines = (digit: number) =>
-    listed(Array.from({ length: n }, (_, k) => `${digit} × ${Math.floor(b / 10 ** (n - 1 - k)) % 10}`))
+    listed(Array.from({ length: n }, (_, k) => `${digit} × ${digitAt(b, n - 1 - k)}`))
   const all = n === 1 ? '' : n === 2 ? 'both ' : 'all '
   switch (step.kind) {
     case 'set':
@@ -224,10 +224,7 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
       const to = step.from - 1
       const unit = 10 ** step.p
       const putBack = listed(
-        Array.from({ length: n }, (_, k) => n - 1 - k)
-          .map((j) => [Math.floor(step.taken / 10 ** j) % 10, step.p + j] as const)
-          .filter(([digit]) => digit !== 0)
-          .map(([digit, at]) => `${digit} back on the ${PLACE[at] ?? `rod ${at}`}`),
+        step.putBack.map(({ digit, place }) => `${digit} back on the ${PLACE[place] ?? `rod ${place}`}`),
       )
       const note =
         to === 0
@@ -239,16 +236,22 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
         what: `Fix it: ${step.from} → ${to}, and put back ${step.back}`,
         math: `${step.before} + ${step.back} = ${step.left}`,
         note,
-        rods: `On the rods: take 1 off the answer, and put ${putBack}`,
+        // A put-back digit can carry into a rod that is already 9, said as
+        // the product line says it.
+        rods: `On the rods: take 1 off the answer, and put ${putBack}${
+          step.cascades ? ' (and carries again into the next rod)' : ''
+        }`,
       }
     }
-    case 'done':
+    case 'done': {
+      const quotient = answerOf(problem)
       return {
         ...none,
         what: 'Read the answer on the left',
-        math: `${a} ÷ ${b} = ${a / b}`,
-        note: `${a / b} on the left, and 0 on every rod to its right.`,
+        math: `${a} ÷ ${b} = ${quotient}`,
+        note: `${quotient} on the left, and 0 on every rod to its right.`,
       }
+    }
   }
 }
 
@@ -392,6 +395,8 @@ export const en: Strings = {
   // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'How to divide',
   divideWalk,
+  // Its words, then its sum, as two sentences.
+  divideWalkSpoken: (what, math) => (math === '' ? what : `${what}. ${math}`),
   divideWalkLeft: 'left',
   divideWalkAnswer: 'Answer',
   rodShortName: (place) => PLACE_SHORT[place] ?? `${place}`,

@@ -4,7 +4,15 @@ import { describeSteps } from '@/domain/explain'
 import type { CellState } from '@/ui/progress/AtomGrid'
 // Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
 import type { PracticeStage } from '@/ui/progress/PracticeTable'
-import { type Digits, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
+import {
+  answerOf,
+  digitAt,
+  divisorFirstDigit,
+  type Digits,
+  type Operation,
+  type PracticeKind,
+  type Problem,
+} from '@/domain/problem'
 import type { BlockKind, PracticePart } from '@/domain/session'
 import type { WalkStep } from '@/domain/divisionWalk'
 
@@ -171,13 +179,12 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
-  const d0 = Math.floor(b / 10 ** (n - 1))
+  const d0 = divisorFirstDigit(problem)
   // The digit's 九九 with each divisor digit, from the top (5×3も5×6も): a
   // digit is right once they all come off (the owner: the candidate "has to
   // pass through each digit").
   const nineNines = (digit: number) =>
-    Array.from({ length: n }, (_, k) => `${digit}×${Math.floor(b / 10 ** (n - 1 - k)) % 10}`).join('も') +
-    (n === 1 ? 'が' : 'も')
+    Array.from({ length: n }, (_, k) => `${digit}×${digitAt(b, n - 1 - k)}`).join('も') + (n === 1 ? 'が' : 'も')
   switch (step.kind) {
     case 'set':
       return {
@@ -229,11 +236,7 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
       const to = step.from - 1
       const unit = 10 ** step.p
       // The divisor digits taken off so far go back where they came off.
-      const putBack = Array.from({ length: n }, (_, k) => n - 1 - k)
-        .map((j) => [Math.floor(step.taken / 10 ** j) % 10, step.p + j] as const)
-        .filter(([digit]) => digit !== 0)
-        .map(([digit, at]) => `${PLACE[at] ?? at}に${digit}`)
-        .join('、')
+      const putBack = step.putBack.map(({ digit, place }) => `${PLACE[place] ?? place}に${digit}`).join('、')
       // The owner's own picture of the fix (2026-09-24): "go back to the
       // point of the current lane then adjust the number and try again".
       // Putting back only the extra lands on that same number.
@@ -247,11 +250,15 @@ function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
         what: `戻す：${step.from}を${to}にして、${step.back}を足し戻す`,
         math: `${step.before}+${step.back}=${step.left}`,
         note,
-        rods: `そろばんでは：答えのけたから1を引き、${putBack}を足す`,
+        // A put-back digit can carry into a rod that is already 9, as a ×
+        // round's 九九 can, so it says so as the product line does.
+        rods: `そろばんでは：答えのけたから1を引き、${putBack}を足す${step.cascades ? '（さらに上の位へ繰り上がる）' : ''}`,
       }
     }
-    case 'done':
-      return { ...none, what: '答えを読む', math: `${a}÷${b}=${a / b}`, note: `左に${a / b}。右はすべて0。` }
+    case 'done': {
+      const quotient = answerOf(problem)
+      return { ...none, what: '答えを読む', math: `${a}÷${b}=${quotient}`, note: `左に${quotient}。右はすべて0。` }
+    }
   }
 }
 
@@ -400,6 +407,10 @@ export const ja = {
   divideIntroTitle: 'わり算のやりかた',
   // The division walkthrough, guess by guess (spec: division walkthrough §3).
   divideWalk,
+  // What VoiceOver reads as a walkthrough step opens: its words, then its
+  // sum if it has one, with the pause a Japanese sentence takes between two
+  // clauses.
+  divideWalkSpoken: (what: string, math: string) => (math === '' ? what : `${what}、${math}`),
   divideWalkLeft: 'のこり',
   divideWalkAnswer: '答え',
   rodShortName: (place: number): string => PLACE_SHORT[place] ?? `${place}`,

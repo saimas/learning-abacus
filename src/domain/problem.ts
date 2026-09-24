@@ -212,7 +212,9 @@ export function applyPlacedStep(s: Soroban, step: PlacedStep): Soroban {
   return { rods }
 }
 
-function digitAt(n: number, place: number): number {
+// The digit of `n` at `place` (0 = ones). The division walkthrough reads the
+// divisor and quotient digit by digit too, so it shares this one.
+export function digitAt(n: number, place: number): number {
   return Math.floor(n / 10 ** place) % 10
 }
 

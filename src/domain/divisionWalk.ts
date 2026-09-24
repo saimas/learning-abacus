@@ -1,6 +1,7 @@
 import {
   answerOf,
   applyPlacedStep,
+  digitAt,
   divisorFirstDigit,
   playDigits,
   productDigits,
@@ -52,10 +53,11 @@ type WalkCommon = {
 // - `stuck`: that 九九 will not come off what is left: the digit is too big;
 // - `fix`: the digit lowered by one, and one copy of the divisor digits
 //   already taken off for it (`taken`, e.g. 30) put back, `back` =
-//   taken × 10^p. That lands exactly where going back to the lane's start
-//   (`laneStart`) and taking the lowered digit's 九九 would: the owner's own
-//   picture of the fix ("go back to the point of the current lane then
-//   adjust the number and try again");
+//   taken × 10^p; `putBack` is those digits with the rod each goes on, so
+//   the badges and the words name the same rods. That lands exactly where
+//   going back to the lane's start (`laneStart`) and taking the lowered
+//   digit's 九九 would: the owner's own picture of the fix ("go back to the
+//   point of the current lane then adjust the number and try again");
 // - `done`: the quotient read off the left.
 export type WalkStep = WalkCommon &
   (
@@ -82,13 +84,22 @@ export type WalkStep = WalkCommon &
       last: boolean
     }
     | { kind: 'stuck'; p: number; digit: number; y: number; j: number; amount: number }
-    | { kind: 'fix'; p: number; from: number; taken: number; back: number; before: number; laneStart: number }
+    | {
+      kind: 'fix'
+      p: number
+      from: number
+      taken: number
+      back: number
+      before: number
+      laneStart: number
+      putBack: WalkPutBack[]
+    }
     | { kind: 'done' }
   )
 
-function digitAt(n: number, place: number): number {
-  return Math.floor(n / 10 ** place) % 10
-}
+// A divisor digit a fix puts back, and the rod place it goes on (0 = ones).
+// A fix lists only the non-zero ones, highest first: a 0 moves no bead.
+export type WalkPutBack = { digit: number; place: number }
 
 // Spec (division walkthrough) §2: 商除法 as a learner really works it. Where
 // the rounds' steps place the right digit at once, this places the 九九
@@ -234,10 +245,18 @@ export function divisionWalk(problem: Problem): WalkStep[] {
       })
       // The guess is never too small, so a digit that sticks is at least 1
       // too big, and lowering it keeps it at or above the quotient's digit.
-      const takenDigits: [number, number][] = []
-      for (let k = n - 1; k > j; k--) takenDigits.push([digitAt(taken, k), p + k])
+      // What goes back is the divisor digits above the one that stuck, each
+      // on the rod it came off (p + k).
+      const putBack: WalkPutBack[] = []
+      for (let k = n - 1; k > j; k--) {
+        const d = digitAt(taken, k)
+        if (d !== 0) putBack.push({ digit: d, place: p + k })
+      }
       const lowered = play([[1, place]], 'sub')
-      const putBack = play(takenDigits, 'add')
+      const putOn = play(
+        putBack.map(({ digit: d, place: at }): [number, number] => [d, at]),
+        'add',
+      )
       const back = taken * 10 ** p
       digit -= 1
       setAnswer(p, { digit, trial: digit !== 0 })
@@ -249,15 +268,16 @@ export function divisionWalk(problem: Problem): WalkStep[] {
         back,
         before,
         laneStart,
-        steps: [...lowered.steps, ...putBack.steps],
-        cascades: lowered.cascades || putBack.cascades,
+        putBack,
+        steps: [...lowered.steps, ...putOn.steps],
+        cascades: lowered.cascades || putOn.cascades,
         left: before + back,
-        focus: [rodOf(place), ...takenDigits.filter(([d]) => d !== 0).map(([, at]) => rodOf(at))],
+        focus: [rodOf(place), ...putBack.map(({ place: at }) => rodOf(at))],
         marks: [
           { rodIndex: rodOf(place), amount: -1 },
-          ...takenDigits.filter(([d]) => d !== 0).map(([d, at]) => ({ rodIndex: rodOf(at), amount: d })),
+          ...putBack.map(({ digit: d, place: at }) => ({ rodIndex: rodOf(at), amount: d })),
         ],
-        divisorPlaces: takenDigits.map(([, at]) => at - p),
+        divisorPlaces: putBack.map(({ place: at }) => at - p),
         answer: [...answer],
       })
       // Lowered to 0: nothing of it was due, and everything is back.
