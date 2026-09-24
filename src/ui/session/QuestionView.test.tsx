@@ -234,13 +234,11 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(textOf(screen.getByTestId('card'))).toBe('0 false')
   })
 
-  // The もどす/こたえる row disappearing while open would shrink the layout
-  // by a whole button row height and shift the soroban above it. The lines
-  // below the controls take its height as their starting size instead, and
-  // grow by the same share as the spacer they stand in for, so the soroban
-  // stays put and no empty row is left at the bottom. Their space takes no
-  // padding or margin: either would count before the share-out and move the
-  // soroban.
+  // The lines below the controls take the もどす/こたえる row's place while
+  // open, starting from its height, so no empty row is left at the bottom.
+  // Where there is room they take all the height left anyway (the top
+  // scroll fits the prompt); on a screen too short for everything the row's
+  // height is the least they keep, and the prompt's scroll gives way.
   it('holds the answer row height in bead mode while the steps are open', () => {
     renderView()
     expect(screen.queryByTestId('step-lines')).toBeNull()
@@ -488,22 +486,66 @@ describe('QuestionView with the step lines below the controls', () => {
     expectLinesBelowControls()
     const drawn = order()
     expect(drawn.indexOf('review-next')).toBeGreaterThan(drawn.indexOf('step-lines-scroll'))
-    // つぎへ holds its own row, so the lines take just the spacer's place:
-    // its flex, and no padding or margin to move the soroban.
+    // つぎへ holds its own row below them, so the lines take just the
+    // spacer's place, with its flex.
     expect(StyleSheet.flatten(screen.getByTestId('step-lines').props.style)).toEqual({ flex: 1 })
   })
 
-  // The top scroll keeps its flex share whether the lines are open or not,
-  // so the soroban under it does not move.
-  it('leaves the top scroll as it was, holding just the prompt', () => {
+  // The owner's request (2026-09-24): with the steps open, the top scroll
+  // kept its flex share and stood mostly empty under the prompt, while the
+  // lines below ◀ ▶ were cut off. So while the panel is open in bead mode
+  // the top scroll is only as tall as what it holds, and the lines take the
+  // rest. It still shrinks, and scrolls, on a very short screen. It has no
+  // `flex`: Yoga reads a positive flex as a flex basis of 0, which would
+  // squash the prompt to nothing. With the panel closed it keeps its share.
+  const topScroll = () => StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)
+  const fitted = { flexGrow: 0, flexShrink: 1 }
+
+  it('fits the top scroll to the prompt while the steps are open before an answer', () => {
     renderView({ demonstration: '385は…' })
-    const closed = StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)
+    expect(topScroll()).toEqual({ flex: 1 })
     fireEvent.press(screen.getByTestId('steps-open'))
-    expect(StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)).toEqual(closed)
+    expect(topScroll()).toEqual(fitted)
     const top = within(screen.getByTestId('question-scroll'))
     expect(top.getByTestId('prompt')).toBeTruthy()
     expect(top.queryByTestId('demonstration')).toBeNull()
     expect(top.queryByTestId('steps-open')).toBeNull()
+
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(topScroll()).toEqual({ flex: 1 })
+  })
+
+  it('fits the top scroll as a miss opens the panel by itself', () => {
+    renderView()
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('step-lines')).toBeTruthy()
+    expect(topScroll()).toEqual(fitted)
+  })
+
+  it('fits the top scroll in the review of a miss only once こたえを見る opens the panel', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(topScroll()).toEqual({ flex: 1 })
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(topScroll()).toEqual(fitted)
+  })
+
+  // Keypad mode keeps the lines in the top scroll, with the prompt, so the
+  // scroll keeps its share of the height whether they are open or not.
+  it('keeps the top scroll flexible in keypad mode, open or not', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    expect(topScroll()).toEqual({ flex: 1 })
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(topScroll()).toEqual({ flex: 1 })
+    fireEvent.press(screen.getByTestId('steps-close'))
+
+    for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.getByTestId('step-panel')).toBeTruthy()
+    expect(topScroll()).toEqual({ flex: 1 })
   })
 
   it('keeps the lines in the scroll with the prompt in keypad mode', () => {

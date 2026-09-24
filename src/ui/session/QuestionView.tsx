@@ -326,16 +326,19 @@ export function QuestionView({
     // The owner's request (2026-09-23): the lines used to share the small
     // scroll above the soroban with the prompt, two lines on show at a
     // time, while below ◀ ▶ the screen stood empty. So with the panel open
-    // they take that empty space instead, filling it to the bottom and
-    // scrolling on their own, with the line stepped to scrolled into view.
-    // They take the place of the flexible spacer under the controls, with
-    // its flex, so the prompt's scroll above keeps its share of the height
-    // and the soroban between the two does not move. Before an answer they
-    // take the もどす/こたえる row's place too. The height that row frees
-    // would otherwise be shared out and move the soroban down by half a
-    // row, so the lines start from that height and grow by the spacer's
-    // share on top of it: the soroban stays put, and no empty row is left
-    // at the bottom. In a miss's review つぎへ keeps its row below them.
+    // they take that empty space instead, in the flexible spacer's place
+    // under the controls, filling it to the bottom and scrolling on their
+    // own, with the line stepped to scrolled into view. Before an answer
+    // they take the もどす/こたえる row's place too; in a miss's review
+    // つぎへ keeps its row below them.
+    // The owner again (2026-09-24, on a 375 × 667 phone): the prompt's
+    // scroll above still kept its share of the height, so it stood mostly
+    // empty between the prompt and the soroban while the lines were cut
+    // off at the bottom. So while the panel is open that scroll is only as
+    // tall as the prompt (scrollFitted), the soroban and the board move up
+    // under it, and the lines take all the height that is left. The
+    // soroban used to stay where it was as the panel opened; the owner
+    // would rather have the room for the lines.
     const beadStepLines = panelOpen ? (
       <View testID="step-lines" style={[styles.stepLines, beforeAnswer && styles.stepLinesOverAnswerRow]}>
         <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
@@ -344,7 +347,11 @@ export function QuestionView({
     return (
       <View style={styles.practice}>
         {track}
-        <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          testID="question-scroll"
+          style={panelOpen ? styles.scrollFitted : styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Text testID="prompt" style={styles.prompt}>
             {prompt}
           </Text>
@@ -381,9 +388,10 @@ export function QuestionView({
         {renderBeneath?.(activeStep)}
         {/* With the panel open the hint gives way to the step controls.
             Until こたえを見る opens the panel at a silent level, an empty
-            space of the controls' height holds their place, so the soroban
-            moves once, as the ✕ lands, and not again when the controls
-            appear. */}
+            space of the controls' height holds their place under the ✕, so
+            they appear where room was already made for them. (The soroban
+            still moves up as the panel opens, when the prompt's scroll
+            fits the prompt: see beadStepLines.) */}
         {panelOpen ? (
           stepControls
         ) : review === null ? (
@@ -524,6 +532,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.small,
   },
   scroll: { flex: 1 },
+  // Bead mode's top scroll while the step panel is open: only as tall as
+  // the prompt it holds, so the soroban sits just under it (sorobanWrap's
+  // marginTop keeps them apart) and the lines get the rest (beadStepLines).
+  // flexGrow 0 overrides ScrollView's own flexGrow 1, and flexShrink 1 lets
+  // it give way, and scroll, on a screen too short for everything. No
+  // `flex`: Yoga reads a positive flex as a flex basis of 0, which would
+  // squash the prompt to nothing.
+  scrollFitted: { flexGrow: 0, flexShrink: 1 },
   scrollContent: { paddingBottom: space.sm },
   sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
   // Centred over whichever soroban it is placed inside (bead mode's
@@ -561,14 +577,16 @@ const styles = StyleSheet.create({
   // Lets the content fill the spacer, with 手順を見る at its top, as a
   // plain spacer would hold it.
   beadSpacerContent: { flexGrow: 1 },
-  // In beadSpacer's place, with the same flex and nothing else: a padding or
-  // margin here would count before the share-out and move the soroban (a
-  // flex basis is never less than the padding). The gap under the controls
-  // is inside, on ScrollingStepLines' scroll.
+  // In beadSpacer's place, with the same flex. While they are open nothing
+  // else in the column grows (the top scroll fits the prompt), so they take
+  // all the height that is left. The gap under the controls is inside, on
+  // ScrollingStepLines' scroll.
   stepLines: { flex: 1 },
   // Before an answer the lines start from the もどす/こたえる row's height
-  // (buttonRow's marginTop and its buttons' height), so the soroban above
-  // does not shift when 手順を見る swaps that row for them and back.
+  // (buttonRow's marginTop and its buttons' height), the place they take.
+  // Where there is room it changes nothing, as they take the rest anyway.
+  // On a screen too short for everything it is the least they keep, since
+  // RN's flex: 1 never shrinks, and the prompt's scroll gives way instead.
   stepLinesOverAnswerRow: { flexBasis: space.md + BUTTON_HEIGHT },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   resetSlot: { flex: 1 },
