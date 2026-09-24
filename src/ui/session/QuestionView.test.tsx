@@ -390,19 +390,15 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
   })
 
   // It sits at the top of the flexible space the step lines take once open,
-  // with that space's flex and no padding or margin, so the soroban stays
-  // where it was when the button was above it. The space is at least the
-  // button's height, so on a phone too short to share out that much it
-  // cannot spill over もどす and こたえる.
+  // which keeps just its flex: no padding, margin or minimum height, since
+  // Yoga counts any of them before the share-out and the soroban would move
+  // up by half of it. The button inside counts for nothing there, so the
+  // soroban stays where it was when the button was above it.
   it('holds it in the flexible space under the soroban, where the lines go', () => {
     renderView()
-    const button = StyleSheet.flatten(screen.getByTestId('steps-open').props.style)
     const place = screen.getByTestId('bead-spacer')
     expect(within(place).getByTestId('steps-open')).toBeTruthy()
-    expect(StyleSheet.flatten(place.props.style)).toEqual({
-      flex: 1,
-      minHeight: button.marginTop + button.minHeight,
-    })
+    expect(StyleSheet.flatten(place.props.style)).toEqual({ flex: 1 })
 
     fireEvent.press(screen.getByTestId('steps-open'))
     expect(screen.queryByTestId('bead-spacer')).toBeNull()

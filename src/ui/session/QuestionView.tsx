@@ -402,15 +402,13 @@ export function QuestionView({
             place (see beadStepLines). Until then 手順を見る sits at its
             top, where the lines will start. Inside the spacer the button
             counts for nothing in the share-out, so the soroban stays where
-            it was when the button sat above it. The spacer is only kept
-            from being shorter than the button, so on a phone too short to
-            share out that much, the button cannot spill over the row
-            below: the soroban moves up just enough instead. */}
+            it was when the button sat above it, in the scroll. It still
+            fits: the spacer's share is the same as the scroll's, which had
+            to show the prompt and the button both. A minimum height here
+            would not do instead: Yoga counts it before the share-out, like
+            a flex basis, and the soroban would move up by half of it. */}
         {beadStepLines ?? (
-          <View
-            testID="bead-spacer"
-            style={[styles.beadSpacer, stepsOpenButton !== null && styles.beadSpacerWithButton]}
-          >
+          <View testID="bead-spacer" style={styles.beadSpacer}>
             {stepsOpenButton}
           </View>
         )}
@@ -492,9 +490,6 @@ export function QuestionView({
   )
 }
 
-// 手順を見る is one line tall at the platforms' minimum tap target.
-const STEPS_OPEN_HEIGHT = 44
-
 const styles = StyleSheet.create({
   practice: { flex: 1 },
   soroban: { marginTop: space.md, position: 'relative' },
@@ -538,7 +533,7 @@ const styles = StyleSheet.create({
   // controls, so it sits where their card will start.
   stepsOpen: {
     alignSelf: 'center',
-    minHeight: STEPS_OPEN_HEIGHT,
+    minHeight: 44,
     justifyContent: 'center',
     marginTop: space.sm,
     paddingHorizontal: space.lg,
@@ -552,10 +547,6 @@ const styles = StyleSheet.create({
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
-  // A minimum, not a padding or a flex basis: those would count before the
-  // share-out and move the soroban on every phone, where this only comes
-  // into play on one too short to give the spacer the button's height.
-  beadSpacerWithButton: { minHeight: space.sm + STEPS_OPEN_HEIGHT },
   // In beadSpacer's place, with the same flex and nothing else: a padding or
   // margin here would count before the share-out and move the soroban (a
   // flex basis is never less than the padding). The gap under the controls
