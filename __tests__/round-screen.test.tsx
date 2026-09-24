@@ -119,7 +119,10 @@ describe('Round screen', () => {
     mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
-    expect(getByTestId('prompt').props.children).toMatch(/^\d{4}を\d{2}でわる。$/)
+    // A 2けた ÷ problem draws a 2-digit quotient and a 2-digit divisor and
+    // multiplies them for the dividend (10 × 10 = 100 up to 99 × 99 = 9801),
+    // so the dividend is 3 or 4 digits, not always 4.
+    expect(getByTestId('prompt').props.children).toMatch(/^\d{3,4}を\d{2}でわる。$/)
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 
