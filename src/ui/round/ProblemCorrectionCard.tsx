@@ -19,11 +19,18 @@ import { colors, fonts } from '@/ui/theme'
 export function ProblemCorrectionCard({
   problem,
   expected,
+  expectedBeads,
   activeGroup,
   showAnswer = true,
 }: {
   problem: Problem
   expected: number
+  // Set only by a caller drawing this in bead mode, and only for a ÷ problem
+  // (Exercise.expectedBeads): the final soroban reading (spec (division) §2's
+  // quotient followed by zeros) that the beads themselves were checked
+  // against, which is not `expected` (the quotient) once N > 0. Undefined
+  // everywhere else, so the answer line reads exactly as it always has.
+  expectedBeads?: number
   activeGroup?: number
   showAnswer?: boolean
 }) {
@@ -37,7 +44,9 @@ export function ProblemCorrectionCard({
     <View testID="correction">
       {showAnswer ? (
         <Text testID="correction-answer" style={styles.answer}>
-          {strings.correctionAnswer(expected)}
+          {expectedBeads === undefined
+            ? strings.correctionAnswer(expected)
+            : strings.correctionAnswerOnBeads(expected, expectedBeads)}
         </Text>
       ) : null}
       {problemSteps(problem).map((group, index) => {

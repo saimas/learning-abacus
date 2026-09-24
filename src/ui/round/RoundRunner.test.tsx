@@ -297,12 +297,25 @@ describe('RoundRunner with ÷', () => {
     expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'div:2', correct: true }))
   })
 
+  // A keypad answer is checked against the quotient alone, so its review
+  // must read exactly as it always has, with no beads reading appended.
+  it('leaves the keypad review’s answer line to the quotient alone', () => {
+    renderRound({ ...divide, fade: 3 })
+    for (const digit of '48') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+  })
+
   it('moves the highlight to the divisor digit of each 九九 as a miss is stepped through', () => {
     renderRound(divide)
     // 47 on the lowest rods is not where 商除法 leaves the quotient.
     setBeads(onSoroban, 47, 5)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+    // Bead mode's beads were checked against the final soroban reading
+    // (spec (division) §2), so the review names that reading too, not just
+    // the quotient.
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
     expect(lit()).toEqual([])
 
     const total = Number(String(screen.getByTestId('step-count').props.children).split(' / ')[1])

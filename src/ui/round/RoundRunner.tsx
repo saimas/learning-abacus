@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
-import { coachingForFade, type FadeLevel } from '@/domain/fade'
+import { answerModeForFade, coachingForFade, type FadeLevel } from '@/domain/fade'
 import type { PracticeAttempt } from '@/domain/practice'
 import {
   groupOfStep,
@@ -69,6 +69,12 @@ export function RoundRunner({
   }
 
   const exercise = exerciseForProblem(problem)
+  // QuestionView decides bead vs. keypad from the same fade this round holds
+  // throughout (see its own `mode`). The review card needs it too: a ÷
+  // miss's beads were checked against expectedBeads (the final soroban
+  // reading), so only in bead mode does its answer line say more than the
+  // quotient.
+  const mode = answerModeForFade(fade)
   const groups = problemSteps(problem)
   // The group of the move the learner has stepped to, if any: an index into
   // `groups` for the answer card's lines, and the group itself for the
@@ -122,6 +128,7 @@ export function RoundRunner({
           <ProblemCorrectionCard
             problem={problem}
             expected={exercise.expected}
+            expectedBeads={mode === 'beads' ? exercise.expectedBeads : undefined}
             activeGroup={groupIndexOf(activeStep)}
             showAnswer={showAnswer}
           />

@@ -93,7 +93,7 @@ describe('ProblemCorrectionCard', () => {
   // keeps its line, and the next digit follows it at once.
   it('gives a 0 quotient digit its line, with no 九九 after it', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a: 202032, b: 976 }} expected={207} />)
-    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('商0（立てずに次へ）')
+    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('商0（立てない）')
     expect(textOf(screen.getByTestId('correction-quotient-5'))).toBe('商7を立てる（683は976より小さいので、頭の1つ左）')
   })
 
@@ -101,6 +101,27 @@ describe('ProblemCorrectionCard', () => {
     // 12915 ÷ 105 = 123: 1 × the 0 of 105 takes nothing off.
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a: 12915, b: 105 }} expected={123} />)
     expect(textOf(screen.getByTestId('correction-subtract-2'))).toBe('1×0=00')
+  })
+
+  // Spec (division) §2: a bead answer is checked against the final soroban
+  // reading, not the quotient, so a caller drawing this in bead mode passes
+  // expectedBeads and the answer line says both.
+  it('names what the beads themselves needed to read, when given expectedBeads', () => {
+    render(
+      <ProblemCorrectionCard
+        problem={{ op: 'div', digits: 2, a: 1692, b: 36 }}
+        expected={47}
+        expectedBeads={47000}
+      />,
+    )
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
+  })
+
+  // Undefined (keypad mode, or any non-÷ problem) leaves the answer line
+  // exactly as it always read.
+  it('leaves the answer line alone without expectedBeads', () => {
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
   })
 })
 

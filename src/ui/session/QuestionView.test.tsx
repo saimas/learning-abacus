@@ -764,9 +764,11 @@ describe('QuestionView with a division', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, latencyMs: null }))
   })
 
-  // The digits in the wrong place are not what 商除法 leaves, and the
-  // answer the miss gives is still the quotient.
-  it('misses the quotient set on the lowest rods, and still says the answer is the quotient', () => {
+  // The digits in the wrong place are not what 商除法 leaves, and the miss
+  // must say what the beads themselves needed to read (the final soroban
+  // reading, spec (division) §2), not just the quotient — "こたえは 47"
+  // alone would read wrong against beads that had to reach 47000.
+  it('misses the quotient set on the lowest rods, and names the beads’ own reading', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
     try {
       const { onSubmit } = renderView({ exercise: division })
@@ -774,7 +776,7 @@ describe('QuestionView with a division', () => {
       announce.mockClear()
       fireEvent.press(screen.getByTestId('submit'))
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false }))
-      expect(announce).toHaveBeenCalledWith('ちがいます こたえは 47')
+      expect(announce).toHaveBeenCalledWith('ちがいます こたえは 47（そろばんは 47000）')
     } finally {
       announce.mockRestore()
     }
@@ -792,6 +794,25 @@ describe('QuestionView with a division', () => {
     for (const digit of '47000') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false }))
+  })
+
+  // A keypad answer is always checked against the quotient itself, so its
+  // miss must never grow the beads’ parenthetical — even with the card
+  // forced open here (fade 3 is never paired with non-silent coaching in
+  // production; coachingForFade only speaks at the bead-mode levels), the
+  // mode alone must gate it, not just whether the exercise carries
+  // expectedBeads.
+  it('never appends the beads’ reading to a keypad miss, whatever the coaching level', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      renderView({ exercise: division, fade: 3, coaching: 'demo' })
+      for (const digit of '48') fireEvent.press(screen.getByTestId(`key-${digit}`))
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('submit'))
+      expect(announce).toHaveBeenCalledWith('ちがいます こたえは 47')
+    } finally {
+      announce.mockRestore()
+    }
   })
 })
 

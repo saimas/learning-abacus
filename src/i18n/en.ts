@@ -123,8 +123,24 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // placed, by comparing the dividend's leading digits with the divisor. A 0
 // is not placed at all, so its line compares nothing.
 function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+  // "nothing to place" already reads right wherever the 0 falls, but it is
+  // named alongside ja's wording fix so the two stay in step.
   if (q === 0) return 'Quotient 0: nothing to place'
   return `Quotient ${q}: ${lead} is ${split ? 'at least' : 'less than'} ${divisor}, so ${split ? 'two rods' : 'one rod'} left of the head`
+}
+
+// The answer line shared by a miss's card, its review, and its VoiceOver
+// announcement.
+function correctionAnswer(expected: number): string {
+  return `The answer is ${expected}`
+}
+
+// A ÷ miss answered on the beads: 商除法 leaves the quotient followed by
+// zeros on the rods (spec (division) §2), so the beads had to read that
+// final value, not the quotient `correctionAnswer` already names. Told
+// alongside it so a miss teaches what the beads themselves needed to show.
+function correctionAnswerOnBeads(expected: number, beads: number): string {
+  return `${correctionAnswer(expected)} (the soroban reads ${beads})`
 }
 
 // Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
@@ -176,7 +192,8 @@ export const en: Strings = {
   coaching,
   coachingLead,
   blockLabel: (kind) => BLOCK_LABEL[kind],
-  correctionAnswer: (expected) => `The answer is ${expected}`,
+  correctionAnswer,
+  correctionAnswerOnBeads,
   correct: 'Correct',
   wrong: 'Not quite',
   quitLabel: 'Stop practice',
@@ -250,7 +267,7 @@ export const en: Strings = {
   divideIntroMethod:
     'Set the number being divided on the soroban, then place the answer’s digits one at a time, from the highest (商除法). After placing each digit, take its times-table answers with the divisor’s digits off the rods. What is left gives the next digit.',
   divideIntroPlacement:
-    'Compare the leading digits with the divisor. If they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
+    'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
   divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,
   operandBoardLabel: (a, b) => `${a} × ${b}`,
   divisorBoardLabel: (b) => `Divisor ${b}`,

@@ -118,8 +118,24 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // leading digits against the divisor). A 0 is not placed at all, so its
 // line compares nothing.
 function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
-  if (q === 0) return '商0（立てずに次へ）'
+  // "立てずに次へ" reads wrong when the 0 is the quotient's last digit (there
+  // is no next digit to move to), so this stays neutral about what follows.
+  if (q === 0) return '商0（立てない）'
   return `商${q}を立てる（${lead}は${divisor}${split ? '以上なので、頭の2つ左' : 'より小さいので、頭の1つ左'}）`
+}
+
+// The answer line shared by a miss's card, its review, and its VoiceOver
+// announcement.
+function correctionAnswer(expected: number): string {
+  return `こたえは ${expected}`
+}
+
+// A ÷ miss answered on the beads: 商除法 leaves the quotient followed by
+// zeros on the rods (spec (division) §2), so the beads had to read that
+// final value, not the quotient `correctionAnswer` already names. Told
+// alongside it so a miss teaches what the beads themselves needed to show.
+function correctionAnswerOnBeads(expected: number, beads: number): string {
+  return `${correctionAnswer(expected)}（そろばんは ${beads}）`
 }
 
 // No plural branch — Japanese has none. The English catalog needs one.
@@ -172,7 +188,8 @@ export const ja = {
   coaching,
   coachingLead,
   blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
-  correctionAnswer: (expected: number) => `こたえは ${expected}`,
+  correctionAnswer,
+  correctionAnswerOnBeads,
   correct: '正解',
   wrong: 'ちがいます',
   quitLabel: '練習をやめる',
@@ -253,7 +270,7 @@ export const ja = {
   divideIntroMethod:
     'わり算は、わられる数をそろばんに置き、商を立ててから、商×わる数の九九を引いていきます（商除法（しょうじょほう））。商は上の位から一つずつ立て、九九を引いた残りで、つぎの商を立てます。',
   divideIntroPlacement:
-    'わられる数の頭の数字とわる数をくらべ、わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
+    '残りの頭から、わる数と同じけた数をとって、わる数とくらべます。わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
   divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,
   // What VoiceOver reads for the operand board under a × problem's soroban:
   // the two numbers, as the board shows them.

@@ -134,6 +134,16 @@ describe('correctionAnswer', () => {
   })
 })
 
+// Spec (division) §2: 商除法 leaves the final soroban reading (the quotient
+// followed by zeros), which is what a bead answer is actually checked
+// against, so a bead-mode miss must say that too, not just the quotient.
+describe('correctionAnswerOnBeads', () => {
+  it('states the answer and what the beads themselves needed to read', () => {
+    expect(ja.correctionAnswerOnBeads(47, 47000)).toBe('こたえは 47（そろばんは 47000）')
+    expect(en.correctionAnswerOnBeads(47, 47000)).toBe('The answer is 47 (the soroban reads 47000)')
+  })
+})
+
 describe('cellStateName', () => {
   it('uses the same names as the cell labels', () => {
     expect(ja.cellStateName('mental')).toBe('暗算')
@@ -301,9 +311,11 @@ describe('division strings', () => {
   })
 
   // A 0 is not placed, so its line compares nothing, whatever the group's
-  // lead says.
+  // lead says. The wording stays neutral about what follows, since a 0 can
+  // be the quotient's last digit (q = 20, 350, …), with no next digit to
+  // move to.
   it('moves on from a 0 quotient digit without placing it', () => {
-    expect(ja.quotientLine(0, 683, 976, false)).toBe('商0（立てずに次へ）')
+    expect(ja.quotientLine(0, 683, 976, false)).toBe('商0（立てない）')
     expect(en.quotientLine(0, 683, 976, false)).toBe('Quotient 0: nothing to place')
   })
 
@@ -351,8 +363,12 @@ describe('division strings', () => {
     expect(en.divideIntroTitle).toBe('How to divide')
     expect(ja.divideIntroMethod).toContain('商除法')
     expect(en.divideIntroMethod).toContain('商除法')
-    // The 割れる / 割れない rule.
+    // The 割れる / 割れない rule compares as many leading digits as the
+    // divisor has, taken from the remainder's head each round — not just
+    // the dividend's head digit, which is only true of the first round.
+    expect(ja.divideIntroPlacement).toContain('残りの頭から、わる数と同じけた数をとって、わる数とくらべます')
     expect(ja.divideIntroPlacement).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
+    expect(en.divideIntroPlacement).toContain('as many digits from the head of what’s left as the divisor has')
     expect(en.divideIntroPlacement).toContain('two rods left of the head')
     expect(ja.divideIntroResult(1692, 36, 47)).toBe('1692÷36 = 47')
     expect(en.divideIntroResult(1692, 36, 47)).toBe('1692 ÷ 36 = 47')

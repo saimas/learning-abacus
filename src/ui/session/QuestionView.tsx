@@ -127,6 +127,17 @@ export function QuestionView({
   // (416 pt), or a 3けた division's seven, are wider than a 375 pt phone, so
   // it has to shrink to fit too.
   const keypadScale = scaleToFit(exercise.rods, room, 1)
+  // What the learner is told the answer is. A keypad answer is checked
+  // against `expected` itself, so that is all it is ever told. A ÷ answer
+  // given on the beads is checked against the final soroban reading instead
+  // (expectedBeads, spec (division) §2's quotient followed by zeros), so a
+  // miss there must say what the beads actually needed to show, not just the
+  // quotient — otherwise "こたえは 47" reads wrong under beads that had to
+  // reach 47000.
+  const answerLine =
+    mode === 'beads' && exercise.expectedBeads !== undefined
+      ? strings.correctionAnswerOnBeads(exercise.expected, exercise.expectedBeads)
+      : strings.correctionAnswer(exercise.expected)
 
   // Scores the answer. A right one is the parent's to move on from; a miss
   // holds the question here for review until つぎへ.
@@ -170,9 +181,7 @@ export function QuestionView({
       // Folding it into this same announcement is the only way VoiceOver
       // ever hears it; a second announceForAccessibility call right after
       // this one would just cut the first off before it finishes.
-      AccessibilityInfo.announceForAccessibility(
-        cardShown ? `${strings.wrong} ${strings.correctionAnswer(exercise.expected)}` : strings.wrong,
-      )
+      AccessibilityInfo.announceForAccessibility(cardShown ? `${strings.wrong} ${answerLine}` : strings.wrong)
     }
     onSubmit({ correct, latencyMs, t, assisted: assisted.current })
   }
@@ -204,7 +213,7 @@ export function QuestionView({
   // itself: the learner steps through the move with ▶ at their own pace.
   function showAnswer() {
     guardFrom.current = now()
-    AccessibilityInfo.announceForAccessibility(strings.correctionAnswer(exercise.expected))
+    AccessibilityInfo.announceForAccessibility(answerLine)
     stepper.restart()
     setReview({ cardShown: true })
   }
