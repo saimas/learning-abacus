@@ -14,10 +14,7 @@ import { colors, fonts, fontSizes, space } from '@/ui/theme'
 
 // What the × walkthrough says around its worked problem: its title, what the
 // method does, where each digit goes, and the result. The group pages need
-// no text of their own: they read as the answer card's lines. ÷ moved to its
-// own bead-by-bead DivideWalkthrough (spec: division walkthrough §4), so
-// this type is only ever given × texts now, though it stays generic over the
-// problem it is handed.
+// no text of their own: they read as the answer card's lines.
 export type IntroTexts = {
   title: string
   method: string
@@ -90,10 +87,9 @@ export function MethodIntro({
   // not just forward. Landing on a group page replays it from its own start,
   // same as opening it going forward; landing on the method or placement
   // page just stops the replay, so `shown` falls back to that page's first
-  // state (the empty soroban). page 0 has no ◀ to press, but the guard
-  // matches next()'s in case that changes.
+  // state (the empty soroban). Page 0 has no ◀ to press; should that change,
+  // it has no page before it, so the same guard as next()'s stops it.
   function back() {
-    if (page === 0) return
     const target = pages[page - 1]
     if (target === undefined) return
     if (target.kind === 'group') replay.play(groupStates(target.index))

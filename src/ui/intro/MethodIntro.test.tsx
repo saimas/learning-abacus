@@ -50,8 +50,7 @@ describe('MethodIntro for ×', () => {
     const onFinish = jest.fn()
     renderMultiply('はじめる', onFinish)
     expect(screen.getByTestId('intro-text').props.children).toContain('両落とし')
-    // × has no guess page: its texts give none, so the method leads straight
-    // to the placement.
+    // The method leads straight to the placement.
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toContain('百の位')
     expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
