@@ -159,6 +159,13 @@ describe('RoundRunner with ×', () => {
     renderRound(multiply)
     expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('12 × 34')
     expect([lit('a'), lit('b')]).toEqual([[], []])
+    // The owner's request (2026-09-24): 手順を見る sits where the steps
+    // appear, below the board.
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('operand-board'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('submit'))
   })
 
   it('shows no operand board for ＋', () => {
@@ -223,8 +230,8 @@ describe('RoundRunner with ×', () => {
     }
   })
 
-  // A 375 × 667 phone must still show the prompt and 手順を見る above the
-  // soroban with the board present, so there both are drawn smaller. On a
+  // A 375 × 667 phone must still show the prompt above the soroban and
+  // 手順を見る below the board, so there both are drawn smaller. On a
   // tall phone neither changes. The window mock is undone after each test,
   // even one that fails, so it cannot leak into the next.
   let restoreWindow = () => {}

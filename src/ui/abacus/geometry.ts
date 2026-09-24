@@ -28,10 +28,10 @@ export const BEAD_MODE_SCALE = 1.38
 
 // A window shorter than this is a 375 × 667 phone (iPhone SE, 8); every newer
 // phone is 812 pt or taller. There, a × problem's operand board under the
-// soroban leaves bead mode too little height to show the prompt and 手順を見る
-// above the soroban, so with the board present the soroban is drawn no
-// larger than SHORT_WINDOW_BEAD_SCALE (and the board smaller too, see
-// OperandBoard). At 1.1 the beads are still 55 × 23 pt on 70 pt rods.
+// soroban leaves bead mode too little height to show the prompt above the
+// soroban and 手順を見る below, so with the board present the soroban is
+// drawn no larger than SHORT_WINDOW_BEAD_SCALE (and the board smaller too,
+// see OperandBoard). At 1.1 the beads are still 55 × 23 pt on 70 pt rods.
 export const SHORT_WINDOW_HEIGHT = 750
 export const SHORT_WINDOW_BEAD_SCALE = 1.1
 

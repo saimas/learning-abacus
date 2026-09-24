@@ -148,8 +148,8 @@ describe('operandScale', () => {
     expect(operandScale(1, 402 - 40, 874)).toBe(OPERAND_MAX_SCALE)
   })
 
-  // A 375 × 667 phone must still show the prompt and 手順を見る above the
-  // product soroban with the board under it.
+  // A 375 × 667 phone must still show the prompt above the product soroban
+  // and 手順を見る below the board under it.
   it('draws them smaller on a short window, as on a 375 × 667 phone', () => {
     expect(operandScale(3, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)
     expect(operandScale(1, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)

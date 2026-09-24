@@ -117,7 +117,7 @@ export function QuestionView({
   const room = width - 2 * space.xl
   const fittedBeadScale = beadModeScale(exercise.rods, room)
   // With a board beneath it, a short phone draws the soroban smaller, so the
-  // prompt and 手順を見る keep their room above it (SHORT_WINDOW_HEIGHT).
+  // prompt above it and 手順を見る below keep their room (SHORT_WINDOW_HEIGHT).
   const beadScale =
     renderBeneath !== undefined && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
@@ -209,8 +209,12 @@ export function QuestionView({
         {demonstration}
       </Text>
     ) : null
-  // Offered under the prompt (and the demonstration) until the question is
-  // answered, and hidden while the panel it opens is up.
+  // Offered until the question is answered, and hidden while the panel it
+  // opens is up. It stands where the step lines appear once opened: below
+  // the soroban in bead mode, after the prompt in keypad mode. The owner
+  // (2026-09-24): it sat under the prompt while the steps showed at the
+  // bottom of the screen, and should be where they are, to keep it
+  // consistent.
   const stepsOpenButton =
     review === null && !stepsOpen ? (
       <Pressable
@@ -332,7 +336,6 @@ export function QuestionView({
             {prompt}
           </Text>
           {demonstrationLine}
-          {stepsOpenButton}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
@@ -383,8 +386,21 @@ export function QuestionView({
             screen this collapses to 0 first and the scroll area is what
             gives way, keeping the soroban, hint (or step controls) and
             buttons on screen. With the panel open the step lines take its
-            place (see beadStepLines). */}
-        {beadStepLines ?? <View style={styles.beadSpacer} />}
+            place (see beadStepLines). Until then 手順を見る sits at its
+            top, where the lines will start. Inside the spacer the button
+            counts for nothing in the share-out, so the soroban stays where
+            it was when the button sat above it. The spacer is only kept
+            from being shorter than the button, so on a phone too short to
+            share out that much, the button cannot spill over the row
+            below: the soroban moves up just enough instead. */}
+        {beadStepLines ?? (
+          <View
+            testID="bead-spacer"
+            style={[styles.beadSpacer, stepsOpenButton !== null && styles.beadSpacerWithButton]}
+          >
+            {stepsOpenButton}
+          </View>
+        )}
         {/* Before an answer, the steps' とじる stands in for もどす and
             こたえる: the learner answers once they have closed the steps.
             The step lines take that row's height meanwhile. */}
@@ -432,11 +448,12 @@ export function QuestionView({
           {prompt}
         </Text>
         {demonstrationLine}
-        {stepsOpenButton}
         {/* After the prompt rather than under the soroban, so it can never
-            push the prompt off a short phone, but ahead of the step lines,
-            near the soroban it explains. */}
+            push the prompt off a short phone, but ahead of the step lines
+            (and 手順を見る, which stands where they appear), near the
+            soroban it explains. */}
         {renderBeneath?.(activeStep)}
+        {stepsOpenButton}
         {stepLines}
       </ScrollView>
       {review !== null ? (
@@ -461,6 +478,9 @@ export function QuestionView({
     </View>
   )
 }
+
+// 手順を見る is one line tall at the platforms' minimum tap target.
+const STEPS_OPEN_HEIGHT = 44
 
 const styles = StyleSheet.create({
   practice: { flex: 1 },
@@ -500,10 +520,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // A small outline button, centred: an offer, not the main action, so it
-  // stays quieter than こたえる, but still a full 44 pt tap target.
+  // stays quieter than こたえる, but still a full 44 pt tap target. In bead
+  // mode its gap from the hint is the same as the step lines' from the
+  // controls, so it sits where their card will start.
   stepsOpen: {
     alignSelf: 'center',
-    minHeight: 44,
+    minHeight: STEPS_OPEN_HEIGHT,
     justifyContent: 'center',
     marginTop: space.sm,
     paddingHorizontal: space.lg,
@@ -517,6 +539,10 @@ const styles = StyleSheet.create({
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
+  // A minimum, not a padding or a flex basis: those would count before the
+  // share-out and move the soroban on every phone, where this only comes
+  // into play on one too short to give the spacer the button's height.
+  beadSpacerWithButton: { minHeight: space.sm + STEPS_OPEN_HEIGHT },
   // In beadSpacer's place, with the same flex and nothing else: a padding or
   // margin here would count before the share-out and move the soroban (a
   // flex basis is never less than the padding). The gap under the controls

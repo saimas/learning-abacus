@@ -172,7 +172,7 @@ describe('QuestionView before an answer, with 手順を見る', () => {
   it('opens the steps before answering, without the answer', () => {
     renderView()
     const scroll = screen.getByTestId('question-scroll')
-    expect(within(scroll).getByTestId('steps-open')).toBeTruthy()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
 
     fireEvent.press(screen.getByTestId('steps-open'))
     // Bead mode: the lines scroll on their own, below the controls.
@@ -322,7 +322,7 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(rods()).toBe('0800')
   })
 
-  it('offers 手順を見る under the demonstration at F0, which the open panel stands in for', () => {
+  it('offers 手順を見る with the demonstration at F0, which the open panel stands in for', () => {
     renderView({ demonstration: '385は…' })
     expect(screen.getByTestId('demonstration')).toBeTruthy()
     expect(screen.getByTestId('steps-open')).toBeTruthy()
@@ -330,6 +330,76 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('demonstration')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(screen.getByTestId('demonstration')).toBeTruthy()
+  })
+})
+
+// The owner's request (2026-09-24): 手順を見る sat under the prompt, while the
+// steps it opens appear below the soroban in bead mode. It now sits where
+// they appear, in both modes, so the button and what it opens stay together.
+describe('QuestionView offering 手順を見る where the steps appear', () => {
+  const beneath = () => <Text testID="beneath">board</Text>
+  // Every testID on screen, in the order they are drawn.
+  const order = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+
+  it('offers it below the soroban and the board in bead mode, above もどす and こたえる', () => {
+    renderView({ demonstration: '385は…', renderBeneath: beneath })
+    const top = within(screen.getByTestId('question-scroll'))
+    expect(top.queryByTestId('steps-open')).toBeNull()
+    // The demonstration stays under the prompt.
+    expect(top.getByTestId('demonstration')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('soroban-wrap'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('reset-beads'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('submit'))
+  })
+
+  // It sits at the top of the flexible space the step lines take once open,
+  // with that space's flex and no padding or margin, so the soroban stays
+  // where it was when the button was above it. The space is at least the
+  // button's height, so on a phone too short to share out that much it
+  // cannot spill over もどす and こたえる.
+  it('holds it in the flexible space under the soroban, where the lines go', () => {
+    renderView()
+    const button = StyleSheet.flatten(screen.getByTestId('steps-open').props.style)
+    const place = screen.getByTestId('bead-spacer')
+    expect(within(place).getByTestId('steps-open')).toBeTruthy()
+    expect(StyleSheet.flatten(place.props.style)).toEqual({
+      flex: 1,
+      minHeight: button.marginTop + button.minHeight,
+    })
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('bead-spacer')).toBeNull()
+    expect(screen.getByTestId('step-lines')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(within(screen.getByTestId('bead-spacer')).getByTestId('steps-open')).toBeTruthy()
+  })
+
+  // Under review there is nothing to offer, and the space goes back to
+  // being just a spacer.
+  it('leaves the space empty under review in bead mode', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('steps-open')).toBeNull()
+    expect(StyleSheet.flatten(screen.getByTestId('bead-spacer').props.style)).toEqual({ flex: 1 })
+  })
+
+  it('offers it in the scroll after the prompt and the board in keypad mode, where the lines go', () => {
+    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…', renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('steps-open')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('prompt'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('demonstration'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    const open = order()
+    expect(open.indexOf('step-panel')).toBeGreaterThan(open.indexOf('beneath'))
   })
 })
 
@@ -542,7 +612,8 @@ describe('QuestionView with something beneath the soroban', () => {
     const drawn = order()
     expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('prompt'))
     expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('demonstration'))
-    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('steps-open'))
+    // Ahead of 手順を見る, which stands where the step lines will appear.
+    expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('steps-open'))
 
     fireEvent.press(screen.getByTestId('steps-open'))
     // Ahead of the step lines, so it stays near the soroban it explains.
@@ -555,8 +626,8 @@ describe('QuestionView with something beneath the soroban', () => {
 })
 
 // With a board under it, a 375 × 667 phone has too little height left in
-// bead mode for the prompt and 手順を見る above the soroban, so there the
-// soroban is drawn smaller. Nowhere else does its size change.
+// bead mode for the prompt above the soroban and 手順を見る below, so there
+// the soroban is drawn smaller. Nowhere else does its size change.
 describe('QuestionView on a short window, with something beneath the soroban', () => {
   let restore = () => {}
   function windowOf(width: number, height: number) {

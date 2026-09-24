@@ -20,8 +20,8 @@ import { colors, fontSizes, space } from '@/ui/theme'
 // Small enough to stay clearly second to the product soroban above.
 export const OPERAND_MAX_SCALE = 0.65
 // Smaller still on a short window (SHORT_WINDOW_HEIGHT), so a 375 × 667
-// phone keeps the prompt and 手順を見る above the soroban with the board
-// present.
+// phone keeps the prompt above the soroban and 手順を見る below the board
+// with the board present.
 export const OPERAND_SHORT_WINDOW_SCALE = 0.5
 // The × between the boards, with its gap on either side. It is text, so it
 // does not scale with the boards.
