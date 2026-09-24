@@ -43,6 +43,10 @@ describe('emptyProgress', () => {
   it('has not yet shown how multiplication works', () => {
     expect(emptyProgress().multiplyIntroDone).toBe(false)
   })
+
+  it('has not yet shown how division works', () => {
+    expect(emptyProgress().divideIntroDone).toBe(false)
+  })
 })
 
 describe('recordAttempt', () => {

@@ -102,6 +102,38 @@ describe('Round screen', () => {
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 
+  // Spec (division) §3.
+  it('shows how division works before the first ÷ round', async () => {
+    mockParams.current = { kind: 'div:2' }
+    // Seeing the × walkthrough does not count for ÷.
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
+    const { queryByTestId } = renderRound()
+    await waitFor(() =>
+      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/divide-intro', params: { kind: 'div:2' } }),
+    )
+    expect(queryByTestId('prompt')).toBeNull()
+  })
+
+  it('plays a ÷ round once the walkthrough has been seen', async () => {
+    mockParams.current = { kind: 'div:2' }
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+    const { getByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('prompt').props.children).toMatch(/^\d{4}を\d{2}でわる。$/)
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  // The ÷ walkthrough is not the × one: a learner who has seen only the ÷
+  // one still sees how to multiply first.
+  it('still shows how multiplication works when only the ÷ walkthrough has been seen', async () => {
+    mockParams.current = { kind: 'mul:1' }
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+    renderRound()
+    await waitFor(() =>
+      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/multiply-intro', params: { kind: 'mul:1' } }),
+    )
+  })
+
   it('starts a kind with no record in bead mode', async () => {
     mockParams.current = { kind: 'add:2' }
     const { getByTestId, queryByTestId } = renderRound()

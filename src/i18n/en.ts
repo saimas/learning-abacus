@@ -159,6 +159,7 @@ export const en: Strings = {
   basicsTitle: 'Basics',
   basicsDetail: 'Single-rod moves · 5 min',
   homeHowTo: 'How multiplication works',
+  homeHowToDivide: 'How division works',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
 
@@ -245,6 +246,12 @@ export const en: Strings = {
   introPlacement:
     'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  divideIntroTitle: 'How to divide',
+  divideIntroMethod:
+    'Set the number being divided on the soroban, then place the answer’s digits one at a time, from the highest (商除法). After placing each digit, take its times-table answers with the divisor’s digits off the rods. What is left gives the next digit.',
+  divideIntroPlacement:
+    'Compare the leading digits with the divisor. If they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
+  divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,
   operandBoardLabel: (a, b) => `${a} × ${b}`,
   divisorBoardLabel: (b) => `Divisor ${b}`,
 }

@@ -345,4 +345,22 @@ describe('division strings', () => {
     expect(ja.divisorBoardLabel(36)).toBe('わる数 36')
     expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
   })
+
+  it('gives the walkthrough its title, its explanations and its result', () => {
+    expect(ja.divideIntroTitle).toBe('わり算のやりかた')
+    expect(en.divideIntroTitle).toBe('How to divide')
+    expect(ja.divideIntroMethod).toContain('商除法')
+    expect(en.divideIntroMethod).toContain('商除法')
+    // The 割れる / 割れない rule.
+    expect(ja.divideIntroPlacement).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
+    expect(en.divideIntroPlacement).toContain('two rods left of the head')
+    expect(ja.divideIntroResult(1692, 36, 47)).toBe('1692÷36 = 47')
+    expect(en.divideIntroResult(1692, 36, 47)).toBe('1692 ÷ 36 = 47')
+  })
+
+  it('names Home’s link to the walkthrough beside the × one', () => {
+    expect(ja.homeHowToDivide).toBe('わり算のやりかた')
+    expect(en.homeHowToDivide).toBe('How division works')
+    expect(ja.homeHowTo).toBe('かけ算のやりかた')
+  })
 })

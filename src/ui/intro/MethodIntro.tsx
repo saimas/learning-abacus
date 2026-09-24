@@ -1,25 +1,48 @@
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { stepColouring } from '@/domain/exercise'
-import { answerOf, problemStates, problemSteps, type Problem } from '@/domain/problem'
+import { answerOf, OPERATION_SYMBOL, problemStates, problemSteps, rodsFor, type Problem } from '@/domain/problem'
 import { emptySoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
 import { beadModeScale } from '@/ui/abacus/geometry'
 import { Button } from '@/ui/kit/Button'
+import { OperandBoard } from '@/ui/multiply/OperandBoard'
+import { groupLine } from '@/ui/round/ProblemCorrectionCard'
 import { useMoveReplay } from '@/ui/session/useMoveReplay'
 import { colors, fonts, fontSizes, space } from '@/ui/theme'
-import { OperandBoard } from './OperandBoard'
 
-// Spec (multiplication) §4: one worked 2×2 problem, small enough to follow
-// and with every kind of placement in it.
-const EXAMPLE: Problem = { op: 'mul', digits: 2, a: 47, b: 36 }
+// What a walkthrough says around its worked problem: its title, what the
+// method does, where each digit goes, and the result. The group pages need
+// no text of their own: they read as the answer card's lines.
+export type IntroTexts = {
+  title: string
+  method: string
+  placement: string
+  result: (a: number, b: number, answer: number) => string
+}
 
-// The pages: the method, where each digit goes, one page per 九九 (its
-// bead steps play as the page opens), and the result.
+// The pages: the method, where each digit goes, one page per step group (its
+// bead steps play as the page opens), and the result. A group is a 九九 of a
+// × problem, or a quotient digit placed or a 九九 taken off in a ÷ problem.
 type Page = { kind: 'method' } | { kind: 'placement' } | { kind: 'group'; index: number } | { kind: 'result' }
 
-export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; onFinish: () => void }) {
+// Spec (multiplication) §4 and (division) §3: the walkthrough shown before an
+// operation's first round, working one problem through on the soroban, with
+// its numbers on the board beneath. Each operation's route gives it the
+// problem and the words, so × (47 × 36, 両落とし) and ÷ (1692 ÷ 36, 商除法)
+// share the paging, the replay, the colouring and the board.
+export function MethodIntro({
+  problem,
+  intro,
+  finishLabel,
+  onFinish,
+}: {
+  problem: Problem
+  intro: IntroTexts
+  finishLabel: string
+  onFinish: () => void
+}) {
   const strings = useStrings()
   const { width } = useWindowDimensions()
   const replay = useMoveReplay()
@@ -28,8 +51,9 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
   // second tap in the meantime must not finish it twice.
   const finished = useRef(false)
 
-  const groups = problemSteps(EXAMPLE)
-  const states = problemStates(EXAMPLE)
+  const groups = problemSteps(problem)
+  const states = problemStates(problem)
+  const rods = rodsFor(problem)
   const pages: Page[] = [
     { kind: 'method' },
     { kind: 'placement' },
@@ -42,10 +66,12 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
   const starts = groups.reduce<number[]>((acc, group, i) => [...acc, (acc[i] ?? 0) + group.steps.length], [0])
 
   const current = pages[page] ?? { kind: 'result' }
-  const shown = replay.soroban ?? states[current.kind === 'result' ? states.length - 1 : 0] ?? emptySoroban(4)
+  // Before the first group plays, the soroban is as the problem starts it:
+  // empty for × (両落とし builds only the product), the dividend for ÷.
+  const shown = replay.soroban ?? states[current.kind === 'result' ? states.length - 1 : 0] ?? emptySoroban(rods)
 
-  // What a 九九's page replays: the soroban before its first step, then after
-  // each of its steps.
+  // What a group's page replays: the soroban before its first step, then
+  // after each of its steps.
   function groupStates(index: number): Soroban[] {
     const from = starts[index] ?? 0
     const to = starts[index + 1] ?? from
@@ -60,10 +86,10 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
   }
 
   // The owner's request (2026-09-23), as when stepping a question: the page's
-  // 九九 is the operation, so the beads it has moved so far are red, the
+  // group is the operation, so the beads it has moved so far are red, the
   // latest step's the deepest. The replay's step is its index into the
   // page's states, so this follows the replay and, once it has played out,
-  // keeps the whole 九九 coloured until the next page. Other pages colour
+  // keeps the whole group coloured until the next page. Other pages colour
   // nothing.
   const tintedBeads =
     current.kind === 'group' && replay.step !== null
@@ -73,20 +99,20 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
   const group = current.kind === 'group' ? groups[current.index] : undefined
   const text =
     current.kind === 'method'
-      ? strings.introMethod
+      ? intro.method
       : current.kind === 'placement'
-        ? strings.introPlacement
+        ? intro.placement
         : current.kind === 'result'
-          ? strings.introResult(EXAMPLE.a, EXAMPLE.b, answerOf(EXAMPLE))
-          : group?.kind === 'product'
-            ? strings.productLine(group.x, group.y, group.place, group.cascades)
-            : ''
+          ? intro.result(problem.a, problem.b, answerOf(problem))
+          : group === undefined
+            ? ''
+            : (groupLine(strings, problem, group) ?? '')
 
   return (
     <View style={styles.intro}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
-          {strings.introTitle}
+          {intro.title}
         </Text>
         <View style={styles.dots}>
           {pages.map((_, i) => (
@@ -98,18 +124,19 @@ export function MultiplyIntro({ finishLabel, onFinish }: { finishLabel: string; 
           everything that can grow scrolls instead of pushing it off a short
           screen. */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.problem}>{`${EXAMPLE.a} × ${EXAMPLE.b}`}</Text>
+        <Text style={styles.problem}>{`${problem.a} ${OPERATION_SYMBOL[problem.op]} ${problem.b}`}</Text>
         <View testID="intro-soroban" style={styles.soroban}>
           <Abacus
             soroban={shown}
             fade={0}
-            scale={beadModeScale(4, width - 2 * space.xl)}
+            scale={beadModeScale(rods, width - 2 * space.xl)}
             tintedBeads={tintedBeads}
           />
         </View>
-        {/* The two numbers under the soroban, as in a × round. A 九九's page
-            points at its two digits for as long as the page is open. */}
-        <OperandBoard problem={EXAMPLE} activeGroup={group} />
+        {/* The board under the soroban, as in a round: both numbers for ×,
+            the divisor for ÷. A 九九's page points at its digits for as long
+            as the page is open; a quotient digit's page points at nothing. */}
+        <OperandBoard problem={problem} activeGroup={group} />
         <Text testID="intro-text" style={styles.text}>
           {text}
         </Text>

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { problemSteps, type Problem, type StepGroup } from '@/domain/problem'
 import { useStrings } from '@/i18n'
+import type { Strings } from '@/i18n/ja'
 import { useActiveLineLayout } from '@/ui/session/useActiveLineLayout'
 import { colors, fonts } from '@/ui/theme'
 
@@ -32,36 +33,6 @@ export function ProblemCorrectionCard({
   // lines are numbered as problemSteps numbers the groups.
   const lineLayout = useActiveLineLayout(activeGroup)
 
-  // A group's line and its testID, or null for a group with nothing to say.
-  // Every 九九 gets a line, even one whose product is 0 (recalling it is
-  // still a step), and so does a 0 quotient digit (deciding it is too).
-  function lineOf(group: StepGroup, index: number): { testID: string; text: string } | null {
-    switch (group.kind) {
-      case 'column':
-        // A column that adds 0 moves nothing.
-        if (group.atom === null) return null
-        return {
-          testID: `correction-column-${group.place}`,
-          text: strings.columnLine(group.place, group.atom, group.cascades),
-        }
-      case 'product':
-        return {
-          testID: `correction-product-${index}`,
-          text: strings.productLine(group.x, group.y, group.place, group.cascades),
-        }
-      case 'quotient':
-        return {
-          testID: `correction-quotient-${index}`,
-          text: strings.quotientLine(group.q, group.lead, problem.b, group.split),
-        }
-      case 'subtract':
-        return {
-          testID: `correction-subtract-${index}`,
-          text: strings.subtractLine(group.q, group.y, group.place, group.cascades),
-        }
-    }
-  }
-
   return (
     <View testID="correction">
       {showAnswer ? (
@@ -70,21 +41,41 @@ export function ProblemCorrectionCard({
         </Text>
       ) : null}
       {problemSteps(problem).map((group, index) => {
-        const line = lineOf(group, index)
+        const line = groupLine(strings, problem, group)
         if (line === null) return null
         return (
           <Text
             key={index}
-            testID={line.testID}
+            // A column is named by its rod, which is unique; the other
+            // kinds by their index, since a place repeats across 九九.
+            testID={group.kind === 'column' ? `correction-column-${group.place}` : `correction-${group.kind}-${index}`}
             onLayout={lineLayout(index)}
             style={[styles.line, index === activeGroup && styles.activeLine]}
           >
-            {line.text}
+            {line}
           </Text>
         )
       })}
     </View>
   )
+}
+
+// A group's line, or null for a group with nothing to say. Every 九九 gets a
+// line, even one whose product is 0 (recalling it is still a step), and so
+// does a 0 quotient digit (deciding it is too). Shared with the walkthrough
+// (MethodIntro), whose pages read each group in the card's own words.
+export function groupLine(strings: Strings, problem: Problem, group: StepGroup): string | null {
+  switch (group.kind) {
+    case 'column':
+      // A column that adds 0 moves nothing.
+      return group.atom === null ? null : strings.columnLine(group.place, group.atom, group.cascades)
+    case 'product':
+      return strings.productLine(group.x, group.y, group.place, group.cascades)
+    case 'quotient':
+      return strings.quotientLine(group.q, group.lead, problem.b, group.split)
+    case 'subtract':
+      return strings.subtractLine(group.q, group.y, group.place, group.cascades)
+  }
 }
 
 const styles = StyleSheet.create({

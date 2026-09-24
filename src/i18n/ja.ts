@@ -153,6 +153,7 @@ export const ja = {
   basicsTitle: '基礎の練習',
   basicsDetail: '1けたの動き・5分',
   homeHowTo: 'かけ算のやりかた',
+  homeHowToDivide: 'わり算のやりかた',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 
@@ -244,6 +245,16 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
+  // The division walkthrough (spec: division §3). The placement page gives
+  // both halves of placing: where the quotient digit goes (割れる / 割れない),
+  // and where its 九九 come off, which each 九九's own page then names rod by
+  // rod.
+  divideIntroTitle: 'わり算のやりかた',
+  divideIntroMethod:
+    'わり算は、わられる数をそろばんに置き、商を立ててから、商×わる数の九九を引いていきます（商除法（しょうじょほう））。商は上の位から一つずつ立て、九九を引いた残りで、つぎの商を立てます。',
+  divideIntroPlacement:
+    'わられる数の頭の数字とわる数をくらべ、わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
+  divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,
   // What VoiceOver reads for the operand board under a × problem's soroban:
   // the two numbers, as the board shows them.
   operandBoardLabel: (a: number, b: number) => `${a} × ${b}`,

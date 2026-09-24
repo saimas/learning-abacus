@@ -50,9 +50,13 @@ export default function Round() {
     )
   }
 
-  // Spec (multiplication) §4: the first × round starts with the walkthrough.
+  // Spec (multiplication) §4, (division) §3: the first × or ÷ round starts
+  // with that operation's walkthrough, each seen on its own.
   if (kind.op === 'mul' && !progress.multiplyIntroDone) {
     return <Redirect href={{ pathname: '/multiply-intro', params: { kind: id } }} />
+  }
+  if (kind.op === 'div' && !progress.divideIntroDone) {
+    return <Redirect href={{ pathname: '/divide-intro', params: { kind: id } }} />
   }
 
   // Answers are already applied to progress one by one; this only makes

@@ -188,6 +188,23 @@ describe('OperandBoard for ÷', () => {
     expect(screen.getAllByTestId('abacus-frame')).toHaveLength(1)
   })
 
+  // The controller's ruling (2026-09-24): the board reads as "÷ 36", with
+  // the ÷ drawn exactly as the × between the × boards.
+  it('puts a ÷ before the divisor, drawn as the × between the × boards', () => {
+    render(<OperandBoard problem={problem} />)
+    const times = screen.getByText('×')
+    const timesStyle = StyleSheet.flatten(times.props.style)
+    screen.unmount()
+
+    render(<OperandBoard problem={division} />)
+    const divide = screen.getByText('÷')
+    expect(StyleSheet.flatten(divide.props.style)).toEqual(timesStyle)
+    expect(divide.props.maxFontSizeMultiplier).toBe(1.3)
+    // Left of the divisor: the board reads as the ÷, then the divisor's
+    // digits.
+    expect(textOf(screen.getByTestId('operand-board'))).toBe('÷36')
+  })
+
   it('reads to VoiceOver as the divisor', () => {
     render(<OperandBoard problem={division} />)
     const board = screen.getByTestId('operand-board')
@@ -261,10 +278,10 @@ describe('divisorScale', () => {
     expect(divisorScale(3, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)
   })
 
-  // One board, with no × beside it, has all the room to itself.
-  it('shrinks the one board to just fit a narrow window', () => {
+  // One board, with only the ÷ beside it, has the rest of the room to itself.
+  it('shrinks the board, so it and the ÷ before it just fit a narrow window', () => {
     const scale = divisorScale(3, 120, 800)
     expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
-    expect(natural(3) * scale).toBeCloseTo(120)
+    expect(natural(3) * scale + TIMES_WIDTH).toBeCloseTo(120)
   })
 })

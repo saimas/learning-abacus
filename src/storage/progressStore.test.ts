@@ -143,6 +143,32 @@ describe('multiplyIntroDone', () => {
   })
 })
 
+// Spec (division) §3: the ÷ walkthrough's flag, added exactly like
+// multiplyIntroDone.
+describe('divideIntroDone', () => {
+  it('loads a document written before the flag existed as not yet seen', async () => {
+    const { divideIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5, multiplyIntroDone: true }
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    const result = await loadProgress()
+    expect(result.divideIntroDone).toBe(false)
+    expect(result.multiplyIntroDone).toBe(true)
+    expect(result.daysPracticed).toBe(5)
+  })
+
+  it('keeps a stored true', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone: true }))
+    const result = await loadProgress()
+    expect(result.divideIntroDone).toBe(true)
+    // The two walkthroughs are seen separately.
+    expect(result.multiplyIntroDone).toBe(false)
+  })
+
+  it.each([['yes'], [1], [null]])('discards a divideIntroDone of %p in favour of false', async (divideIntroDone) => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone }))
+    expect((await loadProgress()).divideIntroDone).toBe(false)
+  })
+})
+
 describe('saveProgress', () => {
   it('writes under the versioned key', async () => {
     const progress = emptyProgress()

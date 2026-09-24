@@ -21,6 +21,7 @@ type ProgressApi = {
   reset: () => Promise<void>
   completeTutorial: () => Promise<void>
   completeMultiplyIntro: () => Promise<void>
+  completeDivideIntro: () => Promise<void>
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null)
@@ -111,19 +112,31 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     await saveProgress(next)
   }, [])
 
-  // Saved at once, as completeTutorial is: the walkthrough is shown only
+  // Saved at once, as completeTutorial is: a walkthrough is shown only
   // until it has been seen, so a crash before the next flush must not bring
   // it back.
-  const completeMultiplyIntro = useCallback(async () => {
-    const next = { ...latest.current, multiplyIntroDone: true }
+  const markIntroDone = useCallback(async (flag: 'multiplyIntroDone' | 'divideIntroDone') => {
+    const next = { ...latest.current, [flag]: true }
     latest.current = next
     setProgress(next)
     await saveProgress(next)
   }, [])
+  const completeMultiplyIntro = useCallback(() => markIntroDone('multiplyIntroDone'), [markIntroDone])
+  const completeDivideIntro = useCallback(() => markIntroDone('divideIntroDone'), [markIntroDone])
 
   return (
     <ProgressContext.Provider
-      value={{ progress, hydrated, attempt, practise, flush, reset, completeTutorial, completeMultiplyIntro }}
+      value={{
+        progress,
+        hydrated,
+        attempt,
+        practise,
+        flush,
+        reset,
+        completeTutorial,
+        completeMultiplyIntro,
+        completeDivideIntro,
+      }}
     >
       {children}
     </ProgressContext.Provider>
