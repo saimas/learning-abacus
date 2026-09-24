@@ -140,8 +140,8 @@ describe('DivideWalkthrough', () => {
     expect(text('walk-mark-2')).toBe('+3')
   })
 
-  // The controller's ruling (2026-09-24): のこり never runs ahead of the
-  // rods. It changes when the step's last bead lands.
+  // のこり never runs ahead of the rods: it changes when the step's last
+  // bead lands.
   it('keeps what is left with the rods while the beads of the fix move', () => {
     renderWalk()
     toFrame(7)
@@ -188,9 +188,8 @@ describe('DivideWalkthrough', () => {
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
 
-  // The controller's ruling (2026-09-24): a stuck step's dot is a ring
-  // whether reached or not, so the two places a guess turns out too big stay
-  // in sight among the reached dots.
+  // A stuck step's dot is a ring whether reached or not, so the two places a
+  // guess turns out too big stay in sight among the reached dots.
   it('has a dot per step, reached ones filled and the stuck ones always a ring', () => {
     renderWalk()
     expect(screen.getAllByTestId(/^walk-dot-/)).toHaveLength(14)

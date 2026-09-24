@@ -64,10 +64,10 @@ export function DivideWalkthrough({
   // keeping the step before it red.
   const tinted = step.steps.length > 0 ? tintsFor(stepColouring(states, groupStarts, frame.state)) : undefined
 
-  // What is left must be the number on the rods (the controller's ruling,
-  // 2026-09-24): until a step's last bead lands, it is what was left before
-  // the step, and only then the step's own. A step without beads is a
-  // single frame, which is its last. The set step has none before it.
+  // What is left must be the number on the rods: until a step's last bead
+  // lands, it is what was left before the step, and only then the step's
+  // own. A step without beads is a single frame, which is its last. The set
+  // step has none before it.
   const stepDone = frames[index + 1]?.step !== frame.step
   const left = stepDone ? step.left : (walk[frame.step - 1] ?? step).left
 
@@ -99,9 +99,9 @@ export function DivideWalkthrough({
           {strings.divideIntroTitle}
         </Text>
         {/* One dot per step, not per ▶, so the dots count explanations. A
-            stuck step's dot is a ring whether reached or not (the
-            controller's ruling, 2026-09-24), so the two places a guess turns
-            out too big stay in sight among the reached dots. */}
+            stuck step's dot is a ring whether reached or not, so the two
+            places a guess turns out too big stay in sight among the reached
+            dots. */}
         <View style={styles.dots}>
           {walk.map((each, i) => (
             <View
