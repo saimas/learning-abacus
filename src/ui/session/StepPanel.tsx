@@ -163,11 +163,12 @@ export function StepControls({
 }
 
 // The icon set has no forward chevron, so the arrows are type. The text
-// variation selector keeps iOS from drawing them as emoji.
-const BACK_GLYPH = '◀︎'
-const NEXT_GLYPH = '▶︎'
+// variation selector keeps iOS from drawing them as emoji. Exported with
+// StepButton for the division walkthrough, whose ◀ ▶ step the same way.
+export const BACK_GLYPH = '◀︎'
+export const NEXT_GLYPH = '▶︎'
 
-function StepButton({
+export function StepButton({
   testID,
   glyph,
   label,
