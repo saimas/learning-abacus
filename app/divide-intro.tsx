@@ -9,14 +9,14 @@ import { useProgress } from '@/ui/ProgressProvider'
 // 九九 taken off per divisor digit after each.
 const EXAMPLE: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
 
+function Walkthrough({ finishLabel, onFinish }: { finishLabel: string; onFinish: () => void }) {
+  return <DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />
+}
+
 // The bead-by-bead walkthrough of 商除法, guess and all (spec: division
 // walkthrough §2, §4), shown before the first ÷ round and from Home's
 // わり算のやりかた link.
 export default function DivideIntroScreen() {
   const { completeDivideIntro } = useProgress()
-  return (
-    <IntroScreen op="div" complete={completeDivideIntro}>
-      {(finishLabel, onFinish) => <DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />}
-    </IntroScreen>
-  )
+  return <IntroScreen op="div" complete={completeDivideIntro} walkthrough={Walkthrough} />
 }
