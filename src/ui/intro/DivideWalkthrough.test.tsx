@@ -99,11 +99,14 @@ describe('DivideWalkthrough', () => {
     expect(text('walk-mark-1')).toBe('−1')
     expect(text('walk-mark-2')).toBe('−5')
     expect(tintedRods()).toEqual(['1'])
+    // Only the 1 is off (rods 5 0 6 9 2), so what is left is still 1692.
+    expect(text('walk-left')).toBe('1692')
     next()
     expect(text('walk-count')).toBe('5 / 23')
     expect(text('walk-what')).toBe('50×30=1500を引く')
     expect(text('walk-reading-2')).toBe('1')
     expect(rods()).toBe('5 0 1 9 2')
+    expect(text('walk-left')).toBe('192')
     expect(text('walk-mark-1')).toBe('−1')
     expect(text('walk-mark-2')).toBe('−5')
     expect(tintedRods()).toEqual(['1', '2'])
@@ -135,6 +138,21 @@ describe('DivideWalkthrough', () => {
     expect(rods()).toBe('4 0 4 9 2')
     expect(text('walk-mark-0')).toBe('−1')
     expect(text('walk-mark-2')).toBe('+3')
+  })
+
+  // The controller's ruling (2026-09-24): のこり never runs ahead of the
+  // rods. It changes when the step's last bead lands.
+  it('keeps what is left with the rods while the beads of the fix move', () => {
+    renderWalk()
+    toFrame(7)
+    expect(rods()).toBe('0 0 1 9 2')
+    expect(text('walk-left')).toBe('192')
+    next()
+    expect(rods()).toBe('4 0 1 9 2')
+    expect(text('walk-left')).toBe('192')
+    next()
+    expect(rods()).toBe('4 0 4 9 2')
+    expect(text('walk-left')).toBe('492')
   })
 
   it('goes back across a step with ◀', () => {
@@ -170,19 +188,29 @@ describe('DivideWalkthrough', () => {
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
 
-  it('has a dot per step, reached ones filled and the stuck ones outlined', () => {
+  // The controller's ruling (2026-09-24): a stuck step's dot is a ring
+  // whether reached or not, so the two places a guess turns out too big stay
+  // in sight among the reached dots.
+  it('has a dot per step, reached ones filled and the stuck ones always a ring', () => {
     renderWalk()
     expect(screen.getAllByTestId(/^walk-dot-/)).toHaveLength(14)
-    const outlined = Array.from({ length: 14 }, (_, i) => i).filter(
-      (i) => style(`walk-dot-${i}`)?.borderColor === colors.accent,
-    )
-    expect(outlined).toEqual([4, 10])
-    const filled = () =>
-      Array.from({ length: 14 }, (_, i) => i).filter((i) => style(`walk-dot-${i}`)?.backgroundColor === colors.accent)
+    const dots = Array.from({ length: 14 }, (_, i) => i)
+    const fill = (i: number) => style(`walk-dot-${i}`)?.backgroundColor
+    const ringed = () => dots.filter((i) => style(`walk-dot-${i}`)?.borderColor === colors.accent)
+    const filled = () => dots.filter((i) => fill(i) === colors.accent)
+    expect(ringed()).toEqual([4, 10])
+    expect(style('walk-dot-4')).toMatchObject({ borderWidth: 1.5, backgroundColor: colors.accentSoft })
     expect(filled()).toEqual([0])
     // Frame 5 is step 3's second bead step.
     toFrame(5)
     expect(filled()).toEqual([0, 1, 2, 3])
+    // Frame 6 is the stuck step itself, and frame 7 the fix after it.
+    next()
+    expect(fill(4)).toBe(colors.accentSoft)
+    next()
+    expect(filled()).toEqual([0, 1, 2, 3, 5])
+    expect(fill(4)).toBe(colors.accentSoft)
+    expect(ringed()).toEqual([4, 10])
   })
 
   it('names the rods under the soroban', () => {

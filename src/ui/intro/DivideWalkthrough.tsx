@@ -64,6 +64,13 @@ export function DivideWalkthrough({
   // keeping the step before it red.
   const tinted = step.steps.length > 0 ? tintsFor(stepColouring(states, groupStarts, frame.state)) : undefined
 
+  // What is left must be the number on the rods (the controller's ruling,
+  // 2026-09-24): until a step's last bead lands, it is what was left before
+  // the step, and only then the step's own. A step without beads is a
+  // single frame, which is its last. The set step has none before it.
+  const stepDone = frames[index + 1]?.step !== frame.step
+  const left = stepDone ? step.left : (walk[frame.step - 1] ?? step).left
+
   // The beads' slide is silent to VoiceOver, so each ▶ or ◀ is read out: a
   // new step's words, or just the count while the same step's beads move.
   // Only a change is: nothing is read as the walkthrough opens.
@@ -91,9 +98,10 @@ export function DivideWalkthrough({
         <Text accessibilityRole="header" style={styles.title}>
           {strings.divideIntroTitle}
         </Text>
-        {/* One dot per step, not per ▶, so the dots count explanations. The
-            stuck steps are ringed, so the learner sees from the start that
-            a guess will turn out too big, and where. */}
+        {/* One dot per step, not per ▶, so the dots count explanations. A
+            stuck step's dot is a ring whether reached or not (the
+            controller's ruling, 2026-09-24), so the two places a guess turns
+            out too big stay in sight among the reached dots. */}
         <View style={styles.dots}>
           {walk.map((each, i) => (
             <View
@@ -192,7 +200,7 @@ export function DivideWalkthrough({
         <View style={styles.leftRow}>
           <Text style={styles.leftLabel}>{strings.divideWalkLeft}</Text>
           <Text testID="walk-left" style={styles.left}>
-            {String(step.left)}
+            {String(left)}
           </Text>
           {caption.math === '' ? null : (
             <Text testID="walk-math" style={[styles.math, { color: mathColour(caption.math) }]}>
@@ -318,7 +326,8 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.track },
   dotReached: { backgroundColor: colors.accent },
-  dotStuck: { borderWidth: 1.5, borderColor: colors.accent },
+  // After dotReached, so a reached stuck step stays a ring.
+  dotStuck: { borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.accentSoft },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: space.sm },
   problemRow: {
