@@ -119,14 +119,17 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
   return `${digits.length === 0 ? head : `${head}: take ${digits.join(', ')}`}${cascades ? ' (borrowing from a rod further left)' : ''}`
 }
 
-// One line of a ÷ problem's answer card for a quotient digit: where it is
-// placed, by comparing the dividend's leading digits with the divisor. A 0
-// is not placed at all, so its line compares nothing.
-function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+// One line of a ÷ problem's answer card for a quotient digit, as ja's: the
+// guess by times table (the head of what is left ÷ the divisor's first
+// digit), why a guess too big to take away was lowered to q, then where q
+// goes. A 0 is not placed at all, so its line names no rod.
+function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
+  const estimate = `Estimate ${partial} ÷ ${d0} = ${guess}.`
+  const lowered = guess > q ? ` ${guess} is too big to take away, so use ${q}.` : ''
   // "nothing to place" already reads right wherever the 0 falls, but it is
   // named alongside ja's wording fix so the two stay in step.
-  if (q === 0) return 'Quotient 0: nothing to place'
-  return `Quotient ${q}: ${lead} is ${split ? 'at least' : 'less than'} ${divisor}, so ${split ? 'two rods' : 'one rod'} left of the head`
+  const placed = q === 0 ? ' Quotient 0: nothing to place.' : ` Place ${q} ${split ? 'two rods' : 'one rod'} left of the head.`
+  return `${estimate}${lowered}${placed}`
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver

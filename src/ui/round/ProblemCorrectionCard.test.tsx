@@ -68,10 +68,10 @@ describe('ProblemCorrectionCard', () => {
       .getAllByTestId(/^correction-(quotient|subtract)-/)
       .map((line) => [line.props.testID, textOf(line)])
     expect(lines).toEqual([
-      ['correction-quotient-0', '商4を立てる（16は36より小さいので、頭の1つ左）'],
+      ['correction-quotient-0', '16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる'],
       ['correction-subtract-1', '4×3=12　千の位から1、百の位から2を引く'],
       ['correction-subtract-2', '4×6=24　百の位から2、十の位から4を引く'],
-      ['correction-quotient-3', '商7を立てる（25は36より小さいので、頭の1つ左）'],
+      ['correction-quotient-3', '25÷3で見当をつけると8。8だと引ききれないので7にする。商7を頭の1つ左に立てる'],
       ['correction-subtract-4', '7×3=21　百の位から2、十の位から1を引く'],
       ['correction-subtract-5', '7×6=42　十の位から4、一の位から2を引く'],
     ])
@@ -83,7 +83,7 @@ describe('ProblemCorrectionCard', () => {
     render(
       <ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 432, b: 36 }} expected={12} activeGroup={0} />,
     )
-    expect(textOf(screen.getByTestId('correction-quotient-0'))).toBe('商1を立てる（43は36以上なので、頭の2つ左）')
+    expect(textOf(screen.getByTestId('correction-quotient-0'))).toBe('4÷3で見当をつけると1。商1を頭の2つ左に立てる')
     expect(colorOf('correction-quotient-0')).toBe(colors.accent)
     expect(colorOf('correction-subtract-1')).not.toBe(colors.accent)
   })
@@ -93,8 +93,8 @@ describe('ProblemCorrectionCard', () => {
   // keeps its line, and the next digit follows it at once.
   it('gives a 0 quotient digit its line, with no 九九 after it', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a: 202032, b: 976 }} expected={207} />)
-    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('商0（立てない）')
-    expect(textOf(screen.getByTestId('correction-quotient-5'))).toBe('商7を立てる（683は976より小さいので、頭の1つ左）')
+    expect(textOf(screen.getByTestId('correction-quotient-4'))).toBe('6÷9で見当をつけると0。商0（立てない）')
+    expect(textOf(screen.getByTestId('correction-quotient-5'))).toBe('68÷9で見当をつけると7。商7を頭の1つ左に立てる')
   })
 
   it('still gives a line for a 九九 of a 0 divisor digit, since recalling it is still a step', () => {

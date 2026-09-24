@@ -26,7 +26,8 @@ Out of scope: remainders, N ÷ 1 sizes, 帰除法, a quotient-only mode, landsca
 
 ### Steps
 The soroban shows one number. The dividend is set right-aligned, so its digits sit at their own place values. For each quotient place p from N − 1 down to 0 with digit q (the quotient's digit at p):
-1. **商を立てる** — a group `{ kind: 'quotient', q, place: p + N + 1, lead, split, moves, steps, cascades }`: add q (atom `(0, q, add)`) on the rod at place `p + N + 1`. That rod is always empty then (the remainder is below `d × 10^(p+1) ≤ 10^(p+N+1)`). `lead` is the remainder's leading N digits and `split` is whether the quotient lands two rods left of the remainder's head (`lead ≥ b`, 割れる) or one (割れない). A digit of 0 is a group with no moves (nothing is placed).
+1. **商を立てる** — a group `{ kind: 'quotient', q, place: p + N + 1, lead, split, partial, guess, moves, steps, cascades }`: add q (atom `(0, q, add)`) on the rod at place `p + N + 1`. That rod is always empty then (the remainder is below `d × 10^(p+1) ≤ 10^(p+N+1)`). `lead` is the remainder's leading N digits and `split` is whether the quotient lands two rods left of the remainder's head (`lead ≥ b`, 割れる) or one (割れない). A digit of 0 is a group with no moves (nothing is placed).
+   - **The guess (仮商), added after build 19.** The owner: "it says 商4を立てる but I have no idea where that 4 comes from." Real 商除法 needs only the 九九: `partial = ⌊remainder / 10^(p+N−1)⌋` (the head of what is left, one or two digits) and `guess = min(9, ⌊partial / d0⌋)`, d0 being the divisor's first digit (`divisorFirstDigit`). d0 alone underestimates the divisor, so `guess ≥ q` always; when it is bigger, the subtraction would not go and the learner lowers it. 1692 ÷ 36: 16 ÷ 3 → 5 (q 4), then 25 ÷ 3 → 8 (q 7); 432 ÷ 36: 1 then 2, both right; 202032 ÷ 976: 2, 0, 7. A 1-digit divisor's guess is always q. The owner chose to explain the guess in words only: the beads still play q directly (no undo steps).
 2. **引く** — for each divisor digit y at divisor place j from N − 1 down to 0: a group `{ kind: 'subtract', q, y, yPlace: j, place: p + j, moves, steps, cascades }` subtracting the 九九 `q × y`: its tens digit at place `p + j + 1`, then its ones digit at place `p + j`, each a subtraction atom played through `placeMove`, so borrows cascade the way P1's carries do. A zero digit is not a move.
 
 Invariants, tested exhaustively:
@@ -45,7 +46,7 @@ Invariants, tested exhaustively:
 - **Prompt:** "1692を36でわる。" (en: "Divide 1692 by 36.").
 - **The divisor board:** `OperandBoard` for ÷ shows only the divisor b, since the dividend is already on the working soroban. The digit `yPlace` is highlighted during a subtract group, and nothing is highlighted during a quotient group.
 - **Step lines** (`ProblemCorrectionCard`):
-  - quotient group: `quotientLine(q, lead, b, split)`, e.g. "商4を立てる（16は36より小さいので、頭の1つ左）", or "（46は36以上なので、頭の2つ左）". A 0 digit reads "商0（立てない）". A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
+  - quotient group: `quotientLine(q, partial, d0, guess, split)`: the guess by 九九, why it was lowered if it was too big, then where q goes, e.g. "16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる", "4÷3で見当をつけると1。商1を頭の2つ左に立てる". A 0 digit reads "6÷9で見当をつけると0。商0（立てない）". (en: "Estimate 16 ÷ 3 = 5. 5 is too big to take away, so use 4. Place 4 one rod left of the head.", "… Quotient 0: nothing to place.") A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
 - **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた:
   1. what 商除法 does;
@@ -61,7 +62,8 @@ Invariants, tested exhaustively:
   - every 1けた and 2けた problem, and a large 3けた sample, replays to `q × 10^(N+1)` with every rod in 0–9 at every step;
   - the quotient rod is empty when each digit is placed;
   - no step touches a quotient rod after its digit is placed;
-  - named cases: 1692 ÷ 36 = 47 (groups, places, split = false twice); 432 ÷ 36 = 12 (a 3-digit dividend: split = true, the quotient two rods left of the head, lead 43); 202032 ÷ 976 = 207 (a 0 quotient digit: a group with no moves).
+  - named cases: 1692 ÷ 36 = 47 (groups, places, split = false twice); 432 ÷ 36 = 12 (a 3-digit dividend: split = true, the quotient two rods left of the head, lead 43); 202032 ÷ 976 = 207 (a 0 quotient digit: a group with no moves);
+  - the guess: those three problems' `partial` and `guess`; exhaustively, `q ≤ guess ≤ 9`, `partial ≤ 99`, and `guess = q` for a 1-digit divisor.
 - Exercise (`expectedBeads`), the target, the strings, the card lines, the divisor board highlight, a ÷ round answered on the beads (final reading) and on the keypad (q), the walkthrough pages, the redirect, and the Home link.
 - On the simulator: the walkthrough, and a 3けた round's 7 rods (tapping, stepping, the board).
 

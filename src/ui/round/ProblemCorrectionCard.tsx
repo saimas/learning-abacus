@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { problemSteps, type Problem, type StepGroup } from '@/domain/problem'
+import { divisorFirstDigit, problemSteps, type Problem, type StepGroup } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import type { Strings } from '@/i18n/ja'
 import { useActiveLineLayout } from '@/ui/session/useActiveLineLayout'
@@ -9,9 +9,10 @@ import { colors, fonts } from '@/ui/theme'
 // how each group is worked, highest place first, in the same words as a
 // single move's card. A column group (＋ −) reads as its rod and move; a
 // product group (×) reads as the 九九 and where its digits land. A ÷
-// problem alternates a quotient group, read as where its digit is placed and
-// why (割れる / 割れない), and a subtract group per divisor digit, read as the
-// 九九 and the rods its digits come off.
+// problem alternates a quotient group, read as how its digit is guessed by
+// 九九 (lowered when too big to take away) and where it is placed (割れる /
+// 割れない), and a subtract group per divisor digit, read as the 九九 and the
+// rods its digits come off.
 // `activeGroup` indexes problemSteps(problem): the group the learner has
 // stepped into. The panel draws the card around these lines. `showAnswer`
 // is false before an answer, where the lines explain the problem without
@@ -81,7 +82,7 @@ export function groupLine(strings: Strings, problem: Problem, group: StepGroup):
     case 'product':
       return strings.productLine(group.x, group.y, group.place, group.cascades)
     case 'quotient':
-      return strings.quotientLine(group.q, group.lead, problem.b, group.split)
+      return strings.quotientLine(group.q, group.partial, divisorFirstDigit(problem), group.guess, group.split)
     case 'subtract':
       return strings.subtractLine(group.q, group.y, group.place, group.cascades)
   }

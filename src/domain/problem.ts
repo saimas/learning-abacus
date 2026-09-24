@@ -145,10 +145,18 @@ export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: b
 // remainder's leading N digits, the number compared with the divisor, and
 // `split` says the digit lands two rods left of the remainder's head (the
 // lead is at least the divisor: 割れる) rather than one (割れない). The card
-// explains the placement by these. A 0 digit is not placed, so its `split`
+// explains the placement by `split`. A 0 digit is not placed, so its `split`
 // is false: the rods' geometry alone could still put its rod two left of
 // the head, but the card must never say a 0 was 割れる, and its line reads
 // neither rule (`lead` is only the remainder's leading digits there).
+// `partial` and `guess` are how the learner finds q in the first place (the
+// owner, 2026-09-24: "it says 商4を立てる but I have no idea where that 4
+// comes from"): `partial` is the head of the remainder, its digits at place
+// p + N − 1 and above (p the quotient digit's own place), and `guess` is
+// `partial` ÷ the divisor's first digit, a 九九 the learner already knows,
+// capped at 9. The divisor's lower digits come off too, so the guess can be
+// too big (1692 ÷ 36: 16 ÷ 3 is 5, but only 4 takes off), never too small.
+// The beads play only q; the card says why the guess was lowered.
 // `subtract` takes the 九九 q × y off the remainder, where y is the
 // divisor's digit at `yPlace`, so the divisor board can point at it; `place`
 // is where its ones digit comes off, and its tens digit comes off one place
@@ -172,6 +180,8 @@ export type StepGroup =
     place: number
     lead: number
     split: boolean
+    partial: number
+    guess: number
     moves: Move[]
     steps: PlacedStep[]
     cascades: boolean
@@ -199,6 +209,12 @@ export function applyPlacedStep(s: Soroban, step: PlacedStep): Soroban {
 
 function digitAt(n: number, place: number): number {
   return Math.floor(n / 10 ** place) % 10
+}
+
+// The digit each quotient digit's guess divides by (see StepGroup): a ÷
+// problem's divisor has `digits` digits, so this is the one at the top.
+export function divisorFirstDigit(problem: Problem): number {
+  return digitAt(problem.b, problem.digits - 1)
 }
 
 function atomFor(rodValue: number, operand: number, direction: Direction): Atom {
@@ -354,11 +370,18 @@ function quotientSteps(problem: Problem): StepGroup[] {
     // at the ones.
     const head = String(remainder).length - 1
     const lead = Math.floor(remainder / 10 ** Math.max(0, head - n + 1))
+    // The guess by 九九 (see StepGroup). The remainder is under
+    // (q + 1) × the divisor × 10^p < 10^(p + N + 1), so its head from place
+    // p + N − 1 up is one or two digits. q × the divisor × 10^p fits in the
+    // remainder, and the divisor is at least its first digit × 10^(N − 1),
+    // so q × that digit fits in the head: the guess is never below q.
+    const partial = Math.floor(remainder / 10 ** (p + n - 1))
+    const guess = Math.min(9, Math.floor(partial / divisorFirstDigit(problem)))
     const placed = playDigits(soroban, [[q, place]], 'add')
     soroban = placed.soroban
     // A 0 is never placed, so it claims no 割れる (see StepGroup).
     const split = q > 0 && place - head === 2
-    groups.push({ kind: 'quotient', q, place, lead, split, ...movesGroup(placed.moves) })
+    groups.push({ kind: 'quotient', q, place, lead, split, partial, guess, ...movesGroup(placed.moves) })
     // Nothing is multiplied by a 0, so there is no 九九 to take off.
     if (q === 0) continue
     for (let j = n - 1; j >= 0; j--) {

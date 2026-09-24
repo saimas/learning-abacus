@@ -113,15 +113,20 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
   return `${digits.length === 0 ? head : `${head}　${digits.join('、')}を引く`}${cascades ? '（さらに上の位から繰り下がる）' : ''}`
 }
 
-// One line of a ÷ problem's answer card for a quotient digit: where it is
-// placed, by the 割れる / 割れない rule the learner applies (the dividend's
-// leading digits against the divisor). A 0 is not placed at all, so its
-// line compares nothing.
-function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+// One line of a ÷ problem's answer card for a quotient digit. The owner
+// (2026-09-24): "it says 商4を立てる but I have no idea where that 4 comes
+// from". So it leads with the guess by 九九 (the head of what is left,
+// `partial`, ÷ the divisor's first digit `d0`), says why a guess too big to
+// take away was lowered to q (the beads play only q), then where q goes by
+// the 割れる / 割れない rule. A 0 is not placed at all, so its line names no
+// rod.
+function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
+  const estimate = `${partial}÷${d0}で見当をつけると${guess}。`
+  const lowered = guess > q ? `${guess}だと引ききれないので${q}にする。` : ''
   // "立てずに次へ" reads wrong when the 0 is the quotient's last digit (there
   // is no next digit to move to), so this stays neutral about what follows.
-  if (q === 0) return '商0（立てない）'
-  return `商${q}を立てる（${lead}は${divisor}${split ? '以上なので、頭の2つ左' : 'より小さいので、頭の1つ左'}）`
+  const placed = q === 0 ? '商0（立てない）' : `商${q}を頭の${split ? 2 : 1}つ左に立てる`
+  return `${estimate}${lowered}${placed}`
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver

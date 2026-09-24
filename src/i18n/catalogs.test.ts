@@ -303,20 +303,33 @@ describe('multiplication strings', () => {
 // Spec (division) §3: the answer card's lines for 商除法, and the board
 // that shows the divisor.
 describe('division strings', () => {
-  it('says where a quotient digit goes, by the 割れる / 割れない rule', () => {
-    expect(ja.quotientLine(4, 16, 36, false)).toBe('商4を立てる（16は36より小さいので、頭の1つ左）')
-    expect(ja.quotientLine(1, 43, 36, true)).toBe('商1を立てる（43は36以上なので、頭の2つ左）')
-    expect(en.quotientLine(4, 16, 36, false)).toBe('Quotient 4: 16 is less than 36, so one rod left of the head')
-    expect(en.quotientLine(1, 43, 36, true)).toBe('Quotient 1: 43 is at least 36, so two rods left of the head')
+  // The owner (2026-09-24): "it says 商4を立てる but I have no idea where
+  // that 4 comes from". The line leads with the guess by 九九 (the head of
+  // what is left ÷ the divisor's first digit), says why it was lowered when
+  // it was too big, then where the digit goes (割れる / 割れない).
+  it('guesses a quotient digit by 九九, lowers a guess too big to take away, then places it', () => {
+    // 1692 ÷ 36: 16 ÷ 3 is 5, but 5 × 36 does not come off, so 4.
+    expect(ja.quotientLine(4, 16, 3, 5, false)).toBe(
+      '16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる',
+    )
+    expect(en.quotientLine(4, 16, 3, 5, false)).toBe(
+      'Estimate 16 ÷ 3 = 5. 5 is too big to take away, so use 4. Place 4 one rod left of the head.',
+    )
   })
 
-  // A 0 is not placed, so its line compares nothing, whatever the group's
-  // lead says. The wording stays neutral about what follows, since a 0 can
-  // be the quotient's last digit (q = 20, 350, …), with no next digit to
-  // move to.
+  it('places a guess that is right first time as it is', () => {
+    // 432 ÷ 36: 4 ÷ 3 is 1, and 43 is at least 36 (割れる).
+    expect(ja.quotientLine(1, 4, 3, 1, true)).toBe('4÷3で見当をつけると1。商1を頭の2つ左に立てる')
+    expect(en.quotientLine(1, 4, 3, 1, true)).toBe('Estimate 4 ÷ 3 = 1. Place 1 two rods left of the head.')
+  })
+
+  // A 0 is not placed, so its line names no rod. The wording stays neutral
+  // about what follows, since a 0 can be the quotient's last digit (q = 20,
+  // 350, …), with no next digit to move to.
   it('moves on from a 0 quotient digit without placing it', () => {
-    expect(ja.quotientLine(0, 683, 976, false)).toBe('商0（立てない）')
-    expect(en.quotientLine(0, 683, 976, false)).toBe('Quotient 0: nothing to place')
+    // 202032 ÷ 976, after 2: 6832 left, and 6 ÷ 9 is 0.
+    expect(ja.quotientLine(0, 6, 9, 0, false)).toBe('6÷9で見当をつけると0。商0（立てない）')
+    expect(en.quotientLine(0, 6, 9, 0, false)).toBe('Estimate 6 ÷ 9 = 0. Quotient 0: nothing to place.')
   })
 
   it('reads a 九九 taken off as its product and the rod each digit comes from', () => {
