@@ -5,6 +5,7 @@ import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/ab
 import { BUTTON_HEIGHT } from '@/ui/kit/Button'
 import { colors, space } from '@/ui/theme'
 import { QuestionView } from './QuestionView'
+import { STEP_CONTROLS_HEIGHT } from './StepPanel'
 import { setBeads, textOf, tintedBeads } from './testing'
 import { useActiveLineLayout } from './useActiveLineLayout'
 
@@ -238,7 +239,9 @@ describe('QuestionView before an answer, with 手順を見る', () => {
   // open, starting from its height, so no empty row is left at the bottom.
   // Where there is room they take all the height left anyway (the top
   // scroll fits the prompt); on a screen too short for everything the row's
-  // height is the least they keep, and the prompt's scroll gives way.
+  // height is the least they keep, and the prompt's scroll gives way by as
+  // much as it does for the row itself with the steps closed, so the
+  // soroban does not move there either.
   it('holds the answer row height in bead mode while the steps are open', () => {
     renderView()
     expect(screen.queryByTestId('step-lines')).toBeNull()
@@ -388,10 +391,11 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
   })
 
   // It sits at the top of the flexible space the step lines take once open,
-  // which keeps just its flex: no padding, margin or minimum height, since
-  // Yoga counts any of them before the share-out and the soroban would move
-  // up by half of it. The button inside counts for nothing there, so the
-  // soroban stays where it was when the button was above it.
+  // which keeps just its flex: no padding, margin or minimum height. Where
+  // the column is too short for everything, Yoga counts any of them before
+  // the prompt's scroll gives way, which it does not for the lines, so the
+  // soroban would move as the panel opens. The button inside the space
+  // counts for nothing there.
   it('holds it in the flexible space under the soroban, where the lines go', () => {
     renderView()
     const place = screen.getByTestId('bead-spacer')
@@ -409,7 +413,7 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
   // button must not spill over もどす and こたえる, which are drawn after it
   // and would take its taps. The space scrolls instead, so a small scroll
   // reaches it. Its outer style is still the spacer's flex alone, so the
-  // soroban does not move for it.
+  // soroban does not move for it (see above).
   it('lets the button be scrolled to where the space is shorter than it', () => {
     renderView()
     const place = screen.getByTestId('bead-spacer')
@@ -493,17 +497,22 @@ describe('QuestionView with the step lines below the controls', () => {
 
   // The owner's request (2026-09-24): with the steps open, the top scroll
   // kept its flex share and stood mostly empty under the prompt, while the
-  // lines below ◀ ▶ were cut off. So while the panel is open in bead mode
-  // the top scroll is only as tall as what it holds, and the lines take the
-  // rest. It still shrinks, and scrolls, on a very short screen. It has no
-  // `flex`: Yoga reads a positive flex as a flex basis of 0, which would
-  // squash the prompt to nothing. With the panel closed it keeps its share.
+  // lines below ◀ ▶ were cut off. So in bead mode the top scroll became only
+  // as tall as what it holds while the panel was open. The owner again the
+  // same day, on a 375 × 667 phone: closed, the scroll still took its share,
+  // so the soroban sat lower and jumped up at 手順を見る and back at とじる,
+  // which drew the eye away. So it is fitted open or closed, before an
+  // answer and in review: the soroban and the board always sit right under
+  // the prompt, and all the spare height goes below them. It still shrinks,
+  // and scrolls, on a very short screen. It has no `flex`: Yoga reads a
+  // positive flex as a flex basis of 0, which would squash the prompt to
+  // nothing.
   const topScroll = () => StyleSheet.flatten(screen.getByTestId('question-scroll').props.style)
   const fitted = { flexGrow: 0, flexShrink: 1 }
 
-  it('fits the top scroll to the prompt while the steps are open before an answer', () => {
+  it('fits the top scroll to the prompt before an answer, whether the steps are open or not', () => {
     renderView({ demonstration: '385は…' })
-    expect(topScroll()).toEqual({ flex: 1 })
+    expect(topScroll()).toEqual(fitted)
     fireEvent.press(screen.getByTestId('steps-open'))
     expect(topScroll()).toEqual(fitted)
     const top = within(screen.getByTestId('question-scroll'))
@@ -512,7 +521,7 @@ describe('QuestionView with the step lines below the controls', () => {
     expect(top.queryByTestId('steps-open')).toBeNull()
 
     fireEvent.press(screen.getByTestId('steps-close'))
-    expect(topScroll()).toEqual({ flex: 1 })
+    expect(topScroll()).toEqual(fitted)
   })
 
   it('fits the top scroll as a miss opens the panel by itself', () => {
@@ -523,13 +532,94 @@ describe('QuestionView with the step lines below the controls', () => {
     expect(topScroll()).toEqual(fitted)
   })
 
-  it('fits the top scroll in the review of a miss only once こたえを見る opens the panel', () => {
+  it('fits the top scroll in the review of a miss, before and after こたえを見る opens the panel', () => {
     renderView({ fade: 2, coaching: 'silent' })
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(topScroll()).toEqual({ flex: 1 })
+    expect(screen.queryByTestId('step-lines')).toBeNull()
+    expect(topScroll()).toEqual(fitted)
     fireEvent.press(screen.getByTestId('review-show'))
     expect(topScroll()).toEqual(fitted)
+  })
+
+  // The owner, the same day: the one-line hint under the soroban (and the
+  // board) gave way to the taller ◀ ▶ row as the panel opened, and moved
+  // everything below it. So the hint, the controls, and the empty place
+  // under a silent level's ✕ share one slot of the controls' height. It is
+  // a minimum, so controls that wrap at the largest text sizes still grow
+  // it rather than spill over the lines. The hint is centred in it.
+  const slot = () => screen.getByTestId('step-controls-slot')
+  const slotStyle = { minHeight: space.sm + STEP_CONTROLS_HEIGHT, justifyContent: 'center' }
+  const hint = '珠をタップして動かします'
+
+  it('holds the hint and the step controls in one slot of the same height', () => {
+    renderView({ renderBeneath: () => <Text testID="beneath">board</Text> })
+    expect(within(slot()).getByText(hint)).toBeTruthy()
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+    const drawn = order()
+    expect(drawn.indexOf('step-controls-slot')).toBeGreaterThan(drawn.indexOf('beneath'))
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(within(slot()).getByTestId('step-next')).toBeTruthy()
+    expect(within(slot()).queryByText(hint)).toBeNull()
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(within(slot()).getByText(hint)).toBeTruthy()
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+  })
+
+  it('keeps the slot its height in the review of a miss, empty until こたえを見る', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(within(slot()).queryByText(hint)).toBeNull()
+    expect(within(slot()).queryByTestId('step-next')).toBeNull()
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(within(slot()).getByTestId('step-next')).toBeTruthy()
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+  })
+
+  // At F0 the demonstration line under the prompt gives way to the open
+  // panel, which says the same. In the fitted scroll its going would move
+  // the soroban up after all, so in bead mode it keeps its place, unseen and
+  // unheard, until the panel closes. Queries skip what VoiceOver cannot
+  // reach unless asked, so the place is looked for with `unseen`.
+  const unseen = { includeHiddenElements: true }
+
+  it('holds the demonstration line’s place in bead mode while the panel says it instead', () => {
+    renderView({ demonstration: '385は…' })
+    const shown = StyleSheet.flatten(screen.getByTestId('demonstration').props.style)
+    expect(screen.queryByTestId('demonstration-place', unseen)).toBeNull()
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('demonstration')).toBeNull()
+    const place = within(screen.getByTestId('question-scroll')).getByTestId('demonstration-place', unseen)
+    expect(textOf(place)).toBe('385は…')
+    expect(StyleSheet.flatten(place.props.style)).toEqual({ ...shown, opacity: 0 })
+    expect(place.props.accessibilityElementsHidden).toBe(true)
+    expect(place.props.importantForAccessibility).toBe('no-hide-descendants')
+
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.getByTestId('demonstration')).toBeTruthy()
+    expect(screen.queryByTestId('demonstration-place', unseen)).toBeNull()
+
+    // A miss at F0 opens the panel with the ✕, and the place is kept too.
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('demonstration')).toBeNull()
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('demonstration-place', unseen)).toBeTruthy()
+  })
+
+  // Keypad mode's scroll keeps its share of the height, so nothing moves
+  // there when the line goes.
+  it('lets the demonstration line go in keypad mode', () => {
+    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…' })
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('demonstration')).toBeNull()
+    expect(screen.queryByTestId('demonstration-place', unseen)).toBeNull()
   })
 
   // Keypad mode keeps the lines in the top scroll, with the prompt, so the
