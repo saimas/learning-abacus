@@ -63,11 +63,11 @@ export function QuestionView({
   demonstration: string | null
   // The step panel's explanation lines. `activeStep` is the bead move the
   // learner has just stepped to, counted from 0, or undefined at the start
-  // or before the first step. `showAnswer` says whether the lines give the
-  // answer, which they do only once the question has been answered. In bead
-  // mode the lines scroll on their own, and the card's highlighted line
-  // reports where it sits so it can be scrolled into view (see
-  // useActiveLineLayout).
+  // (where the panel opens) or when not stepping. `showAnswer` says whether
+  // the lines give the answer, which they do only once the question has
+  // been answered. In bead mode the lines scroll on their own, and the
+  // card's highlighted line reports where it sits so it can be scrolled into
+  // view (see useActiveLineLayout).
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
   // leaves off the soroban, following the same `activeStep` as the step
@@ -117,7 +117,7 @@ export function QuestionView({
   const room = width - 2 * space.xl
   const fittedBeadScale = beadModeScale(exercise.rods, room)
   // With a board beneath it, a short phone draws the soroban smaller, so the
-  // prompt and 手順を見る keep their room above it (SHORT_WINDOW_HEIGHT).
+  // prompt above it and 手順を見る below keep their room (SHORT_WINDOW_HEIGHT).
   const beadScale =
     renderBeneath !== undefined && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
@@ -145,13 +145,18 @@ export function QuestionView({
       AccessibilityInfo.announceForAccessibility(strings.correct)
     } else {
       guardFrom.current = t
-      // The review starts from the learner's own beads, with nothing
-      // stepped, whatever was stepped through before the answer.
-      stepper.clear()
       // The number alone teaches nothing. Where coaching still speaks, the
       // panel with the substitution comes up with the ✕; at silent levels it
       // waits to be asked for.
       const cardShown = coaching !== 'silent'
+      // An open panel starts at the start (see openSteps), whatever was
+      // stepped through before the answer. One still to be asked for
+      // leaves the learner's own beads under the ✕ until then.
+      if (cardShown) {
+        stepper.restart()
+      } else {
+        stepper.clear()
+      }
       setReview({ cardShown })
       // At F0–F1 the panel opens on its own, so showAnswer() — the only
       // other place that announces the answer — never runs for this miss.
@@ -167,8 +172,15 @@ export function QuestionView({
 
   // Spec (core rounds) §4: the same step panel as after a miss, before the
   // answer and without it, for a learner who wants to see the way first.
+  // Wherever the panel opens, here, on a miss, and at こたえを見る, it opens
+  // at the start, drawn solid, so the first ▶ plays the first move. The
+  // owner (2026-09-24) had to press ▶ twice to kick off the first move when
+  // it opened on the learner's own beads, and asked for the steps to be
+  // ready as soon as they are shown. Set in the same press that opens the
+  // panel, so the controls appear at the start and VoiceOver hears no step.
   function openSteps() {
     assisted.current = true
+    stepper.restart()
     setStepsOpen(true)
   }
 
@@ -181,11 +193,12 @@ export function QuestionView({
     setStepsOpen(false)
   }
 
-  // Opens the step panel. Nothing plays by itself: the learner steps
-  // through the move with ▶ at their own pace.
+  // Opens the step panel, at the start (see openSteps). Nothing plays by
+  // itself: the learner steps through the move with ▶ at their own pace.
   function showAnswer() {
     guardFrom.current = now()
     AccessibilityInfo.announceForAccessibility(strings.correctionAnswer(exercise.expected))
+    stepper.restart()
     setReview({ cardShown: true })
   }
 
@@ -209,8 +222,12 @@ export function QuestionView({
         {demonstration}
       </Text>
     ) : null
-  // Offered under the prompt (and the demonstration) until the question is
-  // answered, and hidden while the panel it opens is up.
+  // Offered until the question is answered, and hidden while the panel it
+  // opens is up. It stands where the step lines appear once opened: below
+  // the soroban in bead mode, after the prompt in keypad mode. The owner
+  // (2026-09-24): it sat under the prompt while the steps showed at the
+  // bottom of the screen, and should be where they are, to keep it
+  // consistent.
   const stepsOpenButton =
     review === null && !stepsOpen ? (
       <Pressable
@@ -226,8 +243,8 @@ export function QuestionView({
       </Pressable>
     ) : null
   // The move just played: state k is the soroban after k moves, so after
-  // stepping to k the highlighted move is k − 1. At the start or before the
-  // first step nothing is highlighted.
+  // stepping to k the highlighted move is k − 1. At the start, or when not
+  // stepping, nothing is highlighted.
   const activeStep = stepper.index !== null && stepper.index > 0 ? stepper.index - 1 : undefined
   // The panel is open either after a miss, where it gives the answer and
   // stays until つぎへ, or before an answer, where it keeps the answer back
@@ -332,7 +349,6 @@ export function QuestionView({
             {prompt}
           </Text>
           {demonstrationLine}
-          {stepsOpenButton}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
@@ -383,8 +399,30 @@ export function QuestionView({
             screen this collapses to 0 first and the scroll area is what
             gives way, keeping the soroban, hint (or step controls) and
             buttons on screen. With the panel open the step lines take its
-            place (see beadStepLines). */}
-        {beadStepLines ?? <View style={styles.beadSpacer} />}
+            place (see beadStepLines). Until then 手順を見る sits at its
+            top, where the lines will start. Inside the spacer the button
+            counts for nothing in the share-out, so the soroban stays where
+            it was when the button sat above it, in the scroll. Most phones
+            give the spacer more than the button's height, but a phone
+            whose spare height leaves it less (the owner's is 375 × 667)
+            must not have the button spill over もどす and こたえる, which
+            are drawn after it and would take its taps. So the spacer
+            scrolls: there a small scroll reaches the button, and elsewhere
+            there is nothing to scroll and it looks as a plain spacer
+            would. A minimum height would not do instead: Yoga counts it
+            before the share-out, like a flex basis, and the soroban would
+            move up by half of it on every phone. */}
+        {beadStepLines ?? (
+          <ScrollView
+            testID="bead-spacer"
+            style={styles.beadSpacer}
+            contentContainerStyle={styles.beadSpacerContent}
+            showsVerticalScrollIndicator={false}
+            alwaysBounceVertical={false}
+          >
+            {stepsOpenButton}
+          </ScrollView>
+        )}
         {/* Before an answer, the steps' とじる stands in for もどす and
             こたえる: the learner answers once they have closed the steps.
             The step lines take that row's height meanwhile. */}
@@ -432,11 +470,12 @@ export function QuestionView({
           {prompt}
         </Text>
         {demonstrationLine}
-        {stepsOpenButton}
         {/* After the prompt rather than under the soroban, so it can never
-            push the prompt off a short phone, but ahead of the step lines,
-            near the soroban it explains. */}
+            push the prompt off a short phone, but ahead of the step lines
+            (and 手順を見る, which stands where they appear), near the
+            soroban it explains. */}
         {renderBeneath?.(activeStep)}
+        {stepsOpenButton}
         {stepLines}
       </ScrollView>
       {review !== null ? (
@@ -500,7 +539,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // A small outline button, centred: an offer, not the main action, so it
-  // stays quieter than こたえる, but still a full 44 pt tap target.
+  // stays quieter than こたえる, but still a full 44 pt tap target. In bead
+  // mode its gap from the hint is the same as the step lines' from the
+  // controls, so it sits where their card will start.
   stepsOpen: {
     alignSelf: 'center',
     minHeight: 44,
@@ -517,6 +558,9 @@ const styles = StyleSheet.create({
   // StepControls' row sits at the same marginTop.
   controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
   beadSpacer: { flex: 1 },
+  // Lets the content fill the spacer, with 手順を見る at its top, as a
+  // plain spacer would hold it.
+  beadSpacerContent: { flexGrow: 1 },
   // In beadSpacer's place, with the same flex and nothing else: a padding or
   // margin here would count before the share-out and move the soroban (a
   // flex basis is never less than the padding). The gap under the controls

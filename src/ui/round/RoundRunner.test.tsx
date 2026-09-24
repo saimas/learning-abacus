@@ -107,12 +107,11 @@ describe('RoundRunner', () => {
         (place) =>
           StyleSheet.flatten(screen.getByTestId(`correction-column-${place}`).props.style)?.color === colors.accent,
       )
+    // Open at the start, so the first ▶ plays the first move.
+    expect(count()).toBe('0 / 3')
     expect(lit()).toEqual([])
 
     // 23 + 58: +5 on the tens rod, then the ones' 8 as +10 − 2.
-    fireEvent.press(screen.getByTestId('step-next'))
-    expect(count()).toBe('0 / 3')
-    expect(lit()).toEqual([])
     fireEvent.press(screen.getByTestId('step-next'))
     expect(count()).toBe('1 / 3')
     expect(lit()).toEqual([1])
@@ -159,6 +158,13 @@ describe('RoundRunner with ×', () => {
     renderRound(multiply)
     expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('12 × 34')
     expect([lit('a'), lit('b')]).toEqual([[], []])
+    // The owner's request (2026-09-24): 手順を見る sits where the steps
+    // appear, below the board.
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('operand-board'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('submit'))
   })
 
   it('shows no operand board for ＋', () => {
@@ -170,11 +176,9 @@ describe('RoundRunner with ×', () => {
     renderRound(multiply)
     setBeads(onProduct, 407, 4)
     fireEvent.press(screen.getByTestId('submit'))
+    // The panel opens at the start, with no 九九 yet.
     expect([lit('a'), lit('b')]).toEqual([[], []])
 
-    // The first ▶ shows the start, with no 九九 yet.
-    fireEvent.press(screen.getByTestId('step-next'))
-    expect([lit('a'), lit('b')]).toEqual([[], []])
     // 1 × 3: the tens of each.
     fireEvent.press(screen.getByTestId('step-next'))
     expect([lit('a'), lit('b')]).toEqual([[0], [0]])
@@ -208,8 +212,9 @@ describe('RoundRunner with ×', () => {
       layout('step-lines-scroll', 0, 60)
       for (const [index, y] of [20, 38, 56, 74].entries()) layout(`correction-product-${index}`, y, 16)
 
-      // The start, 1 × 3 and 1 × 4 are all on show.
-      for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('step-next'))
+      // 1 × 3 and 1 × 4 are both on show, as the start the panel opens at
+      // was.
+      for (let i = 0; i < 2; i++) fireEvent.press(screen.getByTestId('step-next'))
       expect(scrollTo).not.toHaveBeenCalled()
       // 2 × 3 reaches past the bottom, and 2 × 4 further still.
       fireEvent.press(screen.getByTestId('step-next'))
@@ -223,8 +228,8 @@ describe('RoundRunner with ×', () => {
     }
   })
 
-  // A 375 × 667 phone must still show the prompt and 手順を見る above the
-  // soroban with the board present, so there both are drawn smaller. On a
+  // A 375 × 667 phone must still show the prompt above the soroban and
+  // 手順を見る below the board, so there both are drawn smaller. On a
   // tall phone neither changes. The window mock is undone after each test,
   // even one that fails, so it cannot leak into the next.
   let restoreWindow = () => {}

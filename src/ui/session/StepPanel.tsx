@@ -101,11 +101,12 @@ export function ScrollingStepLines({ accent, children }: { accent: boolean; chil
   )
 }
 
-// The learner steps through the move with these: ▶ plays the next bead move
-// (the first ▶ shows the start), ◀ undoes the last, 最初から goes back to
-// the start. Nothing plays by itself, so the learner sets the pace and can
-// look again at any move. とじる is offered only where there is something to
-// go back to, which the caller says by passing onClose.
+// The learner steps through the move with these: ▶ plays the next bead move,
+// ◀ undoes the last, 最初から goes back to the start. The caller opens them
+// at the start, so the first ▶ plays the first move. Nothing plays by
+// itself, so the learner sets the pace and can look again at any move.
+// とじる is offered only where there is something to go back to, which the
+// caller says by passing onClose.
 export function StepControls({
   index,
   total,
@@ -114,7 +115,7 @@ export function StepControls({
   onRestart,
   onClose,
 }: {
-  // The state on show, as useStepper counts it: null before the first step.
+  // The state on show, as useStepper counts it: null when not stepping.
   index: number | null
   total: number
   onBack: () => void
@@ -141,7 +142,7 @@ export function StepControls({
         disabled={index === null || index === 0}
         onPress={onBack}
       />
-      {/* Blank rather than absent before the first step, and at a fixed
+      {/* Blank rather than absent when not stepping, and at a fixed
           width, so the ▶ beside it does not move under the learner's thumb
           as the count appears or gains a digit. */}
       <Text testID="step-count" accessible={index !== null} style={styles.count}>

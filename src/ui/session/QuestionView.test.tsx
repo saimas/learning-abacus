@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
-import { ScrollView, StyleSheet, Text } from 'react-native'
+import { AccessibilityInfo, ScrollView, StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { BUTTON_HEIGHT } from '@/ui/kit/Button'
@@ -82,15 +82,10 @@ describe('QuestionView with a 3-digit problem', () => {
     renderView()
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    // At F0 the panel is open at once, so there is no こたえを見る to press,
-    // and the soroban still shows the learner's answer until the first ▶.
+    // At F0 the panel is open at once, so there is no こたえを見る to press.
+    // It opens where the move begins, with nothing highlighted, so the
+    // first ▶ plays the first move (the owner, 2026-09-24).
     expect(screen.queryByTestId('review-show')).toBeNull()
-    expect(screen.getByTestId('step-count').props.children).toBe(' ')
-    expect(rods()).toBe('0800')
-    expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
-
-    // The first ▶ shows where the move begins, with nothing highlighted.
-    fireEvent.press(screen.getByTestId('step-next'))
     expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
     expect(rods()).toBe('0472')
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
@@ -105,6 +100,35 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
     expect(rods()).toBe('0472')
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+  })
+
+  // The panel opening at the start is not a step, so VoiceOver hears no
+  // "0 / 5" as it opens: that would cut off the ✕ and the answer, said in
+  // one announcement as the miss lands.
+  it('tells VoiceOver nothing of the start as the panel opens', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      renderView()
+      setBeads(screen.getByTestId, 800, 4)
+      // The jest setup's announceForAccessibility is already a mock, which
+      // the spy hands back with the calls earlier tests made.
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('submit'))
+      expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+      expect(announce).toHaveBeenCalledTimes(1)
+      expect(announce).not.toHaveBeenCalledWith('0 / 5')
+      fireEvent.press(screen.getByTestId('step-next'))
+      expect(announce).toHaveBeenLastCalledWith('1 / 5')
+
+      screen.unmount()
+      announce.mockClear()
+      renderView()
+      fireEvent.press(screen.getByTestId('steps-open'))
+      expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+      expect(announce).not.toHaveBeenCalled()
+    } finally {
+      announce.mockRestore()
+    }
   })
 
   // ◀ ▶ stay in the fixed area above つぎへ, so they cannot scroll off a
@@ -136,10 +160,18 @@ describe('QuestionView with a 3-digit problem', () => {
     fireEvent.press(screen.getByTestId('submit'))
     expect(screen.queryByTestId('step-panel')).toBeNull()
     expect(textOf(screen.getByTestId('review-show'))).toBe('こたえを見る')
+    // Until then the ✕ sits on the learner's own answer.
+    expect(rods()).toBe('0800')
 
     fireEvent.press(screen.getByTestId('review-show'))
     expect(screen.getByTestId('step-panel')).toBeTruthy()
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
+    // Open at the start, as at F0–F1, so one ▶ plays the first move.
+    expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+    expect(rods()).toBe('0472')
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(screen.getByTestId('step-count').props.children).toBe('1 / 5')
+    expect(rods()).toBe('0972')
     // Once the panel is open, つぎへ is all that is left to press.
     expect(screen.queryByTestId('review-show')).toBeNull()
     expect(screen.getByTestId('review-next')).toBeTruthy()
@@ -172,7 +204,7 @@ describe('QuestionView before an answer, with 手順を見る', () => {
   it('opens the steps before answering, without the answer', () => {
     renderView()
     const scroll = screen.getByTestId('question-scroll')
-    expect(within(scroll).getByTestId('steps-open')).toBeTruthy()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
 
     fireEvent.press(screen.getByTestId('steps-open'))
     // Bead mode: the lines scroll on their own, below the controls.
@@ -190,11 +222,12 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(within(scroll).queryByTestId('step-next')).toBeNull()
     expect(screen.getByTestId('steps-close')).toBeTruthy()
 
-    // The first ▶ shows the start, the next the first move: 472 + 385 begins
+    // The owner's request (2026-09-24): the steps are ready as they open,
+    // at the start, so the first ▶ plays the first move: 472 + 385 begins
     // with +5 on the hundreds rod.
-    fireEvent.press(screen.getByTestId('step-next'))
     expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
     expect(rods()).toBe('0472')
+    expect(textOf(screen.getByTestId('card'))).toBe('undefined false')
     fireEvent.press(screen.getByTestId('step-next'))
     expect(screen.getByTestId('step-count').props.children).toBe('1 / 5')
     expect(rods()).toBe('0972')
@@ -231,10 +264,10 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('submit')).toBeNull()
     expect(within(screen.getByTestId('question-scroll')).queryByTestId('step-next')).toBeNull()
     expect(screen.getByTestId('steps-close')).toBeTruthy()
-    expect(opacity()).toBe(0.35)
-
-    fireEvent.press(screen.getByTestId('step-next'))
+    // Drawn solid from the moment the steps open, at the start.
     expect(opacity()).toBe(1)
+    expect(rods()).toBe('0472')
+
     fireEvent.press(screen.getByTestId('step-next'))
     expect(rods()).toBe('0972')
   })
@@ -243,7 +276,6 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     renderView()
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('steps-open'))
-    fireEvent.press(screen.getByTestId('step-next'))
     fireEvent.press(screen.getByTestId('step-next'))
     expect(rods()).toBe('0972')
 
@@ -301,7 +333,7 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, assisted: true }))
   })
 
-  it("starts the review of a miss after 手順を見る from the learner's beads", () => {
+  it('starts the review of a miss after 手順を見る afresh, at the start', () => {
     const { onSubmit } = renderView()
     fireEvent.press(screen.getByTestId('steps-open'))
     fireEvent.press(screen.getByTestId('step-next'))
@@ -313,16 +345,16 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false, assisted: true }))
 
     // The review's panel: the answer, the correction edge, no とじる, and
-    // nothing stepped yet.
+    // the start on show, whatever was stepped through before the answer.
     expect(textOf(screen.getByTestId('card'))).toBe('undefined true')
     expect(edge()).toBe(colors.accent)
     expect(screen.queryByTestId('steps-close')).toBeNull()
     expect(screen.queryByTestId('steps-open')).toBeNull()
-    expect(screen.getByTestId('step-count').props.children).toBe(' ')
-    expect(rods()).toBe('0800')
+    expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
+    expect(rods()).toBe('0472')
   })
 
-  it('offers 手順を見る under the demonstration at F0, which the open panel stands in for', () => {
+  it('offers 手順を見る with the demonstration at F0, which the open panel stands in for', () => {
     renderView({ demonstration: '385は…' })
     expect(screen.getByTestId('demonstration')).toBeTruthy()
     expect(screen.getByTestId('steps-open')).toBeTruthy()
@@ -330,6 +362,91 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(screen.queryByTestId('demonstration')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(screen.getByTestId('demonstration')).toBeTruthy()
+  })
+})
+
+// The owner's request (2026-09-24): 手順を見る sat under the prompt, while the
+// steps it opens appear below the soroban in bead mode. It now sits where
+// they appear, in both modes, so the button and what it opens stay together.
+describe('QuestionView offering 手順を見る where the steps appear', () => {
+  const beneath = () => <Text testID="beneath">board</Text>
+  // Every testID on screen, in the order they are drawn.
+  const order = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+
+  it('offers it below the soroban and the board in bead mode, above もどす and こたえる', () => {
+    renderView({ demonstration: '385は…', renderBeneath: beneath })
+    const top = within(screen.getByTestId('question-scroll'))
+    expect(top.queryByTestId('steps-open')).toBeNull()
+    // The demonstration stays under the prompt.
+    expect(top.getByTestId('demonstration')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('soroban-wrap'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('reset-beads'))
+    expect(drawn.indexOf('steps-open')).toBeLessThan(drawn.indexOf('submit'))
+  })
+
+  // It sits at the top of the flexible space the step lines take once open,
+  // which keeps just its flex: no padding, margin or minimum height, since
+  // Yoga counts any of them before the share-out and the soroban would move
+  // up by half of it. The button inside counts for nothing there, so the
+  // soroban stays where it was when the button was above it.
+  it('holds it in the flexible space under the soroban, where the lines go', () => {
+    renderView()
+    const place = screen.getByTestId('bead-spacer')
+    expect(within(place).getByTestId('steps-open')).toBeTruthy()
+    expect(StyleSheet.flatten(place.props.style)).toEqual({ flex: 1 })
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('bead-spacer')).toBeNull()
+    expect(screen.getByTestId('step-lines')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(within(screen.getByTestId('bead-spacer')).getByTestId('steps-open')).toBeTruthy()
+  })
+
+  // Where the spare height leaves the space shorter than the button, the
+  // button must not spill over もどす and こたえる, which are drawn after it
+  // and would take its taps. The space scrolls instead, so a small scroll
+  // reaches it. Its outer style is still the spacer's flex alone, so the
+  // soroban does not move for it.
+  it('lets the button be scrolled to where the space is shorter than it', () => {
+    renderView()
+    const place = screen.getByTestId('bead-spacer')
+    expect(screen.UNSAFE_getAllByType(ScrollView).map((scroll) => scroll.props.testID)).toContain('bead-spacer')
+    expect(StyleSheet.flatten(place.props.style)).toEqual({ flex: 1 })
+    expect(StyleSheet.flatten(place.props.contentContainerStyle)).toEqual({ flexGrow: 1 })
+    expect(place.props.showsVerticalScrollIndicator).toBe(false)
+    // On a screen with room there is nothing to scroll, so nothing bounces.
+    expect(place.props.alwaysBounceVertical).toBe(false)
+
+    fireEvent.press(within(place).getByTestId('steps-open'))
+    expect(screen.getByTestId('step-lines')).toBeTruthy()
+  })
+
+  // Under review there is nothing to offer, and the space goes back to
+  // being just a spacer.
+  it('leaves the space empty under review in bead mode', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('steps-open')).toBeNull()
+    expect(StyleSheet.flatten(screen.getByTestId('bead-spacer').props.style)).toEqual({ flex: 1 })
+  })
+
+  it('offers it in the scroll after the prompt and the board in keypad mode, where the lines go', () => {
+    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…', renderBeneath: beneath })
+    expect(within(screen.getByTestId('question-scroll')).getByTestId('steps-open')).toBeTruthy()
+    const drawn = order()
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('prompt'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('demonstration'))
+    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
+
+    fireEvent.press(screen.getByTestId('steps-open'))
+    const open = order()
+    expect(open.indexOf('step-panel')).toBeGreaterThan(open.indexOf('beneath'))
   })
 })
 
@@ -417,8 +534,7 @@ describe('QuestionView with the step lines below the controls', () => {
       fireEvent.press(screen.getByTestId('steps-open'))
       layout('step-lines-scroll', 0, 80)
       layout('line', 200, 16)
-      // Nothing is stepped to yet.
-      fireEvent.press(screen.getByTestId('step-next'))
+      // The panel opens at the start, with nothing stepped to yet.
       expect(scrollTo).not.toHaveBeenCalled()
       fireEvent.press(screen.getByTestId('step-next'))
       expect(scrollTo).toHaveBeenLastCalledWith({ y: 136, animated: true })
@@ -429,7 +545,6 @@ describe('QuestionView with the step lines below the controls', () => {
       fireEvent.press(screen.getByTestId('steps-open'))
       layout('step-lines-scroll', 0, 80)
       layout('line', 30, 16)
-      fireEvent.press(screen.getByTestId('step-next'))
       fireEvent.press(screen.getByTestId('step-next'))
       expect(scrollTo).not.toHaveBeenCalled()
     })
@@ -457,9 +572,8 @@ describe('QuestionView colouring the operation on show', () => {
   ] as const)('colours only the column on show in %s mode, and ◀ brings the last one back', (_mode, fade, coaching) => {
     renderView({ fade, coaching })
     fireEvent.press(screen.getByTestId('steps-open'))
-    expect(tinted()).toEqual([])
-    // The start: nothing has moved yet.
-    step('step-next')
+    // The start, where the steps open: nothing has moved yet.
+    expect(rods()).toBe('0472')
     expect(tinted()).toEqual([])
     // The hundreds column, 472 + 385's first: +5, then −2.
     step('step-next', 2)
@@ -486,7 +600,7 @@ describe('QuestionView colouring the operation on show', () => {
     setBeads(screen.getByTestId, 800, 4)
     expect(tinted()).toEqual([])
     fireEvent.press(screen.getByTestId('steps-open'))
-    step('step-next', 2)
+    step('step-next')
     expect(tinted()).toEqual(['1 heaven latest'])
     fireEvent.press(screen.getByTestId('steps-close'))
     expect(rods()).toBe('0800')
@@ -497,9 +611,9 @@ describe('QuestionView colouring the operation on show', () => {
     renderView()
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    // The learner's answer, before any ▶.
+    // The start, before any ▶.
     expect(tinted()).toEqual([])
-    step('step-next', 2)
+    step('step-next')
     expect(tinted()).toEqual(['1 heaven latest'])
   })
 })
@@ -526,7 +640,6 @@ describe('QuestionView with something beneath the soroban', () => {
 
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    fireEvent.press(screen.getByTestId('step-next'))
     expect(textOf(screen.getByTestId('beneath'))).toBe('undefined')
     fireEvent.press(screen.getByTestId('step-next'))
     expect(textOf(screen.getByTestId('beneath'))).toBe('0')
@@ -542,21 +655,21 @@ describe('QuestionView with something beneath the soroban', () => {
     const drawn = order()
     expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('prompt'))
     expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('demonstration'))
-    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('steps-open'))
+    // Ahead of 手順を見る, which stands where the step lines will appear.
+    expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('steps-open'))
 
     fireEvent.press(screen.getByTestId('steps-open'))
     // Ahead of the step lines, so it stays near the soroban it explains.
     const open = order()
     expect(open.indexOf('beneath')).toBeLessThan(open.indexOf('step-panel'))
     fireEvent.press(screen.getByTestId('step-next'))
-    fireEvent.press(screen.getByTestId('step-next'))
     expect(textOf(screen.getByTestId('beneath'))).toBe('0')
   })
 })
 
 // With a board under it, a 375 × 667 phone has too little height left in
-// bead mode for the prompt and 手順を見る above the soroban, so there the
-// soroban is drawn smaller. Nowhere else does its size change.
+// bead mode for the prompt above the soroban and 手順を見る below, so there
+// the soroban is drawn smaller. Nowhere else does its size change.
 describe('QuestionView on a short window, with something beneath the soroban', () => {
   let restore = () => {}
   function windowOf(width: number, height: number) {
