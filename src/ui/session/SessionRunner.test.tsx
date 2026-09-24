@@ -1131,12 +1131,15 @@ describe('SessionRunner reviewing a miss', () => {
     expect(StyleSheet.flatten(getByTestId('batsu').props.style).width).toBe(110)
   })
 
-  it('shows the answer card at once where coaching still speaks, in place of the demonstration', () => {
-    const { getByTestId, queryByTestId } = renderRunner(beadPlan, autoClock())
+  // In bead mode the demonstration stays under the prompt with the card up,
+  // since its going would move the soroban under it (the owner,
+  // 2026-09-24); keypad mode lets the card stand in for it.
+  it('shows the answer card at once where coaching still speaks, under the demonstration in bead mode', () => {
+    const { getByTestId } = renderRunner(beadPlan, autoClock())
     expect(getByTestId('demonstration')).toBeTruthy()
     answer(getByTestId, '9')
     expect(getByTestId('correction')).toBeTruthy()
-    expect(queryByTestId('demonstration')).toBeNull()
+    expect(getByTestId('demonstration')).toBeTruthy()
   })
 
   it('holds the card back at a silent level until こたえを見る', () => {

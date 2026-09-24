@@ -229,26 +229,19 @@ export function QuestionView({
   }
 
   // Spec §4: F0 is where the app demonstrates the move, so the substitution
-  // is shown *before* the answer, not after a miss. Under review, or with
-  // the steps open before answering, the step panel says it instead.
+  // is shown *before* the answer, not after a miss. In keypad mode, under
+  // review or with the steps open before answering, the step panel says it
+  // instead. Bead mode keeps it on show with the panel open too: its top
+  // scroll is only as tall as what it holds, so the line going would move
+  // the soroban up under the prompt as the panel opens or the ✕ lands,
+  // which the owner (2026-09-24) asked never to happen (see the bead-mode
+  // layout below). The line repeats what the panel says, but a steady screen
+  // matters more than the repeat, and more than a blank where it was.
+  // Keypad mode's scroll keeps its share of the height whatever it holds,
+  // so there the line just goes.
   const demonstrationLine =
-    demonstration === null ? null : review === null && !stepsOpen ? (
+    demonstration !== null && (mode === 'beads' || (review === null && !stepsOpen)) ? (
       <Text testID="demonstration" style={styles.demonstration}>
-        {demonstration}
-      </Text>
-    ) : mode === 'beads' ? (
-      // Bead mode's top scroll is only as tall as what it holds, so the line
-      // going would move the soroban up under the prompt as the panel opens
-      // or the ✕ lands, which the owner (2026-09-24) asked never to happen
-      // (see the bead-mode layout below). So it keeps its place, unseen and
-      // unheard, while the panel says it. Keypad mode's scroll keeps its
-      // share of the height whatever it holds, so there the line just goes.
-      <Text
-        testID="demonstration-place"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[styles.demonstration, styles.placeHeld]}
-      >
         {demonstration}
       </Text>
     ) : null
@@ -373,7 +366,7 @@ export function QuestionView({
     // under the prompt, and opening or closing the panel moves neither;
     // only the space below the controls changes hands (see the spacer).
     const beadStepLines = panelOpen ? (
-      <View testID="step-lines" style={[styles.stepLines, beforeAnswer && styles.stepLinesOverAnswerRow]}>
+      <View testID="step-lines" style={[styles.bottomRegion, beforeAnswer && styles.stepLinesOverAnswerRow]}>
         <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
       </View>
     ) : null
@@ -427,25 +420,22 @@ export function QuestionView({
             slot. The prompt's scroll above is only as tall as the prompt,
             so all the spare height comes here, and nothing above depends on
             what this holds, which is what keeps the soroban still as the
-            panel opens and closes (see beadStepLines). On a screen too
-            short for everything this collapses to 0 (its flex basis) and
-            the prompt's scroll is what gives way, keeping the soroban, the
-            slot and the buttons on screen. With the panel open the step lines take its
-            place (see beadStepLines). Until then 手順を見る sits at its
-            top, where the lines will start. Most phones give the space more
-            than the button's height, but a phone whose spare height leaves
-            it less must not have the button spill over もどす and こたえる,
-            which are drawn after it and would take its taps. So the space
-            scrolls: there a small scroll reaches the button, and elsewhere
-            there is nothing to scroll and it looks as a plain spacer
-            would. A minimum height would not do instead: on a screen too
-            short for everything Yoga would take it from the prompt's
-            scroll with the panel closed but not open (the lines have their
-            own), and the soroban would move as the panel opens. */}
+            panel opens and closes (see beadStepLines). With the panel open
+            the step lines take its place. Until then 手順を見る sits at its
+            top, where the lines will start. It never gets less than the
+            button's room (bottomRegion), even where a large text size makes
+            the prompt taller than the height to spare: the prompt's scroll
+            is what gives way, and scrolls, so the button can always be
+            reached, and the soroban, the slot and the buttons stay on
+            screen. The space scrolls as well, so should the button ever
+            outgrow that room, a small scroll reaches it rather than it
+            spilling over もどす and こたえる, which are drawn after it and
+            would take its taps. Elsewhere there is nothing to scroll and it
+            looks as a plain spacer would. */}
         {beadStepLines ?? (
           <ScrollView
             testID="bead-spacer"
-            style={styles.beadSpacer}
+            style={styles.bottomRegion}
             contentContainerStyle={styles.beadSpacerContent}
             showsVerticalScrollIndicator={false}
             alwaysBounceVertical={false}
@@ -532,6 +522,12 @@ export function QuestionView({
   )
 }
 
+// 手順を見る's height, a full 44 pt tap target, and the room it takes in
+// bead mode with its marginTop: the least the space under the soroban
+// keeps (bottomRegion).
+const STEPS_OPEN_HEIGHT = 44
+const BOTTOM_ROOM = space.sm + STEPS_OPEN_HEIGHT
+
 const styles = StyleSheet.create({
   practice: { flex: 1 },
   soroban: { marginTop: space.md, position: 'relative' },
@@ -584,7 +580,7 @@ const styles = StyleSheet.create({
   // start.
   stepsOpen: {
     alignSelf: 'center',
-    minHeight: 44,
+    minHeight: STEPS_OPEN_HEIGHT,
     justifyContent: 'center',
     marginTop: space.sm,
     paddingHorizontal: space.lg,
@@ -594,8 +590,6 @@ const styles = StyleSheet.create({
   },
   stepsOpenLabel: { fontSize: fontSizes.small, fontWeight: '600', color: colors.accent },
   pressed: { opacity: 0.6 },
-  // The demonstration line's place, kept while the panel says it instead.
-  placeHeld: { opacity: 0 },
   // Centred in controlsSlot. Its marginTop is the controls' own, so it sits
   // level with ◀ ▶ in the row below the gap they share.
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
@@ -603,25 +597,31 @@ const styles = StyleSheet.create({
   // minimum, not a height: at the largest text sizes on a narrow phone the
   // row wraps to a second line, and must grow the slot rather than spill
   // over the lines below, which would take its taps. The soroban above
-  // stays put either way.
+  // stays put, unless the prompt's scroll is already giving way at that
+  // text size, when it gives way by the second line too.
   controlsSlot: { minHeight: space.sm + STEP_CONTROLS_HEIGHT, justifyContent: 'center' },
-  beadSpacer: { flex: 1 },
+  // The space under the controls' slot in bead mode, holding 手順を見る
+  // (`bead-spacer`) or, with the panel open, the step lines (`step-lines`).
+  // Either takes all the height left over, and never less than the button's
+  // room, its marginTop and its height, so the button can be reached at any
+  // text size, and the lines keep a line or two on show: the prompt's
+  // scroll gives way first (the controller's ruling, 2026-09-24). No
+  // shrink: a ScrollView's own style shrinks, and the spacer shrinking
+  // with the prompt's scroll where the lines do not would move the soroban
+  // as the panel opens on a screen too short for everything. The lines'
+  // gap under the controls is inside, on ScrollingStepLines' scroll.
+  bottomRegion: { flexGrow: 1, flexShrink: 0, flexBasis: BOTTOM_ROOM },
   // Lets the content fill the spacer, with 手順を見る at its top, as a
   // plain spacer would hold it.
   beadSpacerContent: { flexGrow: 1 },
-  // In beadSpacer's place, with the same flex. Nothing else in the column
-  // grows (the top scroll fits the prompt), so they take all the height
-  // that is left, just as the spacer did. The gap under the controls is
-  // inside, on ScrollingStepLines' scroll.
-  stepLines: { flex: 1 },
-  // Before an answer the lines start from the もどす/こたえる row's height
-  // (buttonRow's marginTop and its buttons' height), the place they take.
-  // Where there is room it changes nothing, as they take the rest anyway.
-  // On a screen too short for everything it is the least they keep, since
-  // RN's flex: 1 never shrinks, and the prompt's scroll gives way instead,
-  // by as much as it does for the row with the panel closed, so the soroban
-  // does not move there either.
-  stepLinesOverAnswerRow: { flexBasis: space.md + BUTTON_HEIGHT },
+  // Before an answer the lines also take the もどす/こたえる row's place
+  // (buttonRow's marginTop and its buttons' height), so they start from
+  // that too. Where there is room it changes nothing, as they take the rest
+  // anyway. On a screen too short for everything it is the least they
+  // keep, and the column asks for the same height open as closed, so the
+  // prompt's scroll gives way by the same amount and the soroban does not
+  // move there either.
+  stepLinesOverAnswerRow: { flexBasis: BOTTOM_ROOM + space.md + BUTTON_HEIGHT },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   resetSlot: { flex: 1 },
   submitSlot: { flex: 2 },
