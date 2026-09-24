@@ -393,21 +393,8 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
-  // The division walkthrough (spec: division §3). The owner found it hard to
-  // follow (2026-09-24: "it says 商4を立てる but I have no idea where that 4
-  // comes from"), so the method page first says what division is, and a
-  // guess page says how each digit is found by 九九 before the placement
-  // page. The placement page gives both halves of placing: where the
-  // quotient digit goes (割れる / 割れない), and where its 九九 come off,
-  // which each 九九's own page then names rod by rod.
+  // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'わり算のやりかた',
-  divideIntroMethod:
-    'わり算は、わられる数の中にわる数がいくつ入るかを調べます。そろばんでは、わられる数を置き、答え（商）を大きい位から一けたずつ決めて、商×わる数の九九を引いていきます（商除法（しょうじょほう））。',
-  divideIntroGuess:
-    '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
-  divideIntroPlacement:
-    '残りの頭から、わる数と同じけた数をとって、わる数とくらべます。わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
-  divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,
   // The division walkthrough, guess by guess (spec: division walkthrough §3).
   divideWalk,
   divideWalkLeft: 'のこり',

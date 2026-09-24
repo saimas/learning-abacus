@@ -386,14 +386,8 @@ export const en: Strings = {
   introPlacement:
     'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
+  // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'How to divide',
-  divideIntroMethod:
-    'Division finds how many times the divisor goes into the number being divided. On the soroban, set the number being divided, then decide the answer (the quotient) one digit at a time, from the highest, taking each digit’s times-table answers with the divisor’s digits off the rods (商除法).',
-  divideIntroGuess:
-    'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
-  divideIntroPlacement:
-    'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
-  divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,
   divideWalk,
   divideWalkLeft: 'left',
   divideWalkAnswer: 'Answer',

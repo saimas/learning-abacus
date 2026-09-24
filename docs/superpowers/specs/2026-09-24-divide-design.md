@@ -52,13 +52,7 @@ Invariants, tested exhaustively:
     - nothing left at all (`remainderZero`, e.g. 360 ÷ 36 = 10 after the 1): "残りは0なので、商0（立てない）" (en "Nothing is left here: quotient 0, nothing to place."). Keyed on the remainder, not the head: 10815 ÷ 105 = 103 has a head of 0 after the 1 with 315 still left;
     - any other guess of 0 (a head smaller than d0, 0 included, e.g. 202032 ÷ 976 after the 2, or 10815 ÷ 105 after the 1): "頭に9は入らないので、商0（立てない）" (en "9 doesn't go into the head: quotient 0, nothing to place."). A guess of 1 or more lowered to 0 reads like any lowering: "1÷1で見当をつけると1。1だと引ききれないので0にする。商0（立てない）" (17702 ÷ 167 = 106). A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
-- **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた:
-  1. what division is (how many times the divisor goes into the dividend), then what 商除法 does (`divideIntroMethod`);
-  2. how each digit is guessed by 九九 (`divideIntroGuess`, added after build 19): the head of what is left ÷ the divisor's first digit, 1692 ÷ 36 → 16 ÷ 3 = 5, lowered to 4 because the 6 has to come off too, and a guess too big is lowered one at a time until it fits (「引けるようになるまで1つずつ下げます」);
-  3. the 割れる / 割れない rule (`divideIntroPlacement`);
-  4. one page per group, with its bead steps playing and coloured, and the divisor board lit; a quotient page reads the new guess line;
-  5. the result.
-  - Build it by generalising the × walkthrough (`MultiplyIntro`) rather than copying it. The guess page is optional in `IntroTexts`: × gives none, so its walkthrough is unchanged (method → placement → 九九 → result).
+- **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた. Superseded after build 20 by a bead-by-bead walkthrough of 商除法, guess and fix included: see `2026-09-24-divide-walkthrough-design.md`.
 - **Home:** the grid gains a ÷ row automatically (from `OPERATIONS`). (Per-kind examples such as 56 ÷ 8 were planned here, but Home no longer shows examples for any operation since the chooser's round row was replaced by the grid, so none were added.)
 
 ## 4. Testing

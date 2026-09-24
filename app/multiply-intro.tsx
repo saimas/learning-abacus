@@ -1,6 +1,7 @@
 import type { Problem } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { IntroScreen } from '@/ui/intro/IntroScreen'
+import { MethodIntro } from '@/ui/intro/MethodIntro'
 import { useProgress } from '@/ui/ProgressProvider'
 
 // Spec (multiplication) §4: one worked 2×2 problem, small enough to follow
@@ -13,15 +14,20 @@ export default function MultiplyIntroScreen() {
   const { completeMultiplyIntro } = useProgress()
   const strings = useStrings()
   return (
-    <IntroScreen
-      problem={EXAMPLE}
-      intro={{
-        title: strings.introTitle,
-        method: strings.introMethod,
-        placement: strings.introPlacement,
-        result: strings.introResult,
-      }}
-      complete={completeMultiplyIntro}
-    />
+    <IntroScreen op="mul" complete={completeMultiplyIntro}>
+      {(finishLabel, onFinish) => (
+        <MethodIntro
+          problem={EXAMPLE}
+          intro={{
+            title: strings.introTitle,
+            method: strings.introMethod,
+            placement: strings.introPlacement,
+            result: strings.introResult,
+          }}
+          finishLabel={finishLabel}
+          onFinish={onFinish}
+        />
+      )}
+    </IntroScreen>
   )
 }

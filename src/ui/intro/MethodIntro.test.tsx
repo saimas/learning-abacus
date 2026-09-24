@@ -5,8 +5,9 @@ import { tintedBeads } from '@/ui/session/testing'
 import { REPLAY_STEP_MS } from '@/ui/session/useMoveReplay'
 import { MethodIntro, type IntroTexts } from './MethodIntro'
 
-// The two walkthroughs, as their routes set them up (app/multiply-intro.tsx,
-// app/divide-intro.tsx), in the default locale.
+// The × walkthrough, as its route sets it up (app/multiply-intro.tsx), in
+// the default locale. ÷ moved to its own bead-by-bead DivideWalkthrough
+// (spec: division walkthrough §4); see DivideWalkthrough.test.tsx.
 const MULTIPLY: Problem = { op: 'mul', digits: 2, a: 47, b: 36 }
 const MULTIPLY_TEXTS: IntroTexts = {
   title: ja.introTitle,
@@ -14,21 +15,9 @@ const MULTIPLY_TEXTS: IntroTexts = {
   placement: ja.introPlacement,
   result: ja.introResult,
 }
-const DIVIDE: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
-const DIVIDE_TEXTS: IntroTexts = {
-  title: ja.divideIntroTitle,
-  method: ja.divideIntroMethod,
-  guess: ja.divideIntroGuess,
-  placement: ja.divideIntroPlacement,
-  result: ja.divideIntroResult,
-}
 
 function renderMultiply(finishLabel: string, onFinish: () => void) {
   return render(<MethodIntro problem={MULTIPLY} intro={MULTIPLY_TEXTS} finishLabel={finishLabel} onFinish={onFinish} />)
-}
-
-function renderDivide(finishLabel: string, onFinish: () => void) {
-  return render(<MethodIntro problem={DIVIDE} intro={DIVIDE_TEXTS} finishLabel={finishLabel} onFinish={onFinish} />)
 }
 
 beforeEach(() => {
@@ -79,9 +68,6 @@ describe('MethodIntro for ×', () => {
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toBe('47×36 = 1692')
     expect(screen.queryByTestId('intro-next')).toBeNull()
-    fireEvent.press(screen.getByTestId('intro-finish'))
-    expect(onFinish).toHaveBeenCalledTimes(1)
-    // A second tap while the screen is on its way out must not finish twice.
     fireEvent.press(screen.getByTestId('intro-finish'))
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
@@ -178,135 +164,5 @@ describe('MethodIntro for ×', () => {
     renderMultiply('はじめる', jest.fn())
     expect(screen.getByText('かけ算のやりかた')).toBeTruthy()
     expect(screen.getByText('47 × 36')).toBeTruthy()
-  })
-})
-
-// Spec (division) §3: the same walkthrough, of 1692 ÷ 36 = 47 by 商除法.
-describe('MethodIntro for ÷', () => {
-  const text = () => screen.getByTestId('intro-text').props.children
-  const next = () => fireEvent.press(screen.getByTestId('intro-next'))
-  // 商除法 works on 2N + 1 = 5 rods: the dividend right-aligned, the
-  // quotient's rods to its left.
-  const rods = () => [0, 1, 2, 3, 4].map(rod)
-  // The board under the soroban shows only the divisor.
-  const litDivisor = () =>
-    [0, 1].filter((i) => within(screen.getByTestId('operand-b')).queryByTestId(`rod-highlight-${i}`) !== null)
-  const tinted = () => tintedBeads(screen.getByTestId('intro-soroban'), 5)
-  const tintedRods = () => [...new Set(tinted().map((bead) => bead.split(' ')[0]))]
-
-  it('explains 商除法, then plays 1692 ÷ 36 one group at a time, then gives the result', () => {
-    const onFinish = jest.fn()
-    renderDivide('はじめる', onFinish)
-    expect(screen.getByText('わり算のやりかた')).toBeTruthy()
-    expect(screen.getByText('1692 ÷ 36')).toBeTruthy()
-    expect(text()).toContain('商除法')
-    // The owner (2026-09-24) could not tell where 商4 came from, so how each
-    // digit is guessed by 九九 comes before where it is placed.
-    next()
-    expect(text()).toBe(ja.divideIntroGuess)
-    next()
-    expect(text()).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
-
-    // Each group's page reads as its line on the answer card, and plays its
-    // beads: a digit placed, then each 九九 taken off.
-    const pages = [
-      ['16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる', ['4', '1', '6', '9', '2']],
-      ['4×3=12　千の位から1、百の位から2を引く', ['4', '0', '4', '9', '2']],
-      ['4×6=24　百の位から2、十の位から4を引く', ['4', '0', '2', '5', '2']],
-      ['25÷3で見当をつけると8。8だと引ききれないので7にする。商7を頭の1つ左に立てる', ['4', '7', '2', '5', '2']],
-      ['7×3=21　百の位から2、十の位から1を引く', ['4', '7', '0', '4', '2']],
-      ['7×6=42　十の位から4、一の位から2を引く', ['4', '7', '0', '0', '0']],
-    ] as const
-    for (const [line, after] of pages) {
-      next()
-      expect(text()).toBe(line)
-      playOut()
-      expect(rods()).toEqual(after)
-    }
-
-    // The quotient is left on the soroban, followed by zeros.
-    next()
-    expect(text()).toBe('1692÷36 = 47')
-    expect(rods()).toEqual(['4', '7', '0', '0', '0'])
-    expect(screen.queryByTestId('intro-next')).toBeNull()
-    expect(screen.getByText('はじめる')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('intro-finish'))
-    fireEvent.press(screen.getByTestId('intro-finish'))
-    expect(onFinish).toHaveBeenCalledTimes(1)
-  })
-
-  // 商除法 starts from the dividend on the soroban, not an empty one.
-  it('shows the dividend on the soroban until the first group is played', () => {
-    renderDivide('はじめる', jest.fn())
-    expect(rods()).toEqual(['0', '1', '6', '9', '2'])
-    // The guess page, then the placement page.
-    for (let i = 0; i < 2; i++) {
-      next()
-      expect(rods()).toEqual(['0', '1', '6', '9', '2'])
-    }
-  })
-
-  it('shows 36 under the soroban, pointing at the divisor digit of each 九九 taken off', () => {
-    renderDivide('はじめる', jest.fn())
-    expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('わる数 36')
-    expect(screen.queryByTestId('operand-a')).toBeNull()
-    expect(litDivisor()).toEqual([])
-    // The guess page, then the placement page.
-    for (let i = 0; i < 2; i++) {
-      next()
-      expect(litDivisor()).toEqual([])
-    }
-
-    // Placing a digit points at nothing; 4 × 3 and 7 × 3 at the 3, 4 × 6 and
-    // 7 × 6 at the 6, while the beads play and after.
-    for (const expected of [[], [0], [1], [], [0], [1]]) {
-      next()
-      expect(litDivisor()).toEqual(expected)
-      playOut()
-      expect(litDivisor()).toEqual(expected)
-    }
-    next()
-    expect(litDivisor()).toEqual([])
-  })
-
-  it('colours the beads of the group on show, and only while its page is open', () => {
-    renderDivide('はじめる', jest.fn())
-    // The guess page, then the placement page.
-    for (let i = 0; i < 2; i++) {
-      next()
-      expect(tinted()).toEqual([])
-    }
-
-    // 商4: four earth beads on the leftmost rod, in one step.
-    next()
-    expect(tinted()).toEqual([])
-    playOut()
-    expect(tinted()).toEqual(['0 earth0 latest', '0 earth1 latest', '0 earth2 latest', '0 earth3 latest'])
-
-    // 4×3 = 12 comes off the 千 and 百 rods, and leaves the 4 in wood.
-    next()
-    expect(tinted()).toEqual([])
-    playOut()
-    expect(tintedRods()).toEqual(['1', '2'])
-
-    // 4×6 = 24 comes off the 百 and 十 rods.
-    next()
-    playOut()
-    expect(tintedRods()).toEqual(['2', '3'])
-
-    // 商7 on the next rod: the heaven bead, then two earth beads, the latest
-    // step's the deepest.
-    next()
-    playOut()
-    expect(tinted()).toEqual(['1 heaven group', '1 earth0 latest', '1 earth1 latest'])
-
-    for (let i = 0; i < 2; i++) {
-      next()
-      playOut()
-    }
-    // The result page colours nothing.
-    next()
-    expect(text()).toBe('1692÷36 = 47')
-    expect(tinted()).toEqual([])
   })
 })
