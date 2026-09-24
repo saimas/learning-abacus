@@ -13,19 +13,30 @@ import { useMoveReplay } from '@/ui/session/useMoveReplay'
 import { colors, fonts, fontSizes, space } from '@/ui/theme'
 
 // What a walkthrough says around its worked problem: its title, what the
-// method does, where each digit goes, and the result. The group pages need
-// no text of their own: they read as the answer card's lines.
+// method does, how each digit is found (÷ only), where each digit goes, and
+// the result. The group pages need no text of their own: they read as the
+// answer card's lines.
 export type IntroTexts = {
   title: string
   method: string
+  // The owner (2026-09-24) could not tell where ÷'s 商4 came from, so ÷
+  // says how each quotient digit is guessed by 九九. A × digit is just a
+  // 九九's answer, so × gives none and has no such page.
+  guess?: string
   placement: string
   result: (a: number, b: number, answer: number) => string
 }
 
-// The pages: the method, where each digit goes, one page per step group (its
-// bead steps play as the page opens), and the result. A group is a 九九 of a
-// × problem, or a quotient digit placed or a 九九 taken off in a ÷ problem.
-type Page = { kind: 'method' } | { kind: 'placement' } | { kind: 'group'; index: number } | { kind: 'result' }
+// The pages: the method, how each digit is found (if the texts say), where
+// each digit goes, one page per step group (its bead steps play as the page
+// opens), and the result. A group is a 九九 of a × problem, or a quotient
+// digit placed or a 九九 taken off in a ÷ problem.
+type Page =
+  | { kind: 'method' }
+  | { kind: 'guess'; text: string }
+  | { kind: 'placement' }
+  | { kind: 'group'; index: number }
+  | { kind: 'result' }
 
 // Spec (multiplication) §4 and (division) §3: the walkthrough shown before an
 // operation's first round, working one problem through on the soroban, with
@@ -56,6 +67,7 @@ export function MethodIntro({
   const rods = rodsFor(problem)
   const pages: Page[] = [
     { kind: 'method' },
+    ...(intro.guess === undefined ? [] : [{ kind: 'guess' as const, text: intro.guess }]),
     { kind: 'placement' },
     ...groups.map((_, index) => ({ kind: 'group' as const, index })),
     { kind: 'result' },
@@ -97,16 +109,21 @@ export function MethodIntro({
       : undefined
 
   const group = current.kind === 'group' ? groups[current.index] : undefined
-  const text =
-    current.kind === 'method'
-      ? intro.method
-      : current.kind === 'placement'
-        ? intro.placement
-        : current.kind === 'result'
-          ? intro.result(problem.a, problem.b, answerOf(problem))
-          : group === undefined
-            ? ''
-            : (groupLine(strings, problem, group) ?? '')
+  function pageText(): string {
+    switch (current.kind) {
+      case 'method':
+        return intro.method
+      case 'guess':
+        return current.text
+      case 'placement':
+        return intro.placement
+      case 'result':
+        return intro.result(problem.a, problem.b, answerOf(problem))
+      case 'group':
+        return group === undefined ? '' : (groupLine(strings, problem, group) ?? '')
+    }
+  }
+  const text = pageText()
 
   return (
     <View style={styles.intro}>

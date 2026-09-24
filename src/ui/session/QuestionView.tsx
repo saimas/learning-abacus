@@ -228,12 +228,19 @@ export function QuestionView({
     return guardFrom.current !== null && t - guardFrom.current < NEXT_GUARD_MS
   }
 
+  // Spec §4: F0 is where the app demonstrates the move, so the substitution
+  // is shown *before* the answer, not after a miss. In keypad mode, under
+  // review or with the steps open before answering, the step panel says it
+  // instead. Bead mode keeps it on show with the panel open too: its top
+  // scroll is only as tall as what it holds, so the line going would move
+  // the soroban up under the prompt as the panel opens or the ✕ lands,
+  // which the owner (2026-09-24) asked never to happen (see the bead-mode
+  // layout below). The line repeats what the panel says, but a steady screen
+  // matters more than the repeat, and more than a blank where it was.
+  // Keypad mode's scroll keeps its share of the height whatever it holds,
+  // so there the line just goes.
   const demonstrationLine =
-    demonstration !== null && review === null && !stepsOpen ? (
-      // Spec §4: F0 is where the app demonstrates the move, so the
-      // substitution is shown *before* the answer, not after a miss. Under
-      // review, or with the steps open before answering, the step panel says
-      // it instead.
+    demonstration !== null && (mode === 'beads' || (review === null && !stepsOpen)) ? (
       <Text testID="demonstration" style={styles.demonstration}>
         {demonstration}
       </Text>
@@ -348,26 +355,25 @@ export function QuestionView({
     // they take the もどす/こたえる row's place too; in a miss's review
     // つぎへ keeps its row below them.
     // The owner again (2026-09-24, on a 375 × 667 phone): the prompt's
-    // scroll above still kept its share of the height, so it stood mostly
-    // empty between the prompt and the soroban while the lines were cut
-    // off at the bottom. So while the panel is open that scroll is only as
-    // tall as the prompt (scrollFitted), the soroban and the board move up
-    // under it, and the lines take all the height that is left. The
-    // soroban used to stay where it was as the panel opened; the owner
-    // would rather have the room for the lines.
+    // scroll above kept a share of the height, so it stood mostly empty
+    // between the prompt and the soroban while the lines were cut off at
+    // the bottom. So that scroll is only as tall as the prompt
+    // (scrollFitted), and the lines take all the height that is left. It
+    // is fitted with the panel closed too, before an answer and in review:
+    // the owner found the soroban jumping up as the panel opened and back
+    // down as it closed distracting, and asked for it to start where the
+    // open panel puts it. So the soroban and the board always sit right
+    // under the prompt, and opening or closing the panel moves neither;
+    // only the space below the controls changes hands (see the spacer).
     const beadStepLines = panelOpen ? (
-      <View testID="step-lines" style={[styles.stepLines, beforeAnswer && styles.stepLinesOverAnswerRow]}>
+      <View testID="step-lines" style={[styles.bottomRegion, beforeAnswer && styles.stepLinesOverAnswerRow]}>
         <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
       </View>
     ) : null
     return (
       <View style={styles.practice}>
         {track}
-        <ScrollView
-          testID="question-scroll"
-          style={panelOpen ? styles.scrollFitted : styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
           <Text testID="prompt" style={styles.prompt}>
             {prompt}
           </Text>
@@ -402,44 +408,34 @@ export function QuestionView({
         {/* Fixed, like the soroban, and outside the stamp's wrap, so the 〇
             or ✕ lands on the soroban alone. */}
         {renderBeneath?.(activeStep)}
-        {/* With the panel open the hint gives way to the step controls.
-            Until こたえを見る opens the panel at a silent level, an empty
-            space of the controls' height holds their place under the ✕, so
-            they appear where room was already made for them. (The soroban
-            still moves up as the panel opens, when the prompt's scroll
-            fits the prompt: see beadStepLines.) */}
-        {panelOpen ? (
-          stepControls
-        ) : review === null ? (
-          <Text style={styles.hint}>{strings.beadHint}</Text>
-        ) : (
-          <View style={styles.controlsPlace} />
-        )}
-        {/* Layout A puts a flexible gap on both sides of the soroban+hint
-            block (mockup: a flex spacer before it, another after). The
-            scroll above already absorbs the top gap; this one balances it
-            below so spare height on a tall phone doesn't all pile up above
-            the soroban. Both share `scroll`'s flexShrink:1, so on a short
-            screen this collapses to 0 first and the scroll area is what
-            gives way, keeping the soroban, hint (or step controls) and
-            buttons on screen. With the panel open the step lines take its
-            place (see beadStepLines). Until then 手順を見る sits at its
-            top, where the lines will start. Inside the spacer the button
-            counts for nothing in the share-out, so the soroban stays where
-            it was when the button sat above it, in the scroll. Most phones
-            give the spacer more than the button's height, but a phone
-            whose spare height leaves it less (the owner's is 375 × 667)
-            must not have the button spill over もどす and こたえる, which
-            are drawn after it and would take its taps. So the spacer
-            scrolls: there a small scroll reaches the button, and elsewhere
-            there is nothing to scroll and it looks as a plain spacer
-            would. A minimum height would not do instead: Yoga counts it
-            before the share-out, like a flex basis, and the soroban would
-            move up by half of it on every phone. */}
+        {/* With the panel open the hint gives way to the step controls,
+            and under a silent level's ✕ both wait for こたえを見る. All
+            three share one slot of the controls' height, so the swap moves
+            nothing below it either: the owner (2026-09-24) found the jump
+            from the one-line hint to the taller ◀ ▶ row distracting. */}
+        <View testID="step-controls-slot" style={styles.controlsSlot}>
+          {panelOpen ? stepControls : review === null ? <Text style={styles.hint}>{strings.beadHint}</Text> : null}
+        </View>
+        {/* The flexible space under the soroban, the board and the controls'
+            slot. The prompt's scroll above is only as tall as the prompt,
+            so all the spare height comes here, and nothing above depends on
+            what this holds, which is what keeps the soroban still as the
+            panel opens and closes (see beadStepLines). With the panel open
+            the step lines take its place. Until then 手順を見る sits at its
+            top, where the lines will start. It never gets less than the
+            button's room (bottomRegion), even where a large text size makes
+            the prompt taller than the height to spare: the prompt's scroll
+            is what gives way, and scrolls, so the button can always be
+            reached, and the soroban, the slot and the buttons stay on
+            screen. The space scrolls as well, so should the button ever
+            outgrow that room, a small scroll reaches it rather than it
+            spilling over もどす and こたえる, which are drawn after it and
+            would take its taps. Elsewhere there is nothing to scroll and it
+            looks as a plain spacer would. */}
         {beadStepLines ?? (
           <ScrollView
             testID="bead-spacer"
-            style={styles.beadSpacer}
+            style={styles.bottomRegion}
             contentContainerStyle={styles.beadSpacerContent}
             showsVerticalScrollIndicator={false}
             alwaysBounceVertical={false}
@@ -526,6 +522,12 @@ export function QuestionView({
   )
 }
 
+// 手順を見る's height, a full 44 pt tap target, and the room it takes in
+// bead mode with its marginTop: the least the space under the soroban
+// keeps (bottomRegion).
+const STEPS_OPEN_HEIGHT = 44
+const BOTTOM_ROOM = space.sm + STEPS_OPEN_HEIGHT
+
 const styles = StyleSheet.create({
   practice: { flex: 1 },
   soroban: { marginTop: space.md, position: 'relative' },
@@ -549,13 +551,13 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.small,
   },
   scroll: { flex: 1 },
-  // Bead mode's top scroll while the step panel is open: only as tall as
-  // the prompt it holds, so the soroban sits just under it (sorobanWrap's
-  // marginTop keeps them apart) and the lines get the rest (beadStepLines).
-  // flexGrow 0 overrides ScrollView's own flexGrow 1, and flexShrink 1 lets
-  // it give way, and scroll, on a screen too short for everything. No
-  // `flex`: Yoga reads a positive flex as a flex basis of 0, which would
-  // squash the prompt to nothing.
+  // Bead mode's top scroll, open or closed: only as tall as the prompt it
+  // holds, so the soroban sits just under it (sorobanWrap's marginTop keeps
+  // them apart) and the space below, or the lines, get the rest
+  // (beadStepLines). flexGrow 0 overrides ScrollView's own flexGrow 1, and
+  // flexShrink 1 lets it give way, and scroll, on a screen too short for
+  // everything. No `flex`: Yoga reads a positive flex as a flex basis of 0,
+  // which would squash the prompt to nothing.
   scrollFitted: { flexGrow: 0, flexShrink: 1 },
   scrollContent: { paddingBottom: space.sm },
   sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
@@ -573,11 +575,12 @@ const styles = StyleSheet.create({
   },
   // A small outline button, centred: an offer, not the main action, so it
   // stays quieter than こたえる, but still a full 44 pt tap target. In bead
-  // mode its gap from the hint is the same as the step lines' from the
-  // controls, so it sits where their card will start.
+  // mode its gap from the hint's slot is the same as the step lines' from
+  // the controls, which fill that slot, so it sits where their card will
+  // start.
   stepsOpen: {
     alignSelf: 'center',
-    minHeight: 44,
+    minHeight: STEPS_OPEN_HEIGHT,
     justifyContent: 'center',
     marginTop: space.sm,
     paddingHorizontal: space.lg,
@@ -587,24 +590,41 @@ const styles = StyleSheet.create({
   },
   stepsOpenLabel: { fontSize: fontSizes.small, fontWeight: '600', color: colors.accent },
   pressed: { opacity: 0.6 },
+  // Centred in controlsSlot. Its marginTop is the controls' own, so it sits
+  // level with ◀ ▶ in the row below the gap they share.
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
-  // StepControls' row sits at the same marginTop.
-  controlsPlace: { marginTop: space.sm, height: STEP_CONTROLS_HEIGHT },
-  beadSpacer: { flex: 1 },
+  // As tall as StepControls' row on one line, with its marginTop. A
+  // minimum, not a height: at the largest text sizes on a narrow phone the
+  // row wraps to a second line, and must grow the slot rather than spill
+  // over the lines below, which would take its taps. The soroban above
+  // stays put, unless the prompt's scroll is already giving way at that
+  // text size, when it gives way by the second line too. At about AX4 and
+  // up, the Button's label and the step count (neither capped) can outgrow
+  // their rows as well, so the soroban can shift a few pt there, while the
+  // prompt is already scrolling.
+  controlsSlot: { minHeight: space.sm + STEP_CONTROLS_HEIGHT, justifyContent: 'center' },
+  // The space under the controls' slot in bead mode, holding 手順を見る
+  // (`bead-spacer`) or, with the panel open, the step lines (`step-lines`).
+  // Either takes all the height left over, and never less than the button's
+  // room, its marginTop and its height, so the button can be reached at any
+  // text size, and the lines keep a line or two on show: the prompt's
+  // scroll gives way first (the controller's ruling, 2026-09-24). No
+  // shrink: a ScrollView's own style shrinks, and the spacer shrinking
+  // with the prompt's scroll where the lines do not would move the soroban
+  // as the panel opens on a screen too short for everything. The lines'
+  // gap under the controls is inside, on ScrollingStepLines' scroll.
+  bottomRegion: { flexGrow: 1, flexShrink: 0, flexBasis: BOTTOM_ROOM },
   // Lets the content fill the spacer, with 手順を見る at its top, as a
   // plain spacer would hold it.
   beadSpacerContent: { flexGrow: 1 },
-  // In beadSpacer's place, with the same flex. While they are open nothing
-  // else in the column grows (the top scroll fits the prompt), so they take
-  // all the height that is left. The gap under the controls is inside, on
-  // ScrollingStepLines' scroll.
-  stepLines: { flex: 1 },
-  // Before an answer the lines start from the もどす/こたえる row's height
-  // (buttonRow's marginTop and its buttons' height), the place they take.
-  // Where there is room it changes nothing, as they take the rest anyway.
-  // On a screen too short for everything it is the least they keep, since
-  // RN's flex: 1 never shrinks, and the prompt's scroll gives way instead.
-  stepLinesOverAnswerRow: { flexBasis: space.md + BUTTON_HEIGHT },
+  // Before an answer the lines also take the もどす/こたえる row's place
+  // (buttonRow's marginTop and its buttons' height), so they start from
+  // that too. Where there is room it changes nothing, as they take the rest
+  // anyway. On a screen too short for everything it is the least they
+  // keep, and the column asks for the same height open as closed, so the
+  // prompt's scroll gives way by the same amount and the soroban does not
+  // move there either.
+  stepLinesOverAnswerRow: { flexBasis: BOTTOM_ROOM + space.md + BUTTON_HEIGHT },
   buttonRow: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   resetSlot: { flex: 1 },
   submitSlot: { flex: 2 },

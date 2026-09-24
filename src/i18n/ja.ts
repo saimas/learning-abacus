@@ -113,15 +113,47 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
   return `${digits.length === 0 ? head : `${head}　${digits.join('、')}を引く`}${cascades ? '（さらに上の位から繰り下がる）' : ''}`
 }
 
-// One line of a ÷ problem's answer card for a quotient digit: where it is
-// placed, by the 割れる / 割れない rule the learner applies (the dividend's
-// leading digits against the divisor). A 0 is not placed at all, so its
-// line compares nothing.
-function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+// One line of a ÷ problem's answer card for a quotient digit. The owner
+// (2026-09-24): "it says 商4を立てる but I have no idea where that 4 comes
+// from". So it leads with the guess by 九九 (the head of what is left,
+// `partial`, ÷ the divisor's first digit `d0`), says why a guess too big to
+// take away was lowered to q (the beads play only q), then where q goes by
+// the 割れる / 割れない rule. A 0 is not placed at all, so its line names no
+// rod.
+function quotientLine(
+  q: number,
+  partial: number,
+  d0: number,
+  guess: number,
+  split: boolean,
+  remainderZero: boolean,
+): string {
   // "立てずに次へ" reads wrong when the 0 is the quotient's last digit (there
   // is no next digit to move to), so this stays neutral about what follows.
-  if (q === 0) return '商0（立てない）'
-  return `商${q}を立てる（${lead}は${divisor}${split ? '以上なので、頭の2つ左' : 'より小さいので、頭の1つ左'}）`
+  const zero = '商0（立てない）'
+  // Nothing left at all (360 ÷ 36 = 10, after the 1) can only give a 0, and
+  // "0÷3で見当をつけると0" reads oddly, so it says why directly. A head of 0
+  // is not enough: 10815 ÷ 105, after the 1, leaves 315, whose head above
+  // the tens is 0, and the next digit is read from it.
+  if (remainderZero) return `残りは0なので、${zero}`
+  // A head smaller than the divisor's first digit (0 included, with
+  // something left below it) guesses 0: said as the digit not going in, not
+  // as a sum ("6÷9で見当をつけると0").
+  if (guess === 0) return `頭に${d0}は入らないので、${zero}`
+  // A digit is at most 9, so a head ÷ first digit of 10 or more guesses 9;
+  // "32÷3で見当をつけると9" would be wrong arithmetic.
+  const estimate =
+    Math.floor(partial / d0) > 9 ? `${partial}÷${d0}は10以上なので、見当は9。` : `${partial}÷${d0}で見当をつけると${guess}。`
+  // A guess can be too big by more than one (mostly for a divisor starting
+  // with 1); then it is lowered until it fits, not just once.
+  const lowered =
+    guess - q >= 2
+      ? `${guess}だと引ききれないので、引けるまで下げて${q}にする。`
+      : guess > q
+        ? `${guess}だと引ききれないので${q}にする。`
+        : ''
+  const placed = q === 0 ? zero : `商${q}を頭の${split ? 2 : 1}つ左に立てる`
+  return `${estimate}${lowered}${placed}`
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver
@@ -262,13 +294,18 @@ export const ja = {
   introPlacement:
     '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
   introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
-  // The division walkthrough (spec: division §3). The placement page gives
-  // both halves of placing: where the quotient digit goes (割れる / 割れない),
-  // and where its 九九 come off, which each 九九's own page then names rod by
-  // rod.
+  // The division walkthrough (spec: division §3). The owner found it hard to
+  // follow (2026-09-24: "it says 商4を立てる but I have no idea where that 4
+  // comes from"), so the method page first says what division is, and a
+  // guess page says how each digit is found by 九九 before the placement
+  // page. The placement page gives both halves of placing: where the
+  // quotient digit goes (割れる / 割れない), and where its 九九 come off,
+  // which each 九九's own page then names rod by rod.
   divideIntroTitle: 'わり算のやりかた',
   divideIntroMethod:
-    'わり算は、わられる数をそろばんに置き、商を立ててから、商×わる数の九九を引いていきます（商除法（しょうじょほう））。商は上の位から一つずつ立て、九九を引いた残りで、つぎの商を立てます。',
+    'わり算は、わられる数の中にわる数がいくつ入るかを調べます。そろばんでは、わられる数を置き、答え（商）を大きい位から一けたずつ決めて、商×わる数の九九を引いていきます（商除法（しょうじょほう））。',
+  divideIntroGuess:
+    '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
   divideIntroPlacement:
     '残りの頭から、わる数と同じけた数をとって、わる数とくらべます。わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
   divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,

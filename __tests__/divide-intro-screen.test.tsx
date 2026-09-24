@@ -49,11 +49,11 @@ async function renderScreen() {
   await act(async () => {})
 }
 
-// Pages through to the last page: the method, the placement, and the six
-// groups of 1692 ÷ 36 (a digit placed and two 九九 taken off, twice).
+// Pages through to the last page: the method, the guess, the placement, and
+// the six groups of 1692 ÷ 36 (a digit placed and two 九九 taken off, twice).
 async function renderToLastPage() {
   await renderScreen()
-  for (let i = 0; i < 8; i++) fireEvent.press(screen.getByTestId('intro-next'))
+  for (let i = 0; i < 9; i++) fireEvent.press(screen.getByTestId('intro-next'))
 }
 
 // Spec (division) §3: shown before the first ÷ round, with that round's
@@ -78,6 +78,10 @@ describe('Divide intro screen', () => {
     expect(screen.getByText('わり算のやりかた')).toBeTruthy()
     expect(screen.getByText('1692 ÷ 36')).toBeTruthy()
     expect(screen.getByTestId('intro-text').props.children).toContain('商除法')
+    // The owner (2026-09-24): how each digit is guessed by 九九, before
+    // where it is placed.
+    fireEvent.press(screen.getByTestId('intro-next'))
+    expect(screen.getByTestId('intro-text').props.children).toContain('商の見当は九九でつけます')
     for (let i = 0; i < 8; i++) fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toBe('1692÷36 = 47')
   })

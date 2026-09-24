@@ -119,14 +119,37 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
   return `${digits.length === 0 ? head : `${head}: take ${digits.join(', ')}`}${cascades ? ' (borrowing from a rod further left)' : ''}`
 }
 
-// One line of a ÷ problem's answer card for a quotient digit: where it is
-// placed, by comparing the dividend's leading digits with the divisor. A 0
-// is not placed at all, so its line compares nothing.
-function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+// One line of a ÷ problem's answer card for a quotient digit, as ja's: the
+// guess by times table (the head of what is left ÷ the divisor's first
+// digit), why a guess too big to take away was lowered to q, then where q
+// goes. A 0 is not placed at all, so its line names no rod.
+function quotientLine(
+  q: number,
+  partial: number,
+  d0: number,
+  guess: number,
+  split: boolean,
+  remainderZero: boolean,
+): string {
+  // Nothing left at all can only give a 0, and a head too small for the
+  // first digit guesses 0; both are said directly, as ja does.
+  if (remainderZero) return 'Nothing is left here: quotient 0, nothing to place.'
+  if (guess === 0) return `${d0} doesn't go into the head: quotient 0, nothing to place.`
+  // A digit is at most 9, so "Estimate 32 ÷ 3 = 9" would be wrong
+  // arithmetic; the capped guess says why it is 9.
+  const estimate =
+    Math.floor(partial / d0) > 9 ? `${partial} ÷ ${d0} is 10 or more, so guess 9.` : `Estimate ${partial} ÷ ${d0} = ${guess}.`
+  // A guess too big by more than one is lowered until it fits, as ja says.
+  const lowered =
+    guess - q >= 2
+      ? ` ${guess} is too big to take away; lower it until it fits: ${q}.`
+      : guess > q
+        ? ` ${guess} is too big to take away, so use ${q}.`
+        : ''
   // "nothing to place" already reads right wherever the 0 falls, but it is
   // named alongside ja's wording fix so the two stay in step.
-  if (q === 0) return 'Quotient 0: nothing to place'
-  return `Quotient ${q}: ${lead} is ${split ? 'at least' : 'less than'} ${divisor}, so ${split ? 'two rods' : 'one rod'} left of the head`
+  const placed = q === 0 ? ' Quotient 0: nothing to place.' : ` Place ${q} ${split ? 'two rods' : 'one rod'} left of the head.`
+  return `${estimate}${lowered}${placed}`
 }
 
 // The answer line shared by a miss's card, its review, and its VoiceOver
@@ -265,7 +288,9 @@ export const en: Strings = {
   introResult: (a, b, product) => `${a} × ${b} = ${product}`,
   divideIntroTitle: 'How to divide',
   divideIntroMethod:
-    'Set the number being divided on the soroban, then place the answer’s digits one at a time, from the highest (商除法). After placing each digit, take its times-table answers with the divisor’s digits off the rods. What is left gives the next digit.',
+    'Division finds how many times the divisor goes into the number being divided. On the soroban, set the number being divided, then decide the answer (the quotient) one digit at a time, from the highest, taking each digit’s times-table answers with the divisor’s digits off the rods (商除法).',
+  divideIntroGuess:
+    'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
   divideIntroPlacement:
     'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
   divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,

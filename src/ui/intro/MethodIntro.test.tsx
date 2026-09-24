@@ -18,6 +18,7 @@ const DIVIDE: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
 const DIVIDE_TEXTS: IntroTexts = {
   title: ja.divideIntroTitle,
   method: ja.divideIntroMethod,
+  guess: ja.divideIntroGuess,
   placement: ja.divideIntroPlacement,
   result: ja.divideIntroResult,
 }
@@ -60,8 +61,11 @@ describe('MethodIntro for ×', () => {
     const onFinish = jest.fn()
     renderMultiply('はじめる', onFinish)
     expect(screen.getByTestId('intro-text').props.children).toContain('両落とし')
+    // × has no guess page: its texts give none, so the method leads straight
+    // to the placement.
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toContain('百の位')
+    expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toBe('4×3=12　千の位に1、百の位に2')
     playOut()
@@ -196,16 +200,20 @@ describe('MethodIntro for ÷', () => {
     expect(screen.getByText('わり算のやりかた')).toBeTruthy()
     expect(screen.getByText('1692 ÷ 36')).toBeTruthy()
     expect(text()).toContain('商除法')
+    // The owner (2026-09-24) could not tell where 商4 came from, so how each
+    // digit is guessed by 九九 comes before where it is placed.
+    next()
+    expect(text()).toBe(ja.divideIntroGuess)
     next()
     expect(text()).toContain('わる数以上なら頭の2つ左、小さければ1つ左')
 
     // Each group's page reads as its line on the answer card, and plays its
     // beads: a digit placed, then each 九九 taken off.
     const pages = [
-      ['商4を立てる（16は36より小さいので、頭の1つ左）', ['4', '1', '6', '9', '2']],
+      ['16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる', ['4', '1', '6', '9', '2']],
       ['4×3=12　千の位から1、百の位から2を引く', ['4', '0', '4', '9', '2']],
       ['4×6=24　百の位から2、十の位から4を引く', ['4', '0', '2', '5', '2']],
-      ['商7を立てる（25は36より小さいので、頭の1つ左）', ['4', '7', '2', '5', '2']],
+      ['25÷3で見当をつけると8。8だと引ききれないので7にする。商7を頭の1つ左に立てる', ['4', '7', '2', '5', '2']],
       ['7×3=21　百の位から2、十の位から1を引く', ['4', '7', '0', '4', '2']],
       ['7×6=42　十の位から4、一の位から2を引く', ['4', '7', '0', '0', '0']],
     ] as const
@@ -231,8 +239,11 @@ describe('MethodIntro for ÷', () => {
   it('shows the dividend on the soroban until the first group is played', () => {
     renderDivide('はじめる', jest.fn())
     expect(rods()).toEqual(['0', '1', '6', '9', '2'])
-    next()
-    expect(rods()).toEqual(['0', '1', '6', '9', '2'])
+    // The guess page, then the placement page.
+    for (let i = 0; i < 2; i++) {
+      next()
+      expect(rods()).toEqual(['0', '1', '6', '9', '2'])
+    }
   })
 
   it('shows 36 under the soroban, pointing at the divisor digit of each 九九 taken off', () => {
@@ -240,8 +251,11 @@ describe('MethodIntro for ÷', () => {
     expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('わる数 36')
     expect(screen.queryByTestId('operand-a')).toBeNull()
     expect(litDivisor()).toEqual([])
-    next()
-    expect(litDivisor()).toEqual([])
+    // The guess page, then the placement page.
+    for (let i = 0; i < 2; i++) {
+      next()
+      expect(litDivisor()).toEqual([])
+    }
 
     // Placing a digit points at nothing; 4 × 3 and 7 × 3 at the 3, 4 × 6 and
     // 7 × 6 at the 6, while the beads play and after.
@@ -257,8 +271,11 @@ describe('MethodIntro for ÷', () => {
 
   it('colours the beads of the group on show, and only while its page is open', () => {
     renderDivide('はじめる', jest.fn())
-    next()
-    expect(tinted()).toEqual([])
+    // The guess page, then the placement page.
+    for (let i = 0; i < 2; i++) {
+      next()
+      expect(tinted()).toEqual([])
+    }
 
     // 商4: four earth beads on the leftmost rod, in one step.
     next()

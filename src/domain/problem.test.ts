@@ -4,6 +4,7 @@ import {
   answerOf,
   applyPlacedStep,
   DIVIDE_ESTIMATE_MS,
+  divisorFirstDigit,
   generateProblems,
   groupOfStep,
   isPracticeId,
@@ -408,6 +409,25 @@ describe('division', () => {
         // A 0 digit is not placed, so it never claims 割れる, whatever the
         // rods' geometry says.
         if (group.q === 0 && group.split) faults.push(`${name}: a 0 digit at place ${group.place} claims split`)
+        // The guess the card explains (the owner, 2026-09-24): the divisor's
+        // first digit alone is smaller than the divisor, so the guess is
+        // never too small, only too big, and lowering it is all the learner
+        // is ever asked to do. A digit is at most 9.
+        if (group.guess < group.q || group.guess > 9) {
+          faults.push(`${name}: guess ${group.guess} for digit ${group.q} at place ${group.place}`)
+        }
+        // The walkthrough says the head is one or two digits.
+        if (group.partial > 99) faults.push(`${name}: head ${group.partial} at place ${group.place}`)
+        // The card says "nothing is left" only when the rods below the
+        // quotient's read 0, not whenever the head does (10815 ÷ 105).
+        const state = states[at]
+        const remainder = state === undefined ? undefined : readValue(state) % 10 ** group.place
+        if (group.remainderZero !== (remainder === 0)) {
+          faults.push(`${name}: remainderZero ${group.remainderZero} but ${remainder} left at place ${group.place}`)
+        }
+        // A 1-digit divisor has no lower digit to come off as well, so its
+        // guess is always the digit.
+        if (p.digits === 1 && group.guess !== group.q) faults.push(`${name}: guess ${group.guess} is not ${group.q}`)
       }
       at += group.steps.length
     }
@@ -429,6 +449,63 @@ describe('division', () => {
       { kind: 'subtract', q: 7, y: 3, yPlace: 1, place: 1 },
       { kind: 'subtract', q: 7, y: 6, yPlace: 0, place: 0 },
     ])
+  })
+
+  // The owner (2026-09-24): "it says 商4を立てる but I have no idea where
+  // that 4 comes from". Each digit is guessed by a 九九: the head of what is
+  // left (above the divisor's width below the digit's own place) ÷ the
+  // divisor's first digit, at most 9. The guess can be too big, since the
+  // divisor's lower digits come off too; the digit placed is the one that
+  // takes off.
+  it('guesses each digit from the head of what is left ÷ the divisor’s first digit', () => {
+    const guesses = (q: number, d: number) =>
+      problemSteps(division(q, d)).flatMap((group) =>
+        group.kind === 'quotient' ? [{ q: group.q, partial: group.partial, guess: group.guess }] : [],
+      )
+    // 1692 ÷ 36: 16 ÷ 3 is 5, but 5 × 36 is too big, so 4; then 252 left,
+    // 25 ÷ 3 is 8, but 8 × 36 is too big, so 7.
+    expect(guesses(47, 36)).toEqual([
+      { q: 4, partial: 16, guess: 5 },
+      { q: 7, partial: 25, guess: 8 },
+    ])
+    // 432 ÷ 36: 4 ÷ 3 is 1, then 72 left, 7 ÷ 3 is 2; both right first time.
+    expect(guesses(12, 36)).toEqual([
+      { q: 1, partial: 4, guess: 1 },
+      { q: 2, partial: 7, guess: 2 },
+    ])
+    // 202032 ÷ 976: 20 ÷ 9 is 2; then 6832 left, 6 ÷ 9 is 0; then 68 ÷ 9 is 7.
+    expect(guesses(207, 976)).toEqual([
+      { q: 2, partial: 20, guess: 2 },
+      { q: 0, partial: 6, guess: 0 },
+      { q: 7, partial: 68, guess: 7 },
+    ])
+    // 684 ÷ 36: after 1, 32 ÷ 3 is 10, but a digit is at most 9.
+    expect(guesses(19, 36)).toEqual([
+      { q: 1, partial: 6, guess: 2 },
+      { q: 9, partial: 32, guess: 9 },
+    ])
+    // 360 ÷ 36: after 1, nothing is left.
+    expect(guesses(10, 36)).toEqual([
+      { q: 1, partial: 3, guess: 1 },
+      { q: 0, partial: 0, guess: 0 },
+    ])
+  })
+
+  // A head of 0 does not mean nothing is left: 10815 ÷ 105, after the 1,
+  // leaves 315, whose head above the tens is 0. Only 360 ÷ 36, after the
+  // 1, leaves nothing at all.
+  it('says whether anything is left when a digit is decided, apart from its head', () => {
+    const zeros = (q: number, d: number) =>
+      problemSteps(division(q, d)).flatMap((group) =>
+        group.kind === 'quotient' && group.q === 0 ? [{ partial: group.partial, remainderZero: group.remainderZero }] : [],
+      )
+    expect(zeros(103, 105)).toEqual([{ partial: 0, remainderZero: false }])
+    expect(zeros(10, 36)).toEqual([{ partial: 0, remainderZero: true }])
+    expect(zeros(207, 976)).toEqual([{ partial: 6, remainderZero: false }])
+  })
+
+  it('names the divisor’s first digit, which each guess divides by', () => {
+    expect([division(7, 8), division(47, 36), division(207, 976)].map(divisorFirstDigit)).toEqual([8, 3, 9])
   })
 
   it('places a quotient digit as one addition on its empty rod', () => {
