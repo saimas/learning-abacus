@@ -43,8 +43,10 @@ const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
 }
 
 // A rod's name by its place, 0 being the ones rod. A 3-digit problem's
-// soroban has four rods; a 3×3 multiplication's product can take six.
-const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位']
+// soroban has four rods, a 3×3 multiplication's product can take six, and a
+// 3けた division works on seven: the dividend's six and the quotient's
+// highest digit left of them.
+const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位', '百万の位']
 
 const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算' }
 
@@ -75,21 +77,49 @@ function coaching(atom: Atom): string {
   return `${coachingLead(atom)}${describeSteps(atom)}`
 }
 
-// One line of a × problem's answer card: the 九九 with its product written
-// as two digits, as it is said (2×3 is ゼロロク), then where each non-zero
-// digit goes.
-function productLine(x: number, y: number, place: number, cascades: boolean): string {
-  const product = x * y
-  const digits = (
+// A 九九 with its product written as two digits, as it is said (2×3 is
+// ゼロロク).
+function nineNine(x: number, y: number): string {
+  return `${x}×${y}=${String(x * y).padStart(2, '0')}`
+}
+
+// The digits of a 九九's product with the rod each goes on or comes off:
+// its ones digit at `place`, its tens one above. A 0 moves no bead, so it is
+// left out.
+function productDigits(product: number, place: number): (readonly [digit: number, place: number])[] {
+  return (
     [
       [Math.floor(product / 10), place + 1],
       [product % 10, place],
     ] as const
-  )
-    .filter(([digit]) => digit !== 0)
-    .map(([digit, at]) => `${PLACE[at] ?? at}に${digit}`)
-  const head = `${x}×${y}=${String(product).padStart(2, '0')}`
+  ).filter(([digit]) => digit !== 0)
+}
+
+// One line of a × problem's answer card: the 九九, then where each non-zero
+// digit goes.
+function productLine(x: number, y: number, place: number, cascades: boolean): string {
+  const head = nineNine(x, y)
+  const digits = productDigits(x * y, place).map(([digit, at]) => `${PLACE[at] ?? at}に${digit}`)
   return `${digits.length === 0 ? head : `${head}　${digits.join('、')}`}${cascades ? '（さらに上の位へ繰り上がる）' : ''}`
+}
+
+// One line of a ÷ problem's answer card for a 九九 taken off the remainder:
+// the 九九 of the quotient digit and a divisor digit, then the rod each
+// non-zero digit comes off. A 0 divisor digit still has its 九九 to recall,
+// so it gets its line, with nothing to take off.
+function subtractLine(q: number, y: number, place: number, cascades: boolean): string {
+  const head = nineNine(q, y)
+  const digits = productDigits(q * y, place).map(([digit, at]) => `${PLACE[at] ?? at}から${digit}`)
+  return `${digits.length === 0 ? head : `${head}　${digits.join('、')}を引く`}${cascades ? '（さらに上の位から繰り下がる）' : ''}`
+}
+
+// One line of a ÷ problem's answer card for a quotient digit: where it is
+// placed, by the 割れる / 割れない rule the learner applies (the dividend's
+// leading digits against the divisor). A 0 is not placed at all, so its
+// line compares nothing.
+function quotientLine(q: number, lead: number, divisor: number, split: boolean): string {
+  if (q === 0) return '商0（立てずに次へ）'
+  return `商${q}を立てる（${lead}は${divisor}${split ? '以上なので、頭の2つ左' : 'より小さいので、頭の1つ左'}）`
 }
 
 // No plural branch — Japanese has none. The English catalog needs one.
@@ -183,6 +213,8 @@ export const ja = {
       cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
     }`,
   productLine,
+  quotientLine,
+  subtractLine,
   roundCount: (index: number, total: number) => `${index} / ${total}`,
   roundComplete: 'けたの練習おわり',
   roundSection: 'けたの練習',
@@ -215,6 +247,9 @@ export const ja = {
   // What VoiceOver reads for the operand board under a × problem's soroban:
   // the two numbers, as the board shows them.
   operandBoardLabel: (a: number, b: number) => `${a} × ${b}`,
+  // What VoiceOver reads for the board under a ÷ problem's soroban, which
+  // shows only the divisor: the dividend is already on the soroban.
+  divisorBoardLabel: (b: number) => `わる数 ${b}`,
 }
 
 // The contract every catalog satisfies, derived from the catalog that ships

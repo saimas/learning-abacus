@@ -145,11 +145,14 @@ export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: b
 // remainder's leading N digits, the number compared with the divisor, and
 // `split` says the digit lands two rods left of the remainder's head (the
 // lead is at least the divisor: 割れる) rather than one (割れない). The card
-// explains the placement by these. For a 0 digit nothing is placed and
-// `lead` / `split` describe no placement. `subtract` takes the 九九 q × y
-// off the remainder, where y is the divisor's digit at `yPlace`, so the
-// divisor board can point at it; `place` is where its ones digit comes off,
-// and its tens digit comes off one place above.
+// explains the placement by these. A 0 digit is not placed, so its `split`
+// is false: the rods' geometry alone could still put its rod two left of
+// the head, but the card must never say a 0 was 割れる, and its line reads
+// neither rule (`lead` is only the remainder's leading digits there).
+// `subtract` takes the 九九 q × y off the remainder, where y is the
+// divisor's digit at `yPlace`, so the divisor board can point at it; `place`
+// is where its ones digit comes off, and its tens digit comes off one place
+// above.
 export type StepGroup =
   | { kind: 'column'; place: number; atom: Atom | null; steps: PlacedStep[]; cascades: boolean }
   | {
@@ -353,7 +356,9 @@ function quotientSteps(problem: Problem): StepGroup[] {
     const lead = Math.floor(remainder / 10 ** Math.max(0, head - n + 1))
     const placed = playDigits(soroban, [[q, place]], 'add')
     soroban = placed.soroban
-    groups.push({ kind: 'quotient', q, place, lead, split: place - head === 2, ...movesGroup(placed.moves) })
+    // A 0 is never placed, so it claims no 割れる (see StepGroup).
+    const split = q > 0 && place - head === 2
+    groups.push({ kind: 'quotient', q, place, lead, split, ...movesGroup(placed.moves) })
     // Nothing is multiplied by a 0, so there is no 九九 to take off.
     if (q === 0) continue
     for (let j = n - 1; j >= 0; j--) {

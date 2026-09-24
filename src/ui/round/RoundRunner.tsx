@@ -72,7 +72,7 @@ export function RoundRunner({
   const groups = problemSteps(problem)
   // The group of the move the learner has stepped to, if any: an index into
   // `groups` for the answer card's lines, and the group itself for the
-  // operand board. Both follow it.
+  // operand (or divisor) board. Both follow it.
   const groupIndexOf = (activeStep: number | undefined) =>
     activeStep === undefined ? undefined : groupOfStep(groups, activeStep)
   const groupOf = (activeStep: number | undefined) => {
@@ -127,9 +127,10 @@ export function RoundRunner({
           />
         )}
         // 両落とし leaves both numbers off the soroban, so a × problem shows
-        // them on a board of their own beneath it (see OperandBoard).
+        // them on a board of their own beneath it, and 商除法 leaves the
+        // divisor off, so a ÷ problem shows that (see OperandBoard).
         renderBeneath={
-          problem.op === 'mul'
+          problem.op === 'mul' || problem.op === 'div'
             ? (activeStep) => <OperandBoard problem={problem} activeGroup={groupOf(activeStep)} />
             : undefined
         }

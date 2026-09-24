@@ -405,6 +405,9 @@ describe('division', () => {
         if (group.q > 0 && group.split !== group.lead >= p.b) {
           faults.push(`${name}: split ${group.split} but lead ${group.lead} against ${p.b}`)
         }
+        // A 0 digit is not placed, so it never claims 割れる, whatever the
+        // rods' geometry says.
+        if (group.q === 0 && group.split) faults.push(`${name}: a 0 digit at place ${group.place} claims split`)
       }
       at += group.steps.length
     }
@@ -480,7 +483,18 @@ describe('division', () => {
       'subtract',
       'subtract',
     ])
-    expect(groups[4]).toMatchObject({ kind: 'quotient', q: 0, place: 5, moves: [], steps: [], cascades: false })
+    // Its remainder's head, 683, sits three places below it, which would
+    // read as 割れる by position alone; a digit that is never placed claims
+    // neither rule.
+    expect(groups[4]).toMatchObject({
+      kind: 'quotient',
+      q: 0,
+      place: 5,
+      split: false,
+      moves: [],
+      steps: [],
+      cascades: false,
+    })
     expect(readValue(lastOf(problemStates(p)))).toBe(207 * 10 ** 4)
     expect(divisionFaults(p)).toEqual([])
   })
@@ -517,8 +531,8 @@ describe('division', () => {
     expect(divisionFaults(p)).toEqual([])
   })
 
-  it('works a sample of 3けた problems down to their quotients', () => {
-    const faults = generateProblems({ op: 'div', digits: 3 }, 500, seeded(17)).flatMap(divisionFaults)
+  it('works a large sample of 3けた problems down to their quotients', () => {
+    const faults = generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(17)).flatMap(divisionFaults)
     expect(faults).toEqual([])
   })
 

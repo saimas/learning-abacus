@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { problemSteps, type Problem } from '@/domain/problem'
+import { problemSteps, type Problem, type StepGroup } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { useActiveLineLayout } from '@/ui/session/useActiveLineLayout'
 import { colors, fonts } from '@/ui/theme'
@@ -8,8 +8,9 @@ import { colors, fonts } from '@/ui/theme'
 // how each group is worked, highest place first, in the same words as a
 // single move's card. A column group (＋ −) reads as its rod and move; a
 // product group (×) reads as the 九九 and where its digits land. A ÷
-// problem's groups (quotient, subtract) have no lines yet: their wording
-// comes with the ÷ screens, and until then the card still gives the answer.
+// problem alternates a quotient group, read as where its digit is placed and
+// why (割れる / 割れない), and a subtract group per divisor digit, read as the
+// 九九 and the rods its digits come off.
 // `activeGroup` indexes problemSteps(problem): the group the learner has
 // stepped into. The panel draws the card around these lines. `showAnswer`
 // is false before an answer, where the lines explain the problem without
@@ -30,6 +31,37 @@ export function ProblemCorrectionCard({
   // tells the scroll where it sits, so it can be scrolled into view. The
   // lines are numbered as problemSteps numbers the groups.
   const lineLayout = useActiveLineLayout(activeGroup)
+
+  // A group's line and its testID, or null for a group with nothing to say.
+  // Every 九九 gets a line, even one whose product is 0 (recalling it is
+  // still a step), and so does a 0 quotient digit (deciding it is too).
+  function lineOf(group: StepGroup, index: number): { testID: string; text: string } | null {
+    switch (group.kind) {
+      case 'column':
+        // A column that adds 0 moves nothing.
+        if (group.atom === null) return null
+        return {
+          testID: `correction-column-${group.place}`,
+          text: strings.columnLine(group.place, group.atom, group.cascades),
+        }
+      case 'product':
+        return {
+          testID: `correction-product-${index}`,
+          text: strings.productLine(group.x, group.y, group.place, group.cascades),
+        }
+      case 'quotient':
+        return {
+          testID: `correction-quotient-${index}`,
+          text: strings.quotientLine(group.q, group.lead, problem.b, group.split),
+        }
+      case 'subtract':
+        return {
+          testID: `correction-subtract-${index}`,
+          text: strings.subtractLine(group.q, group.y, group.place, group.cascades),
+        }
+    }
+  }
+
   return (
     <View testID="correction">
       {showAnswer ? (
@@ -38,28 +70,16 @@ export function ProblemCorrectionCard({
         </Text>
       ) : null}
       {problemSteps(problem).map((group, index) => {
-        const active = index === activeGroup
-        if (group.kind === 'product') {
-          return (
-            <Text
-              key={index}
-              testID={`correction-product-${index}`}
-              onLayout={lineLayout(index)}
-              style={[styles.line, active && styles.activeLine]}
-            >
-              {strings.productLine(group.x, group.y, group.place, group.cascades)}
-            </Text>
-          )
-        }
-        if (group.kind !== 'column' || group.atom === null) return null
+        const line = lineOf(group, index)
+        if (line === null) return null
         return (
           <Text
             key={index}
-            testID={`correction-column-${group.place}`}
+            testID={line.testID}
             onLayout={lineLayout(index)}
-            style={[styles.line, active && styles.activeLine]}
+            style={[styles.line, index === activeGroup && styles.activeLine]}
           >
-            {strings.columnLine(group.place, group.atom, group.cascades)}
+            {line.text}
           </Text>
         )
       })}

@@ -70,9 +70,10 @@ export function QuestionView({
   // view (see useActiveLineLayout).
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
-  // leaves off the soroban, following the same `activeStep` as the step
-  // lines. Bead mode draws it right under the soroban; keypad mode after the
-  // prompt. Nothing for any other question.
+  // leaves off the soroban, or a ÷ problem's, which shows the divisor,
+  // following the same `activeStep` as the step lines. Bead mode draws it
+  // right under the soroban; keypad mode after the prompt. Nothing for any
+  // other question.
   renderBeneath?: (activeStep: number | undefined) => ReactNode
   track: ReactNode
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
@@ -123,7 +124,8 @@ export function QuestionView({
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
       : fittedBeadScale
   // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
-  // (416 pt) are wider than a 375 pt phone, so it has to shrink to fit too.
+  // (416 pt), or a 3けた division's seven, are wider than a 375 pt phone, so
+  // it has to shrink to fit too.
   const keypadScale = scaleToFit(exercise.rods, room, 1)
 
   // Scores the answer. A right one is the parent's to move on from; a miss
@@ -139,7 +141,12 @@ export function QuestionView({
     if (guarded(t)) return
     // Bead answers are untimed: speed only counts once the work is mental.
     const latencyMs = mode === 'beads' ? null : Math.max(0, t - shownAt)
-    const correct = given === exercise.expected
+    // The beads are checked against what the soroban reads when the work is
+    // done, which for ÷ is the quotient followed by zeros (spec (division)
+    // §2), and the keypad against the answer itself. What the learner is
+    // told is the answer, either way.
+    const wanted = mode === 'beads' ? (exercise.expectedBeads ?? exercise.expected) : exercise.expected
+    const correct = given === wanted
 
     if (correct) {
       AccessibilityInfo.announceForAccessibility(strings.correct)
@@ -501,7 +508,8 @@ export function QuestionView({
           submitLabel={strings.answer}
           submitTestID="submit"
           // The answer always fits the soroban's rods: 2 for a single move,
-          // the operands' digit count + 1 for ＋ −, and that count × 2 for ×.
+          // the operands' digit count + 1 for ＋ −, that count × 2 for ×,
+          // and 2N + 1 for ÷, whose quotient has only N digits.
           maxDigits={exercise.rods}
         />
       )}

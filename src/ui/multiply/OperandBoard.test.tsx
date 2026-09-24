@@ -5,6 +5,7 @@ import { DECK_PADDING, FRAME_PADDING, geometryFor, ROD_WIDTH } from '@/ui/abacus
 import { textOf } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import {
+  divisorScale,
   OPERAND_MAX_SCALE,
   OPERAND_SHORT_WINDOW_SCALE,
   OperandBoard,
@@ -159,5 +160,111 @@ describe('operandScale', () => {
     const scale = operandScale(3, 280, 800)
     expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
     expect(2 * natural(3) * scale + TIMES_WIDTH).toBeCloseTo(280)
+  })
+})
+
+// Spec (division) §3: 商除法 sets the dividend on the soroban itself, so the
+// board shows only the divisor, and points at the digit whose 九九 is being
+// taken off.
+describe('OperandBoard for ÷', () => {
+  const division: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+  const divisionGroups = problemSteps(division)
+  const groupOf = (index: number): StepGroup => {
+    const group = divisionGroups[index]
+    if (group === undefined) throw new Error(`no group ${index}`)
+    return group
+  }
+  const divisorDigits = () => [0, 1].map((i) => textOf(screen.getByTestId(`operand-b-digit-${i}`)))
+  const divisorRods = () => [0, 1].map((i) => side('b').getByTestId(`rod-${i}`).props.accessibilityValue.text)
+  const divisorLit = () => [0, 1].filter((i) => side('b').queryByTestId(`rod-highlight-${i}`) !== null)
+  const divisorEmphasised = () => [0, 1].filter((i) => digitStyle('b', i).color === colors.accent)
+
+  it('sets only the divisor on beads, with its digits over the rods', () => {
+    render(<OperandBoard problem={division} />)
+    expect(divisorDigits()).toEqual(['3', '6'])
+    expect(divisorRods()).toEqual(['3', '6'])
+    expect(screen.queryByTestId('operand-a')).toBeNull()
+    expect(screen.queryByText('×')).toBeNull()
+    expect(screen.getAllByTestId('abacus-frame')).toHaveLength(1)
+  })
+
+  it('reads to VoiceOver as the divisor', () => {
+    render(<OperandBoard problem={division} />)
+    const board = screen.getByTestId('operand-board')
+    expect(board.props.accessible).toBe(true)
+    expect(board.props.accessibilityLabel).toBe('わる数 36')
+  })
+
+  it('draws the divisor solid and takes no taps', () => {
+    render(<OperandBoard problem={division} />)
+    for (const layer of screen.getAllByTestId('fade-layer')) expect(layer.props.style.opacity).toBe(1)
+    expect(side('b').getByTestId('rod-0').props.accessibilityRole).toBeUndefined()
+  })
+
+  it('highlights nothing while no 九九 is on show', () => {
+    render(<OperandBoard problem={division} />)
+    expect([divisorLit(), divisorEmphasised()]).toEqual([[], []])
+  })
+
+  // Placing a quotient digit multiplies nothing.
+  it('highlights nothing while a quotient digit is placed', () => {
+    expect(groupOf(0)).toMatchObject({ kind: 'quotient', q: 4 })
+    render(<OperandBoard problem={division} activeGroup={groupOf(0)} />)
+    expect([divisorLit(), divisorEmphasised()]).toEqual([[], []])
+  })
+
+  it('points at the divisor digit of the 九九 taken off: 4 × 3, then 4 × 6', () => {
+    expect(groupOf(1)).toMatchObject({ kind: 'subtract', q: 4, y: 3, yPlace: 1 })
+    render(<OperandBoard problem={division} activeGroup={groupOf(1)} />)
+    expect([divisorLit(), divisorEmphasised()]).toEqual([[0], [0]])
+    expect(digitStyle('b', 0).fontWeight).toBe('700')
+    expect(digitStyle('b', 1).fontWeight).not.toBe('700')
+
+    expect(groupOf(2)).toMatchObject({ kind: 'subtract', q: 4, y: 6, yPlace: 0 })
+    screen.rerender(<OperandBoard problem={division} activeGroup={groupOf(2)} />)
+    expect([divisorLit(), divisorEmphasised()]).toEqual([[1], [1]])
+  })
+
+  it('ignores a 九九 of a × problem, which takes nothing off', () => {
+    render(<OperandBoard problem={division} activeGroup={groupAt(2, 2)} />)
+    expect(divisorLit()).toEqual([])
+  })
+
+  // The same sizes as the × boards, so the board under the soroban looks the
+  // same whichever the operation.
+  it('draws the divisor at the × boards’ size: smaller on a short window, usual on a tall one', () => {
+    windowOf(375, 667)
+    render(<OperandBoard problem={division} />)
+    expect(framePadding()).toEqual([FRAME_PADDING * OPERAND_SHORT_WINDOW_SCALE])
+    screen.unmount()
+    restoreWindow()
+
+    windowOf(402, 874)
+    render(<OperandBoard problem={division} />)
+    expect(framePadding()).toEqual([FRAME_PADDING * OPERAND_MAX_SCALE])
+  })
+
+  it('fits a narrow window', () => {
+    windowOf(160, 800)
+    render(<OperandBoard problem={{ op: 'div', digits: 3, a: 202032, b: 976 }} />)
+    const scale = divisorScale(3, 120, 800)
+    expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
+    expect(framePadding()).toEqual([FRAME_PADDING * scale])
+  })
+})
+
+describe('divisorScale', () => {
+  const natural = (digits: number) => digits * ROD_WIDTH + 2 * (DECK_PADDING + FRAME_PADDING)
+
+  it('follows the × boards’ limits', () => {
+    expect(divisorScale(3, 402 - 40, 874)).toBe(OPERAND_MAX_SCALE)
+    expect(divisorScale(3, 375 - 40, 667)).toBe(OPERAND_SHORT_WINDOW_SCALE)
+  })
+
+  // One board, with no × beside it, has all the room to itself.
+  it('shrinks the one board to just fit a narrow window', () => {
+    const scale = divisorScale(3, 120, 800)
+    expect(scale).toBeLessThan(OPERAND_MAX_SCALE)
+    expect(natural(3) * scale).toBeCloseTo(120)
   })
 })
