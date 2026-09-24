@@ -1,7 +1,7 @@
 # learning-abacus — The division walkthrough, guess by guess
 
 Date: 2026-09-24
-Status: Approved, not yet implemented. Replaces the ÷ walkthrough described in `2026-09-24-divide-design.md` §3 (its text pages) with a bead-by-bead walkthrough.
+Status: Implemented on feature/divide-walkthrough (TestFlight build 21). Replaces the ÷ walkthrough described in `2026-09-24-divide-design.md` §3 (its text pages) with a bead-by-bead walkthrough.
 
 ## 1. Why, and what the owner chose
 
