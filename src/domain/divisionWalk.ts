@@ -60,7 +60,15 @@ type WalkCommon = {
 export type WalkStep = WalkCommon &
   (
     | { kind: 'set' }
-    | { kind: 'guess'; p: number; chunk: number; partial: number; raw: number; guess: number; remainderZero: boolean }
+    | {
+      kind: 'guess'
+      p: number
+      chunk: number
+      partial: number
+      raw: number
+      guess: number
+      remainderZero: boolean
+    }
     | { kind: 'try'; p: number; digit: number; lead: number; split: boolean }
     | {
       kind: 'take'

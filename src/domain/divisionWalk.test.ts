@@ -223,6 +223,26 @@ describe('divisionWalk', () => {
     expect(walkFaults(division(106, 167))).toEqual([])
   })
 
+  // Two divisor digits already off when the third sticks: both go back.
+  it('puts back every divisor digit taken off so far: 24066 ÷ 126', () => {
+    const walk = divisionWalk(division(191, 126))
+    expect(walk.find((step) => step.kind === 'fix' && step.p === 2)).toMatchObject({
+      from: 2,
+      taken: 120,
+      back: 12000,
+      before: 66,
+      laneStart: 24066,
+      left: 12066,
+      marks: [
+        { rodIndex: 0, amount: -1 },
+        { rodIndex: 2, amount: 1 },
+        { rodIndex: 3, amount: 2 },
+      ],
+      divisorPlaces: [2, 1],
+    })
+    expect(walkFaults(division(191, 126))).toEqual([])
+  })
+
   it('never needs a fix for a 1-digit divisor: 56 ÷ 8', () => {
     expect(kinds(divisionWalk(division(7, 8)))).toEqual(['set', 'guess', 'try', 'take', 'done'])
   })

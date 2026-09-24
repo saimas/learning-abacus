@@ -146,6 +146,20 @@ describe('the division walkthrough, in Japanese', () => {
     )
   })
 
+  it('lists three 九九 and puts back two digits for a 3-digit divisor', () => {
+    const three = division(207, 976)
+    expect(ja.divideWalk(three, stepOf(three, (s) => s.kind === 'try')).note).toBe(
+      'のこりの頭202は976より小さいので、頭の1つ左に置く。2×9も2×7も2×6も引けたら、2で決まり。',
+    )
+    const twoBack = division(191, 126)
+    expect(ja.divideWalk(twoBack, stepOf(twoBack, (s) => s.kind === 'fix' && s.p === 2))).toEqual({
+      what: '戻す：2を1にして、12000を足し戻す',
+      math: '66+12000=12066',
+      note: '200×120を引いたが、100×120でよかった。多く引いた100×120=12000を戻す。やり直さなくていい：24066に戻して100×120を引いたのと同じ12066になる。',
+      rods: 'そろばんでは：答えのけたから1を引き、万の位に1、千の位に2を足す',
+    })
+  })
+
   it('names rods briefly for the row under the soroban', () => {
     expect([4, 3, 2, 1, 0].map(ja.rodShortName)).toEqual(['万', '千', '百', '十', '一'])
   })
