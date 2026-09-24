@@ -25,7 +25,7 @@ Decisions:
 | `try` | the guess is placed on its rod (p + N + 1), one or two left of the head of what is left (`lead`, `split`, as in the rounds) | yes |
 | `take` | one 九九 of the digit and a divisor digit y (place j) comes off: `amount` = digit·10^p × y·10^j; `resumed` after a fix; `last` when it is the digit's last 九九 | yes |
 | `stuck` | the next 九九 will not come off what is left, so the digit is too big | none |
-| `fix` | the digit is lowered by one, and one copy of the divisor digits already taken off (`taken`, e.g. 30) is put back: `back` = taken·10^p. This is the same as going back to the lane's start (`laneStart`) and taking the lowered digit's 九九 | yes |
+| `fix` | the digit is lowered by one, and one copy of the divisor digits already taken off (`taken`, e.g. 30) is put back: `back` = taken·10^p. `putBack` lists the digits that go back, `{ digit, place }`, highest first, each with the rod place it goes on (p + k); a 0 moves no bead, so it is left out. The badges, focus rods, underlined divisor digits and the rods line all come from it. This is the same as going back to the lane's start (`laneStart`) and taking the lowered digit's 九九 | yes |
 | `done` | the quotient is read off the left | none |
 
 After a fix the walk carries on from the 九九 that got stuck. A guess of 0, including when nothing is left, is a `guess` with no `try`. A fix down to 0 ends the lane. Each step also carries:
@@ -69,6 +69,7 @@ Other cases:
 - **Nothing left:** 答えの…：のこりは0, and the note のこりが0なので、この位は0（置かない）。
 - **A 1-digit divisor:** 九九：7×8=56は56に入る。
 - **A fix down to 0:** ends with この位は0（置かない）。
+- **A fix whose put-back carries on up the rods** (797402 ÷ 998): the rods line, built from `putBack`, ends with the × product line's note, （さらに上の位へ繰り上がる） / "(and carries again into the next rod)".
 - **English** says the same thing, e.g. "Fix it: 5 → 4, and put back 300", "No need to start over: it's the same 492 as going back to 1692 and taking away 40 × 30."
 - **Labels:** のこり / left, 答え / Answer, and short rod names (一 十 百 千 万 …; 1 10 100 1000 10k …).
 
@@ -77,7 +78,7 @@ The old ÷ page strings (`divideIntroMethod`, `divideIntroGuess`, `divideIntroPl
 ## 4. Screen (`src/ui/intro/DivideWalkthrough.tsx`)
 
 Top to bottom:
-- **Header:** わり算のやりかた, with one dot per step. Reached dots are filled with the accent; the stuck steps' dots are outlined in the accent.
+- **Header:** わり算のやりかた, with one dot per step. Reached dots are filled with the accent. A stuck step's dot is always a ring, outlined in the accent, whether reached or not, so the places a guess turns out too big stay in sight.
 - **Problem line:** 「1692 ÷ 36」, with the divisor digits in use (`divisorPlaces`) in the accent and underlined. On the right are the 答え boxes: dashed while empty, a trial digit in the accent with 「?」, a settled digit in ink.
 - **Rod readings above the soroban,** aligned with its rods: each rod's digit, with focus rods in the accent. A badge under a digit shows the step's mark: `5?` for a trial, `−3?` for a 九九 that won't come off, and `−1` or `+3` otherwise.
 - **The soroban (`Abacus`):**
@@ -86,21 +87,24 @@ Top to bottom:
   - rod names (一 十 百 千 万) sit under it.
 - **Explanation:**
   - the bold `what` line;
-  - のこり and the number left, then `math`, green when it ends in ✓ and accent when it ends in ✗;
+  - のこり and the number left, then `math`. The colour comes from the step, not the text: green for a digit's last 九九 (its sum ends in ✓), accent for a 九九 that will not come off (✗), and ink otherwise;
   - `note`;
   - `rods`, small and muted.
 - **Controls pinned at the bottom:**
   - ◀ (disabled on the first frame), the frame count ("5 / 23"), and ▶;
   - on the last frame, ▶ gives way to the finish button (はじめる before a round, おわる from Home).
+- **Beads first:** のこり and the answer boxes change when a step's last bead lands. Until then they show what they did before the step. They are not the rods' number mid-step, since a take's first bead leaves only part of its 九九 off.
 - **Layout and VoiceOver:**
   - everything above the controls scrolls, so a short phone can reach the note;
-  - VoiceOver hears the new `what` and `math` when a step changes, and the count when only a bead moves.
+  - the scroll returns to the top when the step changes, but not while the same step's beads move;
+  - VoiceOver hears the new `what` and `math` when a step changes (joined by `divideWalkSpoken`: 「、」 in Japanese, a full stop in English), and the count when only a bead moves;
+  - the reading row (digits and badges) and the rod-name row are hidden from VoiceOver. Each rod of the soroban already reads its value, and the caption carries the numbers.
 
-`IntroScreen` takes the walkthrough as a render function (`(finishLabel, onFinish) => ReactNode`). It also holds the once-only finish guard, which now lives in one place for both walkthroughs. `/divide-intro` renders `DivideWalkthrough` and `/multiply-intro` renders `MethodIntro`. `MethodIntro` loses its ÷-only guess page (`IntroTexts.guess`).
+`IntroScreen` takes the walkthrough as a component prop (`walkthrough: ComponentType<{ finishLabel; onFinish }>`). It also holds the once-only finish guard, which now lives in one place for both walkthroughs. `/divide-intro` renders `DivideWalkthrough` and `/multiply-intro` renders `MethodIntro`. `MethodIntro` loses its ÷-only guess page (`IntroTexts.guess`).
 
 ## 5. The × walkthrough's ◀
 
-`MethodIntro`'s bottom button becomes a row: an outline ◀ もどる on the left (hidden on the first page), then つぎへ or the finish button. Going back to a group page replays that group. Going back to any other page stops the replay, so the soroban shows that page's start again.
+`MethodIntro`'s bottom button becomes a row: an outline back button reading 「もどる」 on the left (hidden on the first page), then つぎへ or the finish button. Going back to a group page replays that group. Going back to any other page stops the replay, so the soroban shows that page's start again.
 
 ## 6. Testing
 

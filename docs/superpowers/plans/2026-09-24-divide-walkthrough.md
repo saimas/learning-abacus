@@ -4,7 +4,7 @@
 
 **Goal:** Replace わり算のやりかた's text pages with a bead-by-bead walkthrough of 1692 ÷ 36 that shows each 九九 guess being tried, getting stuck, and being fixed; and give かけ算のやりかた a ◀ back button.
 
-**Architecture:** A pure domain walk (`src/domain/divisionWalk.ts`, done) gives the steps, their bead steps and frames. Its captions come from the i18n catalogues (`divideWalk`, done). A new screen component, `DivideWalkthrough`, steps through the frames with ◀ ▶. `IntroScreen` takes the walkthrough as a render function, so `/divide-intro` renders the new component and `/multiply-intro` keeps `MethodIntro`.
+**Architecture:** A pure domain walk (`src/domain/divisionWalk.ts`, done) gives the steps, their bead steps and frames. Its captions come from the i18n catalogues (`divideWalk`, done). A new screen component, `DivideWalkthrough`, steps through the frames with ◀ ▶. `IntroScreen` takes the walkthrough as a component prop, so `/divide-intro` renders the new component and `/multiply-intro` keeps `MethodIntro`.
 
 **Tech Stack:** Expo 57 / React Native 0.86, expo-router, TypeScript 6, Jest 30 with @testing-library/react-native.
 
@@ -136,10 +136,10 @@ Keep the last announced index in a ref read only inside the effect, as `StepCont
 
 **Files:**
 - Modify: `src/ui/intro/IntroScreen.tsx`
-  - replace the `problem` and `intro` props with `op: Operation` and `children: (finishLabel: string, onFinish: () => void) => ReactNode`;
+  - replace the `problem` and `intro` props with `op: Operation` and a component prop, `walkthrough: ComponentType<{ finishLabel: string; onFinish: () => void }>`;
   - move the once-only finish guard (a `useRef(false)` checked and set in `finish`, today in `MethodIntro`) here, so a second tap while the screen is leaving cannot save twice;
   - the kind check uses `op` where it used `problem.op`.
-- Modify: `app/divide-intro.tsx`: `<IntroScreen op="div" complete={completeDivideIntro}>{(finishLabel, onFinish) => <DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />}</IntroScreen>`. Update the file's comments; the example stays 1692 ÷ 36.
+- Modify: `app/divide-intro.tsx`: `<IntroScreen op="div" complete={completeDivideIntro} walkthrough={Walkthrough} />`, where `Walkthrough` renders `<DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />`. Update the file's comments; the example stays 1692 ÷ 36.
 - Modify: `app/multiply-intro.tsx`: the same shape, rendering `MethodIntro` with its current `intro` texts.
 - Modify: `src/ui/intro/MethodIntro.tsx`:
   - remove `guess?` from `IntroTexts`, the `'guess'` page kind and its branch (× never had one; ÷ no longer uses `MethodIntro`);
