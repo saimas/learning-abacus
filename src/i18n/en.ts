@@ -124,8 +124,19 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // digit), why a guess too big to take away was lowered to q, then where q
 // goes. A 0 is not placed at all, so its line names no rod.
 function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
-  const estimate = `Estimate ${partial} ÷ ${d0} = ${guess}.`
-  const lowered = guess > q ? ` ${guess} is too big to take away, so use ${q}.` : ''
+  // Nothing left can only give a 0; said directly, as ja does.
+  if (partial === 0) return 'Nothing is left here: quotient 0, nothing to place.'
+  // A digit is at most 9, so "Estimate 32 ÷ 3 = 9" would be wrong
+  // arithmetic; the capped guess says why it is 9.
+  const estimate =
+    Math.floor(partial / d0) > 9 ? `${partial} ÷ ${d0} is 10 or more, so guess 9.` : `Estimate ${partial} ÷ ${d0} = ${guess}.`
+  // A guess too big by more than one is lowered until it fits, as ja says.
+  const lowered =
+    guess - q >= 2
+      ? ` ${guess} is too big to take away; lower it until it fits: ${q}.`
+      : guess > q
+        ? ` ${guess} is too big to take away, so use ${q}.`
+        : ''
   // "nothing to place" already reads right wherever the 0 falls, but it is
   // named alongside ja's wording fix so the two stay in step.
   const placed = q === 0 ? ' Quotient 0: nothing to place.' : ` Place ${q} ${split ? 'two rods' : 'one rod'} left of the head.`
@@ -270,7 +281,7 @@ export const en: Strings = {
   divideIntroMethod:
     'Division finds how many times the divisor goes into the number being divided. On the soroban, set the number being divided, then decide the answer (the quotient) one digit at a time, from the highest, taking each digit’s times-table answers with the divisor’s digits off the rods (商除法).',
   divideIntroGuess:
-    'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it by one (here, 4).',
+    'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
   divideIntroPlacement:
     'Take as many digits from the head of what’s left as the divisor has, and compare them with the divisor: if they are at least the divisor, place the answer’s digit two rods left of the head; if less, one rod left. Take its first times-table answer off starting just right of that digit, and each next one a rod further right.',
   divideIntroResult: (a, b, quotient) => `${a} ÷ ${b} = ${quotient}`,

@@ -46,11 +46,14 @@ Invariants, tested exhaustively:
 - **Prompt:** "1692を36でわる。" (en: "Divide 1692 by 36.").
 - **The divisor board:** `OperandBoard` for ÷ shows only the divisor b, since the dividend is already on the working soroban. The digit `yPlace` is highlighted during a subtract group, and nothing is highlighted during a quotient group.
 - **Step lines** (`ProblemCorrectionCard`):
-  - quotient group: `quotientLine(q, partial, d0, guess, split)`: the guess by 九九, why it was lowered if it was too big, then where q goes, e.g. "16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる", "4÷3で見当をつけると1。商1を頭の2つ左に立てる". A 0 digit reads "6÷9で見当をつけると0。商0（立てない）". (en: "Estimate 16 ÷ 3 = 5. 5 is too big to take away, so use 4. Place 4 one rod left of the head.", "… Quotient 0: nothing to place.") A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
+  - quotient group: `quotientLine(q, partial, d0, guess, split)`: the guess by 九九, why it was lowered if it was too big, then where q goes, e.g. "16÷3で見当をつけると5。5だと引ききれないので4にする。商4を頭の1つ左に立てる", "4÷3で見当をつけると1。商1を頭の2つ左に立てる". A 0 digit reads "6÷9で見当をつけると0。商0（立てない）". (en: "Estimate 16 ÷ 3 = 5. 5 is too big to take away, so use 4. Place 4 one rod left of the head.", "… Quotient 0: nothing to place.") Three cases read differently, so the line never shows wrong arithmetic or an odd sum:
+    - head ÷ d0 of 10 or more (the guess is capped at 9): "32÷3は10以上なので、見当は9。…" (684 ÷ 36; en "32 ÷ 3 is 10 or more, so guess 9.");
+    - a guess too big by 2 or more (mostly divisors starting with 1): "9だと引ききれないので、引けるまで下げて5にする。" (285 ÷ 19; en "9 is too big to take away; lower it until it fits: 5."); a drop of exactly 1 keeps "5だと引ききれないので4にする。";
+    - nothing left (a trailing 0 digit, 360 ÷ 36 = 10): "残りは0なので、商0（立てない）" (en "Nothing is left here: quotient 0, nothing to place."). A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
 - **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた:
   1. what division is (how many times the divisor goes into the dividend), then what 商除法 does (`divideIntroMethod`);
-  2. how each digit is guessed by 九九 (`divideIntroGuess`, added after build 19): the head of what is left ÷ the divisor's first digit, 1692 ÷ 36 → 16 ÷ 3 = 5, lowered to 4 because the 6 has to come off too;
+  2. how each digit is guessed by 九九 (`divideIntroGuess`, added after build 19): the head of what is left ÷ the divisor's first digit, 1692 ÷ 36 → 16 ÷ 3 = 5, lowered to 4 because the 6 has to come off too, and a guess too big is lowered one at a time until it fits (「引けるようになるまで1つずつ下げます」);
   3. the 割れる / 割れない rule (`divideIntroPlacement`);
   4. one page per group, with its bead steps playing and coloured, and the divisor board lit; a quotient page reads the new guess line;
   5. the result.

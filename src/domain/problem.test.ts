@@ -472,6 +472,16 @@ describe('division', () => {
       { q: 0, partial: 6, guess: 0 },
       { q: 7, partial: 68, guess: 7 },
     ])
+    // 684 ÷ 36: after 1, 32 ÷ 3 is 10, but a digit is at most 9.
+    expect(guesses(19, 36)).toEqual([
+      { q: 1, partial: 6, guess: 2 },
+      { q: 9, partial: 32, guess: 9 },
+    ])
+    // 360 ÷ 36: after 1, nothing is left.
+    expect(guesses(10, 36)).toEqual([
+      { q: 1, partial: 3, guess: 1 },
+      { q: 0, partial: 0, guess: 0 },
+    ])
   })
 
   it('names the divisor’s first digit, which each guess divides by', () => {

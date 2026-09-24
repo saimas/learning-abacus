@@ -121,11 +121,25 @@ function subtractLine(q: number, y: number, place: number, cascades: boolean): s
 // the 割れる / 割れない rule. A 0 is not placed at all, so its line names no
 // rod.
 function quotientLine(q: number, partial: number, d0: number, guess: number, split: boolean): string {
-  const estimate = `${partial}÷${d0}で見当をつけると${guess}。`
-  const lowered = guess > q ? `${guess}だと引ききれないので${q}にする。` : ''
   // "立てずに次へ" reads wrong when the 0 is the quotient's last digit (there
   // is no next digit to move to), so this stays neutral about what follows.
-  const placed = q === 0 ? '商0（立てない）' : `商${q}を頭の${split ? 2 : 1}つ左に立てる`
+  const zero = '商0（立てない）'
+  // Nothing left (360 ÷ 36 = 10 after the 1) can only give a 0, and
+  // "0÷3で見当をつけると0" reads oddly, so it says why directly.
+  if (partial === 0) return `残りは0なので、${zero}`
+  // A digit is at most 9, so a head ÷ first digit of 10 or more guesses 9;
+  // "32÷3で見当をつけると9" would be wrong arithmetic.
+  const estimate =
+    Math.floor(partial / d0) > 9 ? `${partial}÷${d0}は10以上なので、見当は9。` : `${partial}÷${d0}で見当をつけると${guess}。`
+  // A guess can be too big by more than one (mostly for a divisor starting
+  // with 1); then it is lowered until it fits, not just once.
+  const lowered =
+    guess - q >= 2
+      ? `${guess}だと引ききれないので、引けるまで下げて${q}にする。`
+      : guess > q
+        ? `${guess}だと引ききれないので${q}にする。`
+        : ''
+  const placed = q === 0 ? zero : `商${q}を頭の${split ? 2 : 1}つ左に立てる`
   return `${estimate}${lowered}${placed}`
 }
 
@@ -278,7 +292,7 @@ export const ja = {
   divideIntroMethod:
     'わり算は、わられる数の中にわる数がいくつ入るかを調べます。そろばんでは、わられる数を置き、答え（商）を大きい位から一けたずつ決めて、商×わる数の九九を引いていきます（商除法（しょうじょほう））。',
   divideIntroGuess:
-    '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは1つ下げます（ここでは4）。',
+    '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
   divideIntroPlacement:
     '残りの頭から、わる数と同じけた数をとって、わる数とくらべます。わる数以上なら頭の2つ左、小さければ1つ左に商を立てます。九九の答えは商のすぐ右から引き、わる数のつぎの数字との九九は、一つ右にずらして引きます。',
   divideIntroResult: (a: number, b: number, quotient: number) => `${a}÷${b} = ${quotient}`,

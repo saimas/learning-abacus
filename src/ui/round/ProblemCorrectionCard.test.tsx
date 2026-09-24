@@ -97,6 +97,19 @@ describe('ProblemCorrectionCard', () => {
     expect(textOf(screen.getByTestId('correction-quotient-5'))).toBe('68÷9で見当をつけると7。商7を頭の1つ左に立てる')
   })
 
+  // The guess's harder cases, as a real problem's second digit reads them:
+  // a head ÷ first digit of 10 or more, a guess lowered by more than one,
+  // and a 0 digit with nothing left.
+  it.each([
+    [684, 36, 19, '32÷3は10以上なので、見当は9。商9を頭の1つ左に立てる'],
+    [285, 19, 15, '9÷1で見当をつけると9。9だと引ききれないので、引けるまで下げて5にする。商5を頭の2つ左に立てる'],
+    [893, 19, 47, '13÷1は10以上なので、見当は9。9だと引ききれないので、引けるまで下げて7にする。商7を頭の1つ左に立てる'],
+    [360, 36, 10, '残りは0なので、商0（立てない）'],
+  ])('explains the guess for the second digit of %p ÷ %p', (a, b, expected, line) => {
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a, b }} expected={expected} />)
+    expect(textOf(screen.getByTestId('correction-quotient-3'))).toBe(line)
+  })
+
   it('still gives a line for a 九九 of a 0 divisor digit, since recalling it is still a step', () => {
     // 12915 ÷ 105 = 123: 1 × the 0 of 105 takes nothing off.
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 3, a: 12915, b: 105 }} expected={123} />)

@@ -323,6 +323,43 @@ describe('division strings', () => {
     expect(en.quotientLine(1, 4, 3, 1, true)).toBe('Estimate 4 ÷ 3 = 1. Place 1 two rods left of the head.')
   })
 
+  // A digit is at most 9, so a head ÷ first digit of 10 or more guesses 9;
+  // "32÷3で見当をつけると9" would be wrong arithmetic, so the line says why.
+  it('guesses 9 when the head ÷ the first digit is 10 or more, and says so', () => {
+    // 684 ÷ 36 = 19, after 1: 324 left, and 32 ÷ 3 is 10.
+    expect(ja.quotientLine(9, 32, 3, 9, false)).toBe('32÷3は10以上なので、見当は9。商9を頭の1つ左に立てる')
+    expect(en.quotientLine(9, 32, 3, 9, false)).toBe(
+      '32 ÷ 3 is 10 or more, so guess 9. Place 9 one rod left of the head.',
+    )
+  })
+
+  // A guess can be too big by more than one (mostly for a divisor starting
+  // with 1), so the line says it was lowered until it fits, not by one.
+  it('lowers a guess more than one too big until it fits', () => {
+    // 285 ÷ 19 = 15, after 1: 95 left, and 9 ÷ 1 is 9, but only 5 × 19 fits.
+    expect(ja.quotientLine(5, 9, 1, 9, true)).toBe(
+      '9÷1で見当をつけると9。9だと引ききれないので、引けるまで下げて5にする。商5を頭の2つ左に立てる',
+    )
+    expect(en.quotientLine(5, 9, 1, 9, true)).toBe(
+      'Estimate 9 ÷ 1 = 9. 9 is too big to take away; lower it until it fits: 5. Place 5 two rods left of the head.',
+    )
+    // 893 ÷ 19 = 47, after 4: 133 left, 13 ÷ 1 is 10 or more, so 9, then 7.
+    expect(ja.quotientLine(7, 13, 1, 9, false)).toBe(
+      '13÷1は10以上なので、見当は9。9だと引ききれないので、引けるまで下げて7にする。商7を頭の1つ左に立てる',
+    )
+    expect(en.quotientLine(7, 13, 1, 9, false)).toBe(
+      '13 ÷ 1 is 10 or more, so guess 9. 9 is too big to take away; lower it until it fits: 7. Place 7 one rod left of the head.',
+    )
+  })
+
+  // A trailing 0 digit after an exact subtraction has nothing left to
+  // divide: "0÷3で見当をつけると0" would read oddly, so the line says so.
+  it('says a 0 digit with nothing left is 0 because nothing is left', () => {
+    // 360 ÷ 36 = 10, after 1: nothing left.
+    expect(ja.quotientLine(0, 0, 3, 0, false)).toBe('残りは0なので、商0（立てない）')
+    expect(en.quotientLine(0, 0, 3, 0, false)).toBe('Nothing is left here: quotient 0, nothing to place.')
+  })
+
   // A 0 is not placed, so its line names no rod. The wording stays neutral
   // about what follows, since a 0 can be the quotient's last digit (q = 20,
   // 350, …), with no next digit to move to.
@@ -383,10 +420,10 @@ describe('division strings', () => {
     // Where each digit comes from: a 九九 on the head of what is left, and
     // lowering it when the divisor's next digit will not come off too.
     expect(ja.divideIntroGuess).toBe(
-      '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは1つ下げます（ここでは4）。',
+      '商の見当は九九でつけます。残りの頭の1けたか2けたを、わる数の一番上の数字でわります。1692÷36なら16÷3で5。でも、わる数の下の数字（6）の分も引くので、5では引ききれないことがあります。そのときは、引けるようになるまで1つずつ下げます（ここでは4）。',
     )
     expect(en.divideIntroGuess).toBe(
-      'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it by one (here, 4).',
+      'Guess each digit with the times tables: divide the head of what’s left (one or two digits) by the divisor’s first digit. For 1692 ÷ 36, 16 ÷ 3 gives 5. But the divisor’s next digit (6) has to come off too, so 5 can be too big; then lower it one at a time until it fits (here, 4).',
     )
     // The 割れる / 割れない rule compares as many leading digits as the
     // divisor has, taken from the remainder's head each round — not just
