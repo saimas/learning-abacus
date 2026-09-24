@@ -1,7 +1,7 @@
 # learning-abacus — Division 割算 (roadmap P3)
 
 Date: 2026-09-24
-Status: Approved design, pre-plan. Sub-project P3 of `2026-09-23-n-by-n-roadmap.md`, after P1 (＋ −), P2 (×) and the core-rounds work (grid Home, 手順を見る, colouring, the operand board).
+Status: Implemented on feature/divide (TestFlight build 19). Sub-project P3 of `2026-09-23-n-by-n-roadmap.md`, after P1 (＋ −), P2 (×) and the core-rounds work (grid Home, 手順を見る, colouring, the operand board).
 
 ## 1. Goal and decisions
 
@@ -45,7 +45,7 @@ Invariants, tested exhaustively:
 - **Prompt:** "1692を36でわる。" (en: "Divide 1692 by 36.").
 - **The divisor board:** `OperandBoard` for ÷ shows only the divisor b, since the dividend is already on the working soroban. The digit `yPlace` is highlighted during a subtract group, and nothing is highlighted during a quotient group.
 - **Step lines** (`ProblemCorrectionCard`):
-  - quotient group: `quotientLine(q, lead, b, split)`, e.g. "商4を立てる（16は36より小さいので、頭の1つ左）", or "（46は36以上なので、頭の2つ左）". A 0 digit reads "商0（立てずに次へ）".
+  - quotient group: `quotientLine(q, lead, b, split)`, e.g. "商4を立てる（16は36より小さいので、頭の1つ左）", or "（46は36以上なので、頭の2つ左）". A 0 digit reads "商0（立てない）". A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
 - **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた:
   1. what 商除法 does;
@@ -53,7 +53,7 @@ Invariants, tested exhaustively:
   3. one page per group, with its bead steps playing and coloured, and the divisor board lit;
   4. the result.
   - Build it by generalising the × walkthrough (`MultiplyIntro`) rather than copying it.
-- **Home:** the grid gains a ÷ row automatically (from `OPERATIONS`); examples 56 ÷ 8, 1692 ÷ 36, 202032 ÷ 976.
+- **Home:** the grid gains a ÷ row automatically (from `OPERATIONS`). (Per-kind examples such as 56 ÷ 8 were planned here, but Home no longer shows examples for any operation since the chooser's round row was replaced by the grid, so none were added.)
 
 ## 4. Testing
 - `problem.test.ts`:
