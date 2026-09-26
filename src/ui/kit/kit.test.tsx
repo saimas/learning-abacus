@@ -12,6 +12,7 @@ import { SegmentedControl } from './SegmentedControl'
 // `<Link>` calls useRouter() internally, which throws outside a real
 // navigation tree. A stand-in that renders the href lets it be asserted.
 jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above the imports
   const { Text } = require('react-native')
   return {
     Link: ({ href, testID }: { href: string; testID?: string }) => (

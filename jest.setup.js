@@ -1,3 +1,4 @@
+/* global jest */
 // Global Jest setup.
 //
 // AsyncStorage's native module is unavailable under Jest, so anything that

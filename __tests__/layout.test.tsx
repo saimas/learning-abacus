@@ -11,10 +11,11 @@ jest.mock('@/storage/progressStore')
 const mockScreenOptions: Record<string, unknown> = {}
 jest.mock('expo-router', () => {
   const Stack = ({ children }: { children?: ReactNode }) => children
-  Stack.Screen = ({ name, options }: { name: string; options?: unknown }) => {
+  const Screen = ({ name, options }: { name: string; options?: unknown }) => {
     mockScreenOptions[name] = options
     return null
   }
+  Stack.Screen = Screen
   return { Stack }
 })
 
