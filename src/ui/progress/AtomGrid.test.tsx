@@ -1,41 +1,6 @@
 import { render, within } from '@testing-library/react-native'
 import { emptyProgress } from '@/domain/progress'
-import { newRecord } from '@/domain/fluency'
-import { AtomGrid, atomStates, cellState, mentalCount } from './AtomGrid'
-
-const NOW = 1_700_000_000_000
-
-describe('cellState', () => {
-  it('is unseen with no record', () => {
-    expect(cellState(undefined, 'direct', 900)).toBe('unseen')
-  })
-
-  it('is learning for a fresh record', () => {
-    expect(cellState(newRecord('1+3', NOW), 'direct', 900)).toBe('learning')
-  })
-
-  it('is reflex when fast and well-boxed', () => {
-    const record = { ...newRecord('1+3', NOW), box: 5, recentLatencyMs: [300, 300, 300, 300, 300] }
-    expect(cellState(record, 'direct', 900)).toBe('reflex')
-  })
-
-  it('is mental at full fade', () => {
-    const record = {
-      ...newRecord('1+3', NOW),
-      box: 5,
-      fade: 6 as const,
-      recentLatencyMs: [300, 300, 300, 300, 300],
-    }
-    expect(cellState(record, 'direct', 900)).toBe('mental')
-  })
-})
-
-const MENTAL = {
-  ...newRecord('1+3', NOW),
-  box: 5,
-  fade: 6 as const,
-  recentLatencyMs: [300, 300, 300, 300, 300],
-}
+import { AtomGrid } from './AtomGrid'
 
 describe('AtomGrid maps', () => {
   it('places each atom at its rod value (row) and operand (column)', () => {
@@ -58,16 +23,6 @@ describe('AtomGrid maps', () => {
   it('names the four states in a legend', () => {
     const { getByText } = render(<AtomGrid progress={emptyProgress()} />)
     for (const name of ['未学習', '学習中', '即答', '暗算']) expect(getByText(name)).toBeTruthy()
-  })
-})
-
-describe('atomStates and mentalCount', () => {
-  it('counts the atoms that are fully mental', () => {
-    const progress = { ...emptyProgress(), atoms: { '1+3': MENTAL } }
-    const states = atomStates(progress)
-    expect(Object.keys(states)).toHaveLength(180)
-    expect(states['1+3']).toBe('mental')
-    expect(mentalCount(states)).toBe(1)
   })
 })
 

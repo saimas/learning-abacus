@@ -1,11 +1,14 @@
 import { atomsForStage, highestUnlockedStage } from './curriculum'
 import { newRecord, type AtomRecord } from './fluency'
 import {
+  atomStates,
+  cellState,
   currentStage,
   dayKey,
   DEFAULT_CALIBRATION_MS,
   emptyProgress,
   markDayPracticed,
+  mentalCount,
   recordAttempt,
   recordPracticeAttempt,
   SCHEMA_VERSION,
@@ -185,5 +188,47 @@ describe('recordPracticeAttempt', () => {
 
   it('starts empty', () => {
     expect(emptyProgress().practices).toEqual({})
+  })
+})
+
+describe('cellState', () => {
+  it('is unseen with no record', () => {
+    expect(cellState(undefined, 'direct', 900)).toBe('unseen')
+  })
+
+  it('is learning for a fresh record', () => {
+    expect(cellState(newRecord('1+3', NOW), 'direct', 900)).toBe('learning')
+  })
+
+  it('is reflex when fast and well-boxed', () => {
+    const record = { ...newRecord('1+3', NOW), box: 5, recentLatencyMs: [300, 300, 300, 300, 300] }
+    expect(cellState(record, 'direct', 900)).toBe('reflex')
+  })
+
+  it('is mental at full fade', () => {
+    const record = {
+      ...newRecord('1+3', NOW),
+      box: 5,
+      fade: 6 as const,
+      recentLatencyMs: [300, 300, 300, 300, 300],
+    }
+    expect(cellState(record, 'direct', 900)).toBe('mental')
+  })
+})
+
+const MENTAL = {
+  ...newRecord('1+3', NOW),
+  box: 5,
+  fade: 6 as const,
+  recentLatencyMs: [300, 300, 300, 300, 300],
+}
+
+describe('atomStates and mentalCount', () => {
+  it('counts the atoms that are fully mental', () => {
+    const progress = { ...emptyProgress(), atoms: { '1+3': MENTAL } }
+    const states = atomStates(progress)
+    expect(Object.keys(states)).toHaveLength(180)
+    expect(states['1+3']).toBe('mental')
+    expect(mentalCount(states)).toBe(1)
   })
 })

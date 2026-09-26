@@ -66,3 +66,15 @@ export function isPracticeRecord(value: unknown): value is PracticeRecord {
     Number.isFinite(record.lastPractisedAt)
   )
 }
+
+// Where a practice kind stands, named for what the learner does at it:
+// not tried yet, answering on the beads (F0–F2), answering from faded beads
+// (F3–F5), or mental (F6).
+export type PracticeStage = 'unseen' | 'beads' | 'fading' | 'mental'
+
+export function practiceStage(record: PracticeRecord | undefined): PracticeStage {
+  if (record === undefined) return 'unseen'
+  if (record.fade >= MAX_FADE) return 'mental'
+  if (record.fade >= 3) return 'fading'
+  return 'beads'
+}

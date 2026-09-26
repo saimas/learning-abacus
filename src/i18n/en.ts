@@ -1,10 +1,8 @@
 import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-// Type-only on purpose: AtomGrid imports useStrings from '@/i18n', so a value import here would create a real runtime cycle.
-import type { CellState } from '@/ui/progress/AtomGrid'
-// Type-only on purpose, for the same reason as CellState: PracticeTable will import useStrings from '@/i18n'.
-import type { PracticeStage } from '@/ui/progress/PracticeTable'
 import { answerOf, digitAt, divisorFirstDigit, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
+import type { PracticeStage } from '@/domain/practice'
+import type { CellState } from '@/domain/progress'
 import type { BlockKind, PracticePart } from '@/domain/session'
 import type { WalkStep } from '@/domain/divisionWalk'
 import type { Strings, WalkCaption } from './ja'
