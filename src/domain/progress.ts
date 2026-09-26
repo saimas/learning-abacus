@@ -1,7 +1,9 @@
-import { classify } from './atoms'
+import { ATOMS, classify, type AtomClass } from './atoms'
 import { highestUnlockedStage, type StageIndex } from './curriculum'
+import { MAX_FADE } from './fade'
 import {
   applyAttempt,
+  isReflex,
   LATENCY_WINDOW,
   medianLatencyMs,
   newRecord,
@@ -148,4 +150,33 @@ export function recordPracticeAttempt(
     ...progress,
     practices: { ...progress.practices, [id]: applyPracticeAttempt(existing, correct, pace, now) },
   }
+}
+
+// Where one atom stands on the progress map: never tried, being learned, fast
+// enough to be a reflex, or a reflex with the beads fully faded.
+export type CellState = 'unseen' | 'learning' | 'reflex' | 'mental'
+
+export function cellState(
+  record: AtomRecord | undefined,
+  cls: AtomClass,
+  calibrationMs: number,
+): CellState {
+  if (record === undefined) return 'unseen'
+  const fluent = isReflex(record, cls, calibrationMs)
+  if (fluent && record.fade >= MAX_FADE) return 'mental'
+  if (fluent) return 'reflex'
+  return 'learning'
+}
+
+export function atomStates(progress: Progress): Record<string, CellState> {
+  return Object.fromEntries(
+    ATOMS.map((atom) => [
+      atom.id,
+      cellState(progress.atoms[atom.id], classify(atom), progress.calibrationMs),
+    ]),
+  )
+}
+
+export function mentalCount(states: Record<string, CellState>): number {
+  return Object.values(states).filter((state) => state === 'mental').length
 }

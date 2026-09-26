@@ -42,7 +42,7 @@ export const colors = {
 
 // Lightness only, darkening as a move is learned, so the map reads under
 // every kind of colour blindness. Keyed like CellState in
-// src/ui/progress/AtomGrid.tsx.
+// src/domain/progress.ts.
 export const cellColors = {
   unseen: '#E6DCCB',
   learning: '#E0BE7E',

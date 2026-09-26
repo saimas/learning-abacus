@@ -14,7 +14,9 @@ jest.mock('@/storage/progressStore')
 // effect, which is enough to exercise Home's on-focus refresh under Jest.
 const mockPush = jest.fn()
 jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above the imports
   const { useEffect } = require('react')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- as above
   const { Text, View } = require('react-native')
   return {
     Redirect: ({ href }: { href: string }) => <Text testID="redirect-to">{href}</Text>,

@@ -1,7 +1,7 @@
 # learning-abacus — N × N practice (＋ − × ÷, up to 3 digits): roadmap
 
 Date: 2026-09-23
-Status: Approved decomposition, pre-spec. **This is a roadmap, not an implementable spec.** Each sub-project below gets its own design spec and implementation plan.
+Status: **Complete** (2026-09-24): P1, P2 and P3 have all shipped; see §9. **This is a roadmap, not an implementable spec.** Each sub-project below got its own design spec and implementation plan.
 
 ## 1. What the owner asked for
 
@@ -99,9 +99,32 @@ My recommendation is (a) for P2 and P3, with the size ceiling the owner asked fo
 - The daily session stays as it is. If these modes later feed it, that is a separate decision.
 - Latency targets for multi-digit are unknown; the existing calibration is for single moves.
 
-## 8. How to resume
+## 8. How to resume (historical: followed for P1–P3)
 
 1. Read this file and `2026-09-20-learning-abacus-curriculum-design.md` §5 (scope stages) and §7 (scheduling).
 2. Start with **P1**. Run the brainstorming skill on P1 alone, settle §7's P1 questions with the owner, and write `docs/superpowers/specs/<date>-multi-digit-add-sub-design.md`.
 3. Then the writing-plans skill, then subagent-driven development, then a simulator check and a TestFlight build, as with builds 3–8.
 4. Keep P2 and P3 out of P1's spec. Revisit this roadmap when P1 ships.
+
+## 9. Outcome
+
+Every sub-project shipped, each with its own spec, plan and TestFlight build:
+
+| Sub-project | Spec | Build |
+|---|---|---|
+| P1 — multi-digit ＋ − | `2026-09-23-multi-digit-add-sub-design.md` | 9 |
+| P2 — × by 両落とし | `2026-09-23-multiply-design.md` | 10; operand board 13 |
+| Core rounds — けたの練習 as Home, 手順を見る | `2026-09-23-core-rounds-design.md` | 12 |
+| P3 — ÷ by 商除法 | `2026-09-24-divide-design.md` | 19 |
+| ÷ walkthrough, bead by bead | `2026-09-24-divide-walkthrough-design.md` | 21 |
+
+How §6 and §7's questions were settled:
+
+- **Rods on a phone (§6).** × took (a): the soroban holds the product only (2N rods), and the two numbers are shown on a small read-only soroban beneath it. ÷ sets the dividend on the soroban as 商除法 does (7 rods at 3けた, about 0.70×) with the divisor on that read-only board. Beads work at every size; no size fell back to the keypad.
+- **Menu.** First two segmented controls in the chooser (P1); then, at the owner's request, Home itself became the ＋ − × ÷ × 1 / 2 / 3けた grid, and the single-move session moved behind a smaller 基礎の練習 card (core rounds).
+- **Unlocking.** Every size is open from the start.
+- **Records.** One per kind (`add:2`); a multi-digit answer never credits or faults the single moves inside it.
+- **Teaching.** A walkthrough before the first × and ÷ round, replayable from Home, plus 手順を見る on every question. 1×1 is the 九九 itself, so it doubles as the times-tables drill.
+- **Cross-cutting.** The daily session is unchanged and is not fed by these modes. Multi-digit time targets are derived from the per-move targets, not yet tuned on real data.
+
+Next, if asked: 見取算 as P4 (§5), the first step toward 暗算検定 7-10級.

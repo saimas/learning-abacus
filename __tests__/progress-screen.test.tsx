@@ -11,6 +11,7 @@ jest.mock('@/storage/progressStore')
 // a minimal stand-in lets the target href be asserted without mounting real
 // navigation.
 jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above the imports
   const { Text } = require('react-native')
   return {
     Link: ({ href, testID }: { href: string; testID?: string }) => (

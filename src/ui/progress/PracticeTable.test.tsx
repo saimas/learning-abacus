@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native'
 import { newPracticeRecord } from '@/domain/practice'
 import { emptyProgress } from '@/domain/progress'
 import { colors } from '@/ui/theme'
-import { PracticeTable, practiceStage } from './PracticeTable'
+import { PracticeTable } from './PracticeTable'
 
 // Extract text color from a cell's child Text element
 const textColorOf = (cellTestID: string): string | undefined => {
@@ -20,15 +20,6 @@ const textColorOf = (cellTestID: string): string | undefined => {
   }
   return undefined
 }
-
-describe('practiceStage', () => {
-  it('names where a kind stands by its fade level', () => {
-    expect(practiceStage(undefined)).toBe('unseen')
-    expect(practiceStage({ ...newPracticeRecord(0), fade: 2 })).toBe('beads')
-    expect(practiceStage({ ...newPracticeRecord(0), fade: 3 })).toBe('fading')
-    expect(practiceStage({ ...newPracticeRecord(0), fade: 6 })).toBe('mental')
-  })
-})
 
 describe('PracticeTable', () => {
   it('shows a cell per kind, labelled for VoiceOver', () => {

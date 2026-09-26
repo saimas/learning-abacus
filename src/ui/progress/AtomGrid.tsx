@@ -1,42 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { ATOMS, atomId, classify, type AtomClass, type Direction } from '@/domain/atoms'
-import { isReflex, type AtomRecord } from '@/domain/fluency'
-import { MAX_FADE } from '@/domain/fade'
-import type { Progress } from '@/domain/progress'
+import { ATOMS, atomId, type Direction } from '@/domain/atoms'
+import { atomStates, mentalCount, type CellState, type Progress } from '@/domain/progress'
 import { useStrings } from '@/i18n'
 import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
-
-export type CellState = 'unseen' | 'learning' | 'reflex' | 'mental'
 
 const CELL_STATES: readonly CellState[] = ['unseen', 'learning', 'reflex', 'mental']
 const ROD_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 const OPERANDS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 const DIRECTIONS: readonly Direction[] = ['add', 'sub']
-
-export function cellState(
-  record: AtomRecord | undefined,
-  cls: AtomClass,
-  calibrationMs: number,
-): CellState {
-  if (record === undefined) return 'unseen'
-  const fluent = isReflex(record, cls, calibrationMs)
-  if (fluent && record.fade >= MAX_FADE) return 'mental'
-  if (fluent) return 'reflex'
-  return 'learning'
-}
-
-export function atomStates(progress: Progress): Record<string, CellState> {
-  return Object.fromEntries(
-    ATOMS.map((atom) => [
-      atom.id,
-      cellState(progress.atoms[atom.id], classify(atom), progress.calibrationMs),
-    ]),
-  )
-}
-
-export function mentalCount(states: Record<string, CellState>): number {
-  return Object.values(states).filter((state) => state === 'mental').length
-}
 
 // One direction's 90 atoms as a 10 × 9 grid: rows are the rod's value before
 // the move (0–9), columns the operand (1–9). Every atom has a fixed cell, so

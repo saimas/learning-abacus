@@ -10,6 +10,7 @@ jest.mock('@/storage/progressStore')
 jest.mock('@/storage/localeStore')
 
 jest.mock('expo-router', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above the imports
   const { Text } = require('react-native')
   return {
     Link: ({ href, testID }: { href: string; testID?: string }) => (

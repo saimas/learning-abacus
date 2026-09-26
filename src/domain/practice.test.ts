@@ -1,4 +1,10 @@
-import { applyPracticeAttempt, isPracticeRecord, newPracticeRecord, type PracticeRecord } from './practice'
+import {
+  applyPracticeAttempt,
+  isPracticeRecord,
+  newPracticeRecord,
+  practiceStage,
+  type PracticeRecord,
+} from './practice'
 
 function at(fade: PracticeRecord['fade'], overrides: Partial<PracticeRecord> = {}): PracticeRecord {
   return { ...newPracticeRecord(0), fade, ...overrides }
@@ -44,5 +50,14 @@ describe('isPracticeRecord', () => {
     expect(isPracticeRecord({ ...newPracticeRecord(5), fade: 9 })).toBe(false)
     expect(isPracticeRecord({ ...newPracticeRecord(5), consecutiveWrong: 'x' })).toBe(false)
     expect(isPracticeRecord(null)).toBe(false)
+  })
+})
+
+describe('practiceStage', () => {
+  it('names where a kind stands by its fade level', () => {
+    expect(practiceStage(undefined)).toBe('unseen')
+    expect(practiceStage({ ...newPracticeRecord(0), fade: 2 })).toBe('beads')
+    expect(practiceStage({ ...newPracticeRecord(0), fade: 3 })).toBe('fading')
+    expect(practiceStage({ ...newPracticeRecord(0), fade: 6 })).toBe('mental')
   })
 })

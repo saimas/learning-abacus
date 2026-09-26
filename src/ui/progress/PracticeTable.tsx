@@ -1,22 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { MAX_FADE } from '@/domain/fade'
-import type { PracticeRecord } from '@/domain/practice'
+import { practiceStage, type PracticeStage } from '@/domain/practice'
 import { DIGITS, OPERATION_SYMBOL, OPERATIONS, practiceId, type PracticeKind } from '@/domain/problem'
 import type { Progress } from '@/domain/progress'
 import { useStrings } from '@/i18n'
 import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
-
-// Where a practice kind stands, named for what the learner does at it:
-// not tried yet, answering on the beads (F0–F2), answering from faded beads
-// (F3–F5), or mental (F6).
-export type PracticeStage = 'unseen' | 'beads' | 'fading' | 'mental'
-
-export function practiceStage(record: PracticeRecord | undefined): PracticeStage {
-  if (record === undefined) return 'unseen'
-  if (record.fade >= MAX_FADE) return 'mental'
-  if (record.fade >= 3) return 'fading'
-  return 'beads'
-}
 
 // The atom map's four colours, in the same order of progress.
 const STAGE_COLOR: Record<PracticeStage, string> = {
