@@ -75,14 +75,14 @@ As for ＋ −: the per-move target of each digit's atom, plus `TYPING_ALLOWANCE
 
 ## 4. Screens and wording
 
-- **`src/ui/mitori/TermColumn.tsx`** (new): `{ terms, activeTerm?: number }`. Renders the column (§2) at the prompt's font and size, `fontVariant: ['tabular-nums']`; the active number's digits and sign in `colors.accent`. It is one accessible element whose label is `strings.problemPrompt(problem)`, testID `prompt` (so tests find the prompt the same way as for the other kinds), with a testID per row (`term-0`…`term-4`).
-- **`QuestionView`** gains `renderPrompt?: (activeStep: number | undefined) => ReactNode`, drawn in place of the text prompt in both the bead and keypad layouts, following the same `activeStep` as `renderBeneath`. Without it, the text prompt is drawn as today. The prompt's scroll area already sizes itself to what it holds.
+- **`src/ui/mitori/TermColumn.tsx`** (new): `{ terms, label, activeTerm?: number }`. Renders the column (§2) in the prompt's font at the prompt's 28 pt (line height 34), `fontVariant: ['tabular-nums']`; on a window shorter than `SHORT_WINDOW_HEIGHT` (750 pt, a 375 × 667 phone) at 22 pt (line height 26), so five lines leave the soroban and the controls their room. The active number's digits and sign are in `colors.accent`. It is one accessible element whose label is `label` (`strings.problemPrompt(problem)`), testID `prompt` (so tests find the prompt the same way as for the other kinds), with a testID per row (`term-0`…`term-4`).
+- **`QuestionView`** gains `renderPrompt?: (activeStep: number | undefined) => ReactNode`, drawn in place of the text prompt in both the bead and keypad layouts, following the same `activeStep` as `renderBeneath`. Without it, the text prompt is drawn as today. The prompt's scroll area already sizes itself to what it holds. On a short window the soroban is capped at `SHORT_WINDOW_BEAD_SCALE` with a `renderPrompt` as it already is with a `renderBeneath`, since the column takes the height a board would.
 - **`RoundRunner`** passes `renderPrompt` for a 見取算 problem only: `<TermColumn terms={problem.terms} activeTerm={groupOf(activeStep)?.term} />`.
-- **`ProblemCorrectionCard.groupLine`**: a column group with `term` reads `strings.mitoriLine(terms[term], place, atom, cascades)`.
+- **`ProblemCorrectionCard.groupLine`**: a column group with `term` reads `strings.mitoriLine(terms[term], place, atom, cascades)`. Its line's testID is `correction-term-<term>-<place>`, since a place repeats across the numbers (a ＋ − column keeps `correction-column-<place>`).
 - **i18n** (ja / en):
   - `OP_NAME.mitori`: 見取算 / Columns (so `roundName` gives 2けたの見取算 / 2-digit columns).
   - `problemPrompt` for 見取算, used as the VoiceOver label: 「47、たす85、ひく23、たす61、ひく19。」 / "47 + 85 − 23 + 61 − 19".
-  - `mitoriLine(term, place, atom, cascades)`: the signed number, then the ＋ − column line: 「−23　十の位　…」 / "−23, tens: …". The sign is always shown here (＋85, −23), since after a miss the card lists every line with nothing highlighted, and each "十の位" must say which number it belongs to.
+  - `mitoriLine(term, place, atom, cascades)`: the signed number, then the ＋ − column line: 「−23　十の位　…」 / "−23 · Tens: …". The sign is always shown here (＋85, −23), since after a miss the card lists every line with nothing highlighted, and each "十の位" must say which number it belongs to.
 - Home and the progress screen need no change beyond the new row that `OPERATIONS` gives `PracticeTable`. `app/round.tsx` needs no intro gate for 見取算.
 
 ## 5. Testing
@@ -93,7 +93,7 @@ As for ＋ −: the per-move target of each digit's atom, plus `TYPING_ALLOWANCE
 - **Ids and storage**: `parsePracticeId('mitori:2')`; a `mitori:3` record survives save and load; an unknown `mitori:4` is dropped.
 - **i18n**: both catalogues have the new keys (the catalogue parity test); the prompt sentence and a line in each language.
 - **Components**: `TermColumn` shows the numbers with minus signs only on the subtracted ones, and highlights `activeTerm`; a 見取算 round shows the column, 手順を見る highlights the number of the stepped move and the line of the move; the correction card's lines carry their numbers; `PracticeTable` has the ± row and a cell that starts `mitori:2`.
-- **Simulator**: iPhone 17 Pro, and a 375 × 667 screen (deep link `exp://127.0.0.1:8081/--/round?kind=mitori:3`): the five-line column, the 4-rod soroban and the controls fit in bead and keypad modes, with the panel open and closed. If the column crowds the soroban at 375 × 667, it drops to a smaller font size than the prompt's 28 pt.
+- **Simulator**: iPhone 17 Pro, and a 375 × 667 screen (deep link `exp://127.0.0.1:8081/--/round?kind=mitori:3`): the five-line column, the 4-rod soroban and the controls fit in bead and keypad modes, with the panel open and closed. At 375 × 667 the column's 22 pt size and the capped soroban must leave 手順を見る and こたえる on screen; if they do not, the column's size is what gives way.
 
 ## 6. Build order
 
