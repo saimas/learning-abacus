@@ -126,7 +126,8 @@ textbook progression, not exam ladder. Phase 1 earns no official grade, so the
 atom map (§9) must carry motivation by itself.
 
 The first realistic external milestone is **暗算検定 7-10級**: 見取暗算 only,
-1-2 digits, 3-5 terms, 50 questions in 12 minutes. It is mental-only, so it
+1-digit terms, 3-5 terms (3口3字 to 5口5字; corrected 2026-09-26, it said
+1-2 digits), 50 questions in 12 minutes. It is mental-only, so it
 validates the fade approach directly, and it sits just past Phase 1.
 
 Sources:
