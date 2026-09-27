@@ -1,5 +1,5 @@
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { OPERATION_SYMBOL, type Digits, type Problem, type StepGroup } from '@/domain/problem'
+import { OPERATION_SYMBOL, type Digits, type PairProblem, type StepGroup } from '@/domain/problem'
 import { emptySoroban, setValue } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus } from '@/ui/abacus/Abacus'
@@ -54,7 +54,7 @@ export function divisorScale(digits: Digits, room: number, windowHeight: number)
 // `activeGroup` is the group of the move the learner has just stepped to, if
 // any. A 九九 names the places of its digits, and the rods count from the
 // highest place, so place p is rod digits − 1 − p.
-export function OperandBoard({ problem, activeGroup }: { problem: Problem; activeGroup?: StepGroup }) {
+export function OperandBoard({ problem, activeGroup }: { problem: PairProblem; activeGroup?: StepGroup }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
   // The screen's gutters are space.xl on each side (Screen).

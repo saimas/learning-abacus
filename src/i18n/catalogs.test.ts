@@ -1,5 +1,6 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+import type { MitoriProblem } from '@/domain/problem'
 import { en } from './en'
 import { ja } from './ja'
 import { LOCALES } from './locale'
@@ -248,6 +249,13 @@ describe('multi-digit strings', () => {
     expect(ja.problemPrompt({ op: 'mul', digits: 2, a: 47, b: 36 })).toBe('47に36をかける。')
     expect(ja.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('1692を36でわる。')
     expect(en.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('Divide 1692 by 36.')
+  })
+
+  // Spec (見取算) §4: the column's VoiceOver label.
+  it('prompts a 見取算 column as one sentence', () => {
+    const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 85, -23, 61, -19] }
+    expect(ja.problemPrompt(column)).toBe('47、たす85、ひく23、たす61、ひく19。')
+    expect(en.problemPrompt(column)).toBe('47 + 85 − 23 + 61 − 19')
   })
 
   it('reads a column as its rod and its move', () => {

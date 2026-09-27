@@ -1,6 +1,6 @@
 import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-import { answerOf, digitAt, divisorFirstDigit, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
+import { answerOf, digitAt, divisorFirstDigit, type Operation, type PairProblem, type PracticeKind } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { CellState } from '@/domain/progress'
 import type { BlockKind, PracticePart } from '@/domain/session'
@@ -64,6 +64,7 @@ const OP_NAME: Record<Operation, string> = {
   sub: 'Subtraction',
   mul: 'Multiplication',
   div: 'Division',
+  mitori: 'Columns',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -158,7 +159,7 @@ function quotientLine(
 
 // The division walkthrough's words for one step, as ja's (spec: division
 // walkthrough §3).
-function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+function divideWalk(problem: PairProblem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
@@ -344,6 +345,10 @@ export const en: Strings = {
         return `Multiply ${problem.a} by ${problem.b}.`
       case 'div':
         return `Divide ${problem.a} by ${problem.b}.`
+      case 'mitori':
+        return problem.terms
+          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? '−' : '+'} ${Math.abs(term)}`))
+          .join(' ')
       default:
         return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
     }

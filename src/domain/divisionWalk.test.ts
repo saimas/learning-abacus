@@ -1,5 +1,5 @@
 import { divisionWalk, walkFrames, walkStates, type WalkStep } from './divisionWalk'
-import { answerOf, generateProblems, problemStates, type Digits, type Problem } from './problem'
+import { answerOf, generateProblems, problemStates, type Digits, type PairProblem } from './problem'
 import { readValue } from './soroban'
 
 // A small seeded generator (mulberry32), so the 3けた sample is repeatable.
@@ -14,7 +14,7 @@ function seeded(seed: number): () => number {
   }
 }
 
-function division(q: number, d: number): Problem {
+function division(q: number, d: number): PairProblem {
   const digits = String(d).length as Digits
   return { op: 'div', digits, a: q * d, b: d }
 }
@@ -25,7 +25,7 @@ const kinds = (walk: WalkStep[]) => walk.map((step) => step.kind)
 // walkthrough) §2): it must end where the rounds' steps do, never get stuck
 // on a digit's first 九九 (the guess is that 九九), lower a digit one at a
 // time, and settle each lane on the quotient's digit.
-function walkFaults(problem: Problem): string[] {
+function walkFaults(problem: PairProblem): string[] {
   const faults: string[] = []
   const name = `${problem.a} ÷ ${problem.b}`
   const walk = divisionWalk(problem)
@@ -280,7 +280,12 @@ describe('divisionWalk', () => {
     const faults: string[] = []
     for (let q = 2; q <= 9; q++) for (let d = 2; d <= 9; d++) faults.push(...walkFaults(division(q, d)))
     for (let q = 10; q <= 99; q++) for (let d = 10; d <= 99; d++) faults.push(...walkFaults(division(q, d)))
-    faults.push(...generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(23)).flatMap(walkFaults))
+    faults.push(
+      ...generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(23)).flatMap((p) => {
+        if (p.op === 'mitori') throw new Error('expected a division')
+        return walkFaults(p)
+      }),
+    )
     expect(faults).toEqual([])
   })
 })

@@ -6,6 +6,7 @@ import {
   divisorFirstDigit,
   type Digits,
   type Operation,
+  type PairProblem,
   type PracticeKind,
   type Problem,
 } from '@/domain/problem'
@@ -58,7 +59,7 @@ const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の
 // walkthrough's soroban.
 const PLACE_SHORT: readonly string[] = ['一', '十', '百', '千', '万', '十万', '百万']
 
-const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算' }
+const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算', mitori: '見取算' }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'まだ',
@@ -173,7 +174,7 @@ function quotientLine(
 // and every number in them is one the screen shows.
 export type WalkCaption = { what: string; math: string; note: string; rods: string }
 
-function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+function divideWalk(problem: PairProblem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
@@ -358,6 +359,10 @@ export const ja = {
         return `${problem.a}に${problem.b}をかける。`
       case 'div':
         return `${problem.a}を${problem.b}でわる。`
+      case 'mitori':
+        return `${problem.terms
+          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? 'ひく' : 'たす'}${Math.abs(term)}`))
+          .join('、')}。`
     }
   },
   // One line of a problem's answer card: the rod, then the move worked on

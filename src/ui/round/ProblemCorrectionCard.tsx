@@ -82,6 +82,8 @@ export function groupLine(strings: Strings, problem: Problem, group: StepGroup):
     case 'product':
       return strings.productLine(group.x, group.y, group.place, group.cascades)
     case 'quotient':
+      // Only a ÷ problem has quotient groups.
+      if (problem.op !== 'div') return null
       return strings.quotientLine(
         group.q,
         group.partial,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { stepColouring } from '@/domain/exercise'
-import { answerOf, OPERATION_SYMBOL, problemStates, problemSteps, rodsFor, type Problem } from '@/domain/problem'
+import { answerOf, OPERATION_SYMBOL, problemStates, problemSteps, rodsFor, type PairProblem } from '@/domain/problem'
 import { emptySoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
@@ -39,7 +39,7 @@ export function MethodIntro({
   finishLabel,
   onFinish,
 }: {
-  problem: Problem
+  problem: PairProblem
   intro: IntroTexts
   finishLabel: string
   onFinish: () => void

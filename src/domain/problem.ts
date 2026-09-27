@@ -5,12 +5,17 @@ import { emptySoroban, readRod, readValue, rodFor, setValue, type Soroban } from
 // Spec (multi-digit ＋ − and ×) §3: practice of two numbers of the same
 // size, chosen as an operation and a digit count. For ÷ (spec: division §1)
 // the size is the divisor's and the quotient's: a ÷ problem is a × problem
-// run backwards, a the dividend and b the divisor.
-export type Operation = 'add' | 'sub' | 'mul' | 'div'
+// run backwards, a the dividend and b the divisor. 見取算 (spec: 見取算 §3) is
+// a column of numbers instead of two: its terms are signed, the first always
+// positive.
+export type Operation = 'add' | 'sub' | 'mul' | 'div' | 'mitori'
+export type PairOperation = Exclude<Operation, 'mitori'>
 export type Digits = 1 | 2 | 3
 export type PracticeKind = { op: Operation; digits: Digits }
 export type PracticeId = `${Operation}:${Digits}`
-export type Problem = { op: Operation; digits: Digits; a: number; b: number }
+export type PairProblem = { op: PairOperation; digits: Digits; a: number; b: number }
+export type MitoriProblem = { op: 'mitori'; digits: Digits; terms: number[] }
+export type Problem = PairProblem | MitoriProblem
 
 export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div']
 export const DIGITS: readonly Digits[] = [1, 2, 3]
@@ -20,7 +25,7 @@ export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =
 
 // The same in every language, so it lives with the operations rather than
 // in the string catalogues.
-export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×', div: '÷' }
+export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×', div: '÷', mitori: '±' }
 
 export const ROUND_LENGTH = 10
 // Typing the answer costs time the arithmetic does not, and a 4-digit answer
@@ -36,6 +41,10 @@ export const MULTIPLY_RECALL_MS = 600
 // divisor, then trying a digit) is work of its own in 商除法 that no bead
 // move measures. A first estimate, like MULTIPLY_RECALL_MS.
 export const DIVIDE_ESTIMATE_MS = 1500
+
+// Spec (見取算) §1: five numbers at every size, the longest 暗算検定 10–7級
+// column and 珠算検定 10級's 2けた5口.
+export const MITORI_TERMS = 5
 
 export function practiceId(kind: PracticeKind): PracticeId {
   return `${kind.op}:${kind.digits}`
@@ -62,14 +71,17 @@ export function answerOf(problem: Problem): number {
     // Always whole: a ÷ problem is made as q × d, then divided by d.
     case 'div':
       return problem.a / problem.b
+    case 'mitori':
+      return problem.terms.reduce((sum, term) => sum + term, 0)
   }
 }
 
 // ＋ and − keep one rod beyond the operands for the last carry (999 + 999 =
-// 1998). A product of two N-digit numbers can have 2N digits (99 × 99 =
-// 9801), and 両落とし puts only the product on the soroban. 商除法 sets the
-// dividend (up to 2N digits, places 0 to 2N − 1) and places the N-digit
-// quotient left of it, from place 2N down to place N + 1: 2N + 1 rods.
+// 1998), and so does 見取算: five N-digit numbers never pass 5 × 999 = 4995. A
+// product of two N-digit numbers can have 2N digits (99 × 99 = 9801), and
+// 両落とし puts only the product on the soroban. 商除法 sets the dividend (up
+// to 2N digits, places 0 to 2N − 1) and places the N-digit quotient left of
+// it, from place 2N down to place N + 1: 2N + 1 rods.
 export function rodsFor(kind: { op: Operation; digits: Digits }): number {
   switch (kind.op) {
     case 'mul':
@@ -82,9 +94,16 @@ export function rodsFor(kind: { op: Operation; digits: Digits }): number {
 }
 
 // What the soroban shows before the first step: a for ＋ − (and the dividend
-// for ÷), nothing for ×.
+// for ÷), nothing for ×, and a 見取算 column's first number.
 export function startOf(problem: Problem): number {
-  return problem.op === 'mul' ? 0 : problem.a
+  switch (problem.op) {
+    case 'mul':
+      return 0
+    case 'mitori':
+      return problem.terms[0] ?? 0
+    default:
+      return problem.a
+  }
 }
 
 function randomInt(random: () => number, low: number, high: number): number {
@@ -96,33 +115,63 @@ function randomInt(random: () => number, low: number, high: number): number {
 // numbers are drawn again, since 0 teaches nothing and reads as a blank
 // soroban. A division (spec: division §1) is a multiplication run
 // backwards: it draws the quotient and the divisor, so it always comes out
-// exact, and the dividend is their product.
+// exact, and the dividend is their product. A 見取算 column (spec: 見取算 §3)
+// is drawn whole and drawn again if it breaks its rules.
 export function generateProblems(kind: PracticeKind, count: number, random: () => number): Problem[] {
-  // × 1 teaches nothing (anything × 1 is itself), so 1×1 draws from 2..9
-  // instead of the usual single-digit range of 1..9, leaving out × 1. ÷ 1,
-  // and a quotient of 1, teach nothing either.
-  const nineNine = (kind.op === 'mul' || kind.op === 'div') && kind.digits === 1
-  const low = nineNine ? 2 : 10 ** (kind.digits - 1)
-  const high = 10 ** kind.digits - 1
   const problems: Problem[] = []
   const seen = new Set<string>()
   // A bound, not an expectation: even 1-digit subtraction has 36 pairs, so
   // this only stops a broken `random` from spinning forever.
   for (let tries = 0; problems.length < count && tries < count * 1000; tries++) {
-    let a = randomInt(random, low, high)
-    let b = randomInt(random, low, high)
-    if (kind.op === 'sub') {
-      if (a === b) continue
-      if (a < b) [a, b] = [b, a]
-    }
-    // Drawn as the quotient a and the divisor b; the problem is (a × b) ÷ b.
-    if (kind.op === 'div') a *= b
-    const key = `${a},${b}`
+    const problem = kind.op === 'mitori' ? drawMitori(kind.digits, random) : drawPair(kind.op, kind.digits, random)
+    if (problem === null) continue
+    const key = problem.op === 'mitori' ? problem.terms.join(',') : `${problem.a},${problem.b}`
     if (seen.has(key)) continue
     seen.add(key)
-    problems.push({ op: kind.op, digits: kind.digits, a, b })
+    problems.push(problem)
   }
   return problems
+}
+
+// One two-number problem, or null for a draw that teaches nothing.
+function drawPair(op: PairOperation, digits: Digits, random: () => number): PairProblem | null {
+  // × 1 teaches nothing (anything × 1 is itself), so 1×1 draws from 2..9
+  // instead of the usual single-digit range of 1..9, leaving out × 1. ÷ 1,
+  // and a quotient of 1, teach nothing either.
+  const nineNine = (op === 'mul' || op === 'div') && digits === 1
+  const low = nineNine ? 2 : 10 ** (digits - 1)
+  const high = 10 ** digits - 1
+  let a = randomInt(random, low, high)
+  let b = randomInt(random, low, high)
+  if (op === 'sub') {
+    if (a === b) return null
+    if (a < b) [a, b] = [b, a]
+  }
+  // Drawn as the quotient a and the divisor b; the problem is (a × b) ÷ b.
+  if (op === 'div') a *= b
+  return { op, digits, a, b }
+}
+
+// Five N-digit numbers; one or two of numbers 2–5, chosen at random, are
+// subtracted. Null if the running total would go below 0 on the way, which
+// the soroban cannot show, or end at 0, which reads as a blank soroban.
+function drawMitori(digits: Digits, random: () => number): MitoriProblem | null {
+  const low = 10 ** (digits - 1)
+  const high = 10 ** digits - 1
+  const values = Array.from({ length: MITORI_TERMS }, () => randomInt(random, low, high))
+  const open = Array.from({ length: MITORI_TERMS - 1 }, (_, i) => i + 1)
+  const subtracted = new Set<number>()
+  for (let count = randomInt(random, 1, 2); count > 0; count--) {
+    const [position] = open.splice(randomInt(random, 0, open.length - 1), 1)
+    if (position !== undefined) subtracted.add(position)
+  }
+  const terms = values.map((value, index) => (subtracted.has(index) ? -value : value))
+  let total = 0
+  for (const term of terms) {
+    total += term
+    if (total < 0) return null
+  }
+  return total === 0 ? null : { op: 'mitori', digits, terms }
 }
 
 // A rod step with its rod named outright, since a problem's steps land on
@@ -164,9 +213,10 @@ export type Move = { place: number; atom: Atom; steps: PlacedStep[]; cascades: b
 // `subtract` takes the 九九 q × y off the remainder, where y is the
 // divisor's digit at `yPlace`, so the divisor board can point at it; `place`
 // is where its ones digit comes off, and its tens digit comes off one place
-// above.
+// above. A 見取算 column's `term` is the index in the problem's `terms` of
+// the number the move belongs to (spec: 見取算 §3); ＋ − columns leave it out.
 export type StepGroup =
-  | { kind: 'column'; place: number; atom: Atom | null; steps: PlacedStep[]; cascades: boolean }
+  | { kind: 'column'; place: number; atom: Atom | null; steps: PlacedStep[]; cascades: boolean; term?: number }
   | {
     kind: 'product'
     x: number
@@ -220,7 +270,7 @@ export function digitAt(n: number, place: number): number {
 
 // The digit each quotient digit's guess divides by (see StepGroup): a ÷
 // problem's divisor has `digits` digits, so this is the one at the top.
-export function divisorFirstDigit(problem: Problem): number {
+export function divisorFirstDigit(problem: PairProblem): number {
   return digitAt(problem.b, problem.digits - 1)
 }
 
@@ -266,28 +316,60 @@ function placeMove(
   return { soroban: current, steps, cascades }
 }
 
-// Spec §3: a soroban works from the highest place down. Carries only ever go
-// left, into columns already worked, so the rod a column is worked on still
-// shows a's digit there when its turn comes.
-function columnSteps(problem: Problem, direction: Direction): StepGroup[] {
-  const rods = rodsFor(problem)
-  let soroban = setValue(emptySoroban(rods), problem.a)
-  const columns: StepGroup[] = []
-  for (let place = problem.digits - 1; place >= 0; place--) {
-    const digit = digitAt(problem.b, place)
+// Plays `value`'s digits onto `soroban` from its highest place down (0 =
+// ones), each the one atom it is from what its rod shows by then. Carries
+// only ever go left, into columns already worked, so the rod a column is
+// worked on still shows what it did when its turn comes. A 0 digit moves
+// nothing but keeps its group. `term` tags each group for 見取算.
+function playColumns(
+  soroban: Soroban,
+  value: number,
+  digits: Digits,
+  direction: Direction,
+  term?: number,
+): { soroban: Soroban; groups: StepGroup[] } {
+  const rods = soroban.rods.length
+  const tag = term === undefined ? {} : { term }
+  let current = soroban
+  const groups: StepGroup[] = []
+  for (let place = digits - 1; place >= 0; place--) {
+    const digit = digitAt(value, place)
     if (digit === 0) {
-      columns.push({ kind: 'column', place, atom: null, steps: [], cascades: false })
+      groups.push({ kind: 'column', place, atom: null, steps: [], cascades: false, ...tag })
       continue
     }
     const index = rods - 1 - place
-    const rod = soroban.rods[index]
+    const rod = current.rods[index]
     if (rod === undefined) throw new Error(`no rod at index ${index}`)
     const atom = atomFor(readRod(rod), digit, direction)
-    const move = placeMove(soroban, index, atom)
-    soroban = move.soroban
-    columns.push({ kind: 'column', place, atom, steps: move.steps, cascades: move.cascades })
+    const move = placeMove(current, index, atom)
+    current = move.soroban
+    groups.push({ kind: 'column', place, atom, steps: move.steps, cascades: move.cascades, ...tag })
   }
-  return columns
+  return { soroban: current, groups }
+}
+
+// Spec §3: a soroban works from the highest place down.
+function columnSteps(problem: PairProblem, direction: Direction): StepGroup[] {
+  const start = setValue(emptySoroban(rodsFor(problem)), problem.a)
+  return playColumns(start, problem.b, problem.digits, direction).groups
+}
+
+// Spec (見取算) §3: the first number is on the soroban at the start; each
+// later one is worked onto it as a ＋ − problem's b is, added or subtracted
+// by its sign. The running total never goes below 0 (generateProblems), so
+// working a subtraction from its highest digit always finds something to
+// borrow from, as it does for a > b in ＋ −.
+function mitoriSteps(problem: MitoriProblem): StepGroup[] {
+  let soroban = setValue(emptySoroban(rodsFor(problem)), startOf(problem))
+  const groups: StepGroup[] = []
+  problem.terms.forEach((term, index) => {
+    if (index === 0) return
+    const played = playColumns(soroban, Math.abs(term), problem.digits, term < 0 ? 'sub' : 'add', index)
+    soroban = played.soroban
+    groups.push(...played.groups)
+  })
+  return groups
 }
 
 // Plays each digit, in order, on the rod at its place (0 = ones), as the one
@@ -332,7 +414,7 @@ export function productDigits(product: number, place: number): [digit: number, p
 // its tens digit then its ones digit. The ones digit's place is the two
 // digits' places added together. A digit of 0 is not a move, but the 九九 is
 // still a step the learner takes, so it keeps its group.
-function productSteps(problem: Problem): StepGroup[] {
+function productSteps(problem: PairProblem): StepGroup[] {
   let soroban = emptySoroban(rodsFor(problem))
   const groups: StepGroup[] = []
   for (let i = problem.digits - 1; i >= 0; i--) {
@@ -361,7 +443,7 @@ function productSteps(problem: Problem): StepGroup[] {
 // rest of that product, so the remainder never goes below 0 and no borrow
 // reaches the quotient's rods. At the end only the quotient is left,
 // followed by N + 1 zeros.
-function quotientSteps(problem: Problem): StepGroup[] {
+function quotientSteps(problem: PairProblem): StepGroup[] {
   const n = problem.digits
   const quotient = answerOf(problem)
   let soroban = setValue(emptySoroban(rodsFor(problem)), problem.a)
@@ -403,14 +485,15 @@ function quotientSteps(problem: Problem): StepGroup[] {
 }
 
 export function problemSteps(problem: Problem): StepGroup[] {
-  const op = problem.op
-  switch (op) {
+  switch (problem.op) {
     case 'mul':
       return productSteps(problem)
     case 'div':
       return quotientSteps(problem)
+    case 'mitori':
+      return mitoriSteps(problem)
     default:
-      return columnSteps(problem, op)
+      return columnSteps(problem, problem.op)
   }
 }
 

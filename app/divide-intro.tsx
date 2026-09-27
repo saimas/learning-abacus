@@ -1,4 +1,4 @@
-import type { Problem } from '@/domain/problem'
+import type { PairProblem } from '@/domain/problem'
 import { DivideWalkthrough } from '@/ui/intro/DivideWalkthrough'
 import { IntroScreen } from '@/ui/intro/IntroScreen'
 import { useProgress } from '@/ui/ProgressProvider'
@@ -7,7 +7,7 @@ import { useProgress } from '@/ui/ProgressProvider'
 // a 2けた problem whose two quotient digits both land one rod left of the
 // head (割れない) and each need their 九九 guess fixed down by one, with a
 // 九九 taken off per divisor digit after each.
-const EXAMPLE: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const EXAMPLE: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
 
 function Walkthrough({ finishLabel, onFinish }: { finishLabel: string; onFinish: () => void }) {
   return <DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />
