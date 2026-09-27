@@ -107,6 +107,21 @@ function productDigits(product: number, place: number): (readonly [digit: number
   ).filter(([digit]) => digit !== 0)
 }
 
+function columnLine(place: number, atom: Atom, cascades: boolean): string {
+  return `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
+    cascades
+      ? atom.direction === 'add'
+        ? ' (and carries again into the next rod)'
+        : ' (borrowing from a rod further left)'
+      : ''
+  }`
+}
+
+// As ja's: the number, signed, then the column line.
+function mitoriLine(term: number, place: number, atom: Atom, cascades: boolean): string {
+  return `${term < 0 ? '−' : '+'}${Math.abs(term)} · ${columnLine(place, atom, cascades)}`
+}
+
 // One line of a × problem's answer card: the 九九, then where each non-zero
 // digit goes.
 function productLine(x: number, y: number, place: number, cascades: boolean): string {
@@ -353,14 +368,8 @@ export const en: Strings = {
         return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
     }
   },
-  columnLine: (place, atom, cascades) =>
-    `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
-      cascades
-        ? atom.direction === 'add'
-          ? ' (and carries again into the next rod)'
-          : ' (borrowing from a rod further left)'
-        : ''
-    }`,
+  columnLine,
+  mitoriLine,
   productLine,
   quotientLine,
   subtractLine,

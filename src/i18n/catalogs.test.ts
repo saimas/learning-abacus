@@ -265,6 +265,15 @@ describe('multi-digit strings', () => {
     )
   })
 
+  // Spec (見取算) §4: a 見取算 line names its number, signed, before the ＋ −
+  // column line, since after a miss every line shows at once.
+  it('prefixes a 見取算 column line with its number', () => {
+    expect(ja.mitoriLine(-23, 1, atom(7, 2, 'sub'), false)).toBe(`−23　${ja.columnLine(1, atom(7, 2, 'sub'), false)}`)
+    expect(ja.mitoriLine(30, 1, atom(4, 3, 'add'), false)).toBe(`＋30　${ja.columnLine(1, atom(4, 3, 'add'), false)}`)
+    expect(en.mitoriLine(-23, 1, atom(7, 2, 'sub'), false)).toBe(`−23 · ${en.columnLine(1, atom(7, 2, 'sub'), false)}`)
+    expect(en.mitoriLine(30, 1, atom(4, 3, 'add'), false)).toBe(`+30 · ${en.columnLine(1, atom(4, 3, 'add'), false)}`)
+  })
+
   it('names all four rods', () => {
     expect([0, 1, 2, 3].map(ja.rodName)).toEqual(['一の位', '十の位', '百の位', '千の位'])
   })

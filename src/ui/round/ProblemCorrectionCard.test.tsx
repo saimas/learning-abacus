@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
+import { atomId, type Direction } from '@/domain/atoms'
+import type { MitoriProblem } from '@/domain/problem'
 import { colors } from '@/ui/theme'
 import { textOf } from '@/ui/session/testing'
 import { ActiveLayoutContext } from '@/ui/session/useActiveLineLayout'
+import { ja } from '@/i18n/ja'
 import { ProblemCorrectionCard } from './ProblemCorrectionCard'
 
 const colorOf = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style)?.color
@@ -155,6 +158,34 @@ describe('ProblemCorrectionCard', () => {
   it('leaves the answer line alone without expectedBeads', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
     expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+  })
+
+  // Spec (見取算) §4. 47, +30, −23, +61, −19 = 96. 30's ones digit is 0, so
+  // it moves nothing and has no line.
+  const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
+  const atom = (rodValue: number, operand: number, direction: Direction) => ({
+    id: atomId(rodValue, operand, direction),
+    rodValue,
+    operand,
+    direction,
+  })
+
+  it('gives each 見取算 digit move a line naming its number', () => {
+    render(<ProblemCorrectionCard problem={column} expected={96} />)
+    // 47 + 30: the tens rod shows 4, and 3 is added to it.
+    expect(textOf(screen.getByTestId('correction-term-1-1'))).toBe(`＋30　${ja.columnLine(1, atom(4, 3, 'add'), false)}`)
+    expect(screen.queryByTestId('correction-term-1-0')).toBeNull()
+    // 77 − 23: the tens rod shows 7, then the ones rod 7.
+    expect(textOf(screen.getByTestId('correction-term-2-1'))).toBe(`−23　${ja.columnLine(1, atom(7, 2, 'sub'), false)}`)
+    expect(textOf(screen.getByTestId('correction-term-2-0'))).toBe(`−23　${ja.columnLine(0, atom(7, 3, 'sub'), false)}`)
+    expect(screen.getByTestId('correction-term-4-0')).toBeTruthy()
+  })
+
+  it('highlights the 見取算 move stepped to', () => {
+    // Groups: 30's tens (0), 30's ones (1, no line), 23's tens (2), ...
+    render(<ProblemCorrectionCard problem={column} expected={96} activeGroup={2} />)
+    expect(colorOf('correction-term-2-1')).toBe(colors.accent)
+    expect(colorOf('correction-term-1-1')).not.toBe(colors.accent)
   })
 })
 

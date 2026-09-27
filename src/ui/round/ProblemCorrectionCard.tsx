@@ -8,11 +8,11 @@ import { colors, fonts } from '@/ui/theme'
 // The explanation of a problem, as the step panel shows it: the answer, then
 // how each group is worked, highest place first, in the same words as a
 // single move's card. A column group (＋ −) reads as its rod and move; a
-// product group (×) reads as the 九九 and where its digits land. A ÷
-// problem alternates a quotient group, read as how its digit is guessed by
-// 九九 (lowered when too big to take away) and where it is placed (割れる /
-// 割れない), and a subtract group per divisor digit, read as the 九九 and the
-// rods its digits come off.
+// 見取算 column also names the number it belongs to; a product group (×)
+// reads as the 九九 and where its digits land. A ÷ problem alternates a
+// quotient group, read as how its digit is guessed by 九九 (lowered when too
+// big to take away) and where it is placed (割れる / 割れない), and a subtract
+// group per divisor digit, read as the 九九 and the rods its digits come off.
 // `activeGroup` indexes problemSteps(problem): the group the learner has
 // stepped into. The panel draws the card around these lines. `showAnswer`
 // is false before an answer, where the lines explain the problem without
@@ -56,9 +56,17 @@ export function ProblemCorrectionCard({
         return (
           <Text
             key={index}
-            // A column is named by its rod, which is unique; the other
-            // kinds by their index, since a place repeats across 九九.
-            testID={group.kind === 'column' ? `correction-column-${group.place}` : `correction-${group.kind}-${index}`}
+            // A ＋ − column is named by its rod, which is unique; a 見取算
+            // column by its number and its rod, since each number has a
+            // column on each rod; the other kinds by their index, since a
+            // place repeats across 九九.
+            testID={
+              group.kind !== 'column'
+                ? `correction-${group.kind}-${index}`
+                : group.term === undefined
+                  ? `correction-column-${group.place}`
+                  : `correction-term-${group.term}-${group.place}`
+            }
             onLayout={lineLayout(index)}
             style={[styles.line, index === activeGroup && styles.activeLine]}
           >
@@ -76,9 +84,14 @@ export function ProblemCorrectionCard({
 // (MethodIntro), whose pages read each group in the card's own words.
 export function groupLine(strings: Strings, problem: Problem, group: StepGroup): string | null {
   switch (group.kind) {
-    case 'column':
+    case 'column': {
       // A column that adds 0 moves nothing.
-      return group.atom === null ? null : strings.columnLine(group.place, group.atom, group.cascades)
+      if (group.atom === null) return null
+      const term = problem.op === 'mitori' && group.term !== undefined ? problem.terms[group.term] : undefined
+      return term === undefined
+        ? strings.columnLine(group.place, group.atom, group.cascades)
+        : strings.mitoriLine(term, group.place, group.atom, group.cascades)
+    }
     case 'product':
       return strings.productLine(group.x, group.y, group.place, group.cascades)
     case 'quotient':

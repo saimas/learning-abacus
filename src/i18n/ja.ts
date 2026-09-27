@@ -4,6 +4,7 @@ import {
   answerOf,
   digitAt,
   divisorFirstDigit,
+  OPERATION_SYMBOL,
   type Digits,
   type Operation,
   type PairProblem,
@@ -104,6 +105,21 @@ function productDigits(product: number, place: number): (readonly [digit: number
       [product % 10, place],
     ] as const
   ).filter(([digit]) => digit !== 0)
+}
+
+// One line of a problem's answer card: the rod, then the move worked on it,
+// read exactly as a single move's card reads it.
+function columnLine(place: number, atom: Atom, cascades: boolean): string {
+  return `${PLACE[place] ?? place}　${coaching(atom)}${
+    cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
+  }`
+}
+
+// Spec (見取算) §4: a 見取算 line is its number, signed, then the ＋ − column
+// line. After a miss every line shows at once with nothing highlighted, so
+// each 十の位 must say which number it belongs to.
+function mitoriLine(term: number, place: number, atom: Atom, cascades: boolean): string {
+  return `${OPERATION_SYMBOL[term < 0 ? 'sub' : 'add']}${Math.abs(term)}　${columnLine(place, atom, cascades)}`
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -365,12 +381,8 @@ export const ja = {
           .join('、')}。`
     }
   },
-  // One line of a problem's answer card: the rod, then the move worked on
-  // it, read exactly as a single move's card reads it.
-  columnLine: (place: number, atom: Atom, cascades: boolean) =>
-    `${PLACE[place] ?? place}　${coaching(atom)}${
-      cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
-    }`,
+  columnLine,
+  mitoriLine,
   productLine,
   quotientLine,
   subtractLine,
