@@ -1,7 +1,7 @@
 # learning-abacus — 見取算, a column of five numbers (roadmap P4)
 
 Date: 2026-09-26
-Status: Approved design, not yet implemented. Sub-project P4 of `2026-09-23-n-by-n-roadmap.md` (§5 names 見取算 as the natural P4), after P1–P3 shipped (TestFlight builds 9–21).
+Status: Implemented on feature/mitori (TestFlight build 22). Sub-project P4 of `2026-09-23-n-by-n-roadmap.md`.
 
 ## 1. Goal and decisions
 

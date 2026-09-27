@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { ScrollView, StyleSheet } from 'react-native'
-import type { Problem } from '@/domain/problem'
+import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads } from '@/ui/session/testing'
@@ -367,5 +367,95 @@ describe('RoundRunner with ÷', () => {
     expect(onSoroban('rod-6')).toBeTruthy()
     expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * beadModeScale(7, width - 40))
     expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * board)
+  })
+})
+
+// Spec (見取算) §2: the problem is a column above the soroban, and stepping
+// through a miss highlights the number each move belongs to.
+describe('RoundRunner with 見取算', () => {
+  const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
+  const mitoriRound: Partial<Parameters<typeof RoundRunner>[0]> = { kind: { op: 'mitori', digits: 2 }, problems: [column] }
+  const lit = () =>
+    [0, 1, 2, 3, 4].filter((row) => {
+      const number = within(screen.getByTestId(`term-${row}`)).getByText(String(Math.abs(column.terms[row] ?? 0)))
+      return StyleSheet.flatten(number.props.style).color === colors.accent
+    })
+  // How many bead steps the moves of number `term` take.
+  const stepsOf = (term: number) =>
+    problemSteps(column).reduce((n, g) => (g.kind === 'column' && g.term === term ? n + g.steps.length : n), 0)
+
+  it('shows the column, read as one sentence, and the soroban starting at the first number', () => {
+    renderRound(mitoriRound)
+    expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
+    expect(screen.getByTestId('rod-1').props.accessibilityValue.text).toBe('4')
+    expect(screen.getByTestId('rod-2').props.accessibilityValue.text).toBe('7')
+    expect(lit()).toEqual([])
+  })
+
+  it('takes the total on the beads', () => {
+    const { onAttempt } = renderRound(mitoriRound)
+    answerBeads(96)
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'mitori:2', correct: true, pace: null, assisted: false })
+  })
+
+  it('highlights the number, and its line, of each move stepped through', () => {
+    renderRound(mitoriRound)
+    answerBeads(95)
+    expect(lit()).toEqual([])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(lit()).toEqual([1])
+    expect(StyleSheet.flatten(screen.getByTestId('correction-term-1-1').props.style)?.color).toBe(colors.accent)
+    // Past 30's moves, onto 23's.
+    for (let i = 1; i < stepsOf(1) + 1; i++) fireEvent.press(screen.getByTestId('step-next'))
+    expect(lit()).toEqual([2])
+    fireEvent.press(screen.getByTestId('step-restart'))
+    expect(lit()).toEqual([])
+  })
+
+  it('shows the column above the keypad too', () => {
+    renderRound({ ...mitoriRound, fade: 3 })
+    expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
+    expect(screen.getByTestId('term-4')).toBeTruthy()
+  })
+
+  // Review focus: 3けた can total four digits, and the keypad must take them.
+  it('takes a four-digit 3けた total on the keypad', () => {
+    const { onAttempt } = renderRound({
+      kind: { op: 'mitori', digits: 3 },
+      problems: [{ op: 'mitori', digits: 3, terms: [999, 999, 999, -999, 999] }],
+      fade: 3,
+    })
+    for (const digit of '2997') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'mitori:3', correct: true }))
+  })
+
+  it('draws a two-number problem’s prompt as text, with no column', () => {
+    renderRound()
+    expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(screen.queryByTestId('term-0')).toBeNull()
+  })
+
+  describe('on a short window', () => {
+    let restoreWindow = () => {}
+    afterEach(() => {
+      restoreWindow()
+      restoreWindow = () => {}
+    })
+
+    it.each([
+      ['a short window', 375, 667, SHORT_WINDOW_BEAD_SCALE],
+      ['a tall window', 402, 874, beadModeScale(3, 402 - 40)],
+    ])('sizes the soroban for %s, as with a board', (_window, width, height, scale) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
+      const reactNative = require('react-native')
+      const spy = jest
+        .spyOn(reactNative, 'useWindowDimensions')
+        .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+      restoreWindow = () => spy.mockRestore()
+      renderRound(mitoriRound)
+      const frame = within(screen.getByTestId('soroban-wrap')).getByTestId('abacus-frame')
+      expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
+    })
   })
 })

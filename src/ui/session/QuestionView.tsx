@@ -47,6 +47,7 @@ export function QuestionView({
   demonstration,
   renderSteps,
   renderBeneath,
+  renderPrompt,
   track,
   maru,
   shownAt,
@@ -75,6 +76,10 @@ export function QuestionView({
   // right under the soroban; keypad mode after the prompt. Nothing for any
   // other question.
   renderBeneath?: (activeStep: number | undefined) => ReactNode
+  // Spec (見取算) §4: a problem drawn in place of the text prompt — a 見取算
+  // column — following the same `activeStep` as the step lines. `prompt`
+  // is not drawn when this is given. Nothing for any other question.
+  renderPrompt?: (activeStep: number | undefined) => ReactNode
   track: ReactNode
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
@@ -117,10 +122,11 @@ export function QuestionView({
   // The screen's gutters are space.xl on each side (Screen).
   const room = width - 2 * space.xl
   const fittedBeadScale = beadModeScale(exercise.rods, room)
-  // With a board beneath it, a short phone draws the soroban smaller, so the
-  // prompt above it and 手順を見る below keep their room (SHORT_WINDOW_HEIGHT).
+  // With a board beneath it or a column above it, a short phone draws the
+  // soroban smaller, so the prompt above it and 手順を見る below keep their
+  // room (SHORT_WINDOW_HEIGHT).
   const beadScale =
-    renderBeneath !== undefined && height < SHORT_WINDOW_HEIGHT
+    (renderBeneath !== undefined || renderPrompt !== undefined) && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
       : fittedBeadScale
   // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
@@ -338,6 +344,15 @@ export function QuestionView({
     </View>
   )
 
+  const promptView =
+    renderPrompt === undefined ? (
+      <Text testID="prompt" style={styles.prompt}>
+        {prompt}
+      </Text>
+    ) : (
+      renderPrompt(activeStep)
+    )
+
   if (mode === 'beads') {
     // Layout A: the soroban takes the keypad's place, enlarged and within
     // thumb reach. Only the prompt above it and the step panel's lines below
@@ -374,9 +389,7 @@ export function QuestionView({
       <View style={styles.practice}>
         {track}
         <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
-          <Text testID="prompt" style={styles.prompt}>
-            {prompt}
-          </Text>
+          {promptView}
           {demonstrationLine}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
@@ -486,9 +499,7 @@ export function QuestionView({
           />
           {stamp(110)}
         </View>
-        <Text testID="prompt" style={styles.prompt}>
-          {prompt}
-        </Text>
+        {promptView}
         {demonstrationLine}
         {/* After the prompt rather than under the soroban, so it can never
             push the prompt off a short phone, but ahead of the step lines

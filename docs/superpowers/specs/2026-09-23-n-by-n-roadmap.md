@@ -117,6 +117,7 @@ Every sub-project shipped, each with its own spec, plan and TestFlight build:
 | Core rounds — けたの練習 as Home, 手順を見る | `2026-09-23-core-rounds-design.md` | 12 |
 | P3 — ÷ by 商除法 | `2026-09-24-divide-design.md` | 19 |
 | ÷ walkthrough, bead by bead | `2026-09-24-divide-walkthrough-design.md` | 21 |
+| P4 — 見取算, five numbers mixed ＋ − | `2026-09-26-mitori-design.md` | 22 |
 
 How §6 and §7's questions were settled:
 
@@ -127,4 +128,4 @@ How §6 and §7's questions were settled:
 - **Teaching.** A walkthrough before the first × and ÷ round, replayable from Home, plus 手順を見る on every question. 1×1 is the 九九 itself, so it doubles as the times-tables drill.
 - **Cross-cutting.** The daily session is unchanged and is not fed by these modes. Multi-digit time targets are derived from the per-move targets, not yet tuned on real data.
 
-Next, if asked: 見取算 as P4 (§5), the first step toward 暗算検定 7-10級.
+P4 shipped as 見取算 at 5口 (build 22). Next, if asked: 暗算検定-style timed practice.
