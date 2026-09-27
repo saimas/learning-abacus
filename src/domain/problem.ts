@@ -17,7 +17,7 @@ export type PairProblem = { op: PairOperation; digits: Digits; a: number; b: num
 export type MitoriProblem = { op: 'mitori'; digits: Digits; terms: number[] }
 export type Problem = PairProblem | MitoriProblem
 
-export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div']
+export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div', 'mitori']
 export const DIGITS: readonly Digits[] = [1, 2, 3]
 export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =>
   DIGITS.map((digits) => ({ op, digits })),

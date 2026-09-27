@@ -75,7 +75,7 @@ function expectReplaysTo(p: Problem) {
 }
 
 describe('practice ids', () => {
-  it('names the twelve kinds', () => {
+  it('names the fifteen kinds', () => {
     expect(PRACTICE_KINDS.map(practiceId)).toEqual([
       'add:1',
       'add:2',
@@ -89,6 +89,9 @@ describe('practice ids', () => {
       'div:1',
       'div:2',
       'div:3',
+      'mitori:1',
+      'mitori:2',
+      'mitori:3',
     ])
   })
 
@@ -101,6 +104,8 @@ describe('practice ids', () => {
     expect(isPracticeId('mul:2')).toBe(true)
     expect(isPracticeId('div:1')).toBe(true)
     expect(isPracticeId('pow:1')).toBe(false)
+    expect(parsePracticeId('mitori:2')).toEqual({ op: 'mitori', digits: 2 })
+    expect(isPracticeId('mitori:4')).toBe(false)
   })
 })
 
@@ -127,7 +132,7 @@ describe('answerOf and rodsFor', () => {
 })
 
 describe('generateProblems', () => {
-  it.each(PRACTICE_KINDS)('gives 10 distinct problems of the right size for %o', (kind) => {
+  it.each(PRACTICE_KINDS.filter((kind) => kind.op !== 'mitori'))('gives 10 distinct problems of the right size for %o', (kind) => {
     const problems = generateProblems(kind, 10, seeded(7))
     expect(problems).toHaveLength(10)
     expect(new Set(problems.map((p) => (p.op === 'mitori' ? p.terms.join(',') : `${p.a},${p.b}`))).size).toBe(10)

@@ -119,6 +119,14 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'add:2' } })
   })
 
+  it('starts a 見取算 round from its cell', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    fireEvent.press(getByTestId('practice-cell-mitori:2'))
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'mitori:2' } })
+  })
+
   it('opens the multiplication walkthrough from the home やりかた link', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()

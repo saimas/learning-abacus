@@ -34,6 +34,15 @@ describe('PracticeTable', () => {
     expect(screen.getByTestId('practice-cell-mul:3').props.accessibilityLabel).toBe('3けたのかけ算、まだ')
   })
 
+  // Spec (見取算) §2: a fifth row, headed ±, below ÷.
+  it('has a ± row for 見取算 below ÷', () => {
+    render(<PracticeTable progress={emptyProgress()} />)
+    expect(screen.getByText('±')).toBeTruthy()
+    expect(screen.getByTestId('practice-cell-mitori:2').props.accessibilityLabel).toBe('2けたの見取算、まだ')
+    const cells = screen.getAllByTestId(/^practice-cell-/).map((cell) => cell.props.testID as string)
+    expect(cells.slice(-3)).toEqual(['practice-cell-mitori:1', 'practice-cell-mitori:2', 'practice-cell-mitori:3'])
+  })
+
   it('uses ink text for fading stage and paper text for mental stage', () => {
     const progress = {
       ...emptyProgress(),
