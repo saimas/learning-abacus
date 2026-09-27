@@ -425,7 +425,7 @@ describe('RoundRunner with 見取算', () => {
     for (let i = 0; i < stepsOf(1) + 2; i++) fireEvent.press(screen.getByTestId('step-next'))
     expect(tinted().some((bead) => bead.startsWith('1 ') && bead.endsWith(' group'))).toBe(true)
     expect(tinted().some((bead) => bead.startsWith('2 ') && bead.endsWith(' latest'))).toBe(true)
-    expect([shaded('correction-term-1'), shaded('correction-term-2'), shaded('correction-term-2-1')]).toEqual([
+    expect([shaded('correction-heading-0'), shaded('correction-heading-1'), shaded('correction-term-2-1')]).toEqual([
       false,
       true,
       true,

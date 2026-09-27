@@ -1,6 +1,14 @@
 import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-import { answerOf, digitAt, divisorFirstDigit, type Operation, type PairProblem, type PracticeKind } from '@/domain/problem'
+import {
+  answerOf,
+  digitAt,
+  divisorFirstDigit,
+  type Operation,
+  type PairProblem,
+  type PracticeKind,
+  type StepSection,
+} from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { CellState } from '@/domain/progress'
 import type { BlockKind, PracticePart } from '@/domain/session'
@@ -117,9 +125,17 @@ function columnLine(place: number, atom: Atom, cascades: boolean): string {
   }`
 }
 
-// As ja's: the number, signed, then the soroban before and after it.
-function mitoriHeading(term: number, before: number, after: number): string {
-  return `${term < 0 ? '−' : '+'}${Math.abs(term)}: ${before} → ${after}`
+// As ja's, with a number signed, as the column shows it.
+function sectionHeading(section: StepSection): string {
+  const change = `${section.before} → ${section.after}`
+  switch (section.kind) {
+    case 'number':
+      return `${section.value < 0 ? '−' : '+'}${Math.abs(section.value)}: ${change}`
+    case 'multiply':
+      return `${section.x} × ${section.multiplier}: ${change}`
+    case 'divide':
+      return `Quotient ${section.q}: ${change} left`
+  }
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -369,7 +385,7 @@ export const en: Strings = {
     }
   },
   columnLine,
-  mitoriHeading,
+  sectionHeading,
   productLine,
   quotientLine,
   subtractLine,

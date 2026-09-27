@@ -525,6 +525,88 @@ export function groupOfStep(groups: StepGroup[], stepIndex: number): number | un
   return undefined
 }
 
+// Spec (core rounds) §11: a problem's steps in the units a learner thinks
+// in, for 手順を見る to group, colour and head (the owner, 2026-09-27: "it
+// is hard to tell upto which click was for −59 and +39"). A `number` section
+// is one number added or taken off, signed: a ＋ − problem's b, or each
+// 見取算 number after the first. A `multiply` section is one multiplicand
+// digit times the whole multiplier, its 九九 in turn (両落とし). A `divide`
+// section is one quotient digit placed and its 九九 taken off (商除法).
+// `groups` indexes problemSteps(problem), in order; every group is in
+// exactly one section. `before` and `after` are what the soroban reads
+// around the section, or for ÷ what is left below the quotient's rods.
+export type StepSection = { groups: number[]; before: number; after: number } & (
+  | { kind: 'number'; value: number }
+  | { kind: 'multiply'; x: number; multiplier: number }
+  | { kind: 'divide'; q: number }
+)
+
+export function problemSections(problem: Problem): StepSection[] {
+  const groups = problemSteps(problem)
+  const states = problemStates(problem)
+  // The soroban's reading after `steps` bead steps.
+  const reading = (steps: number) => {
+    const state = states[steps]
+    if (state === undefined) throw new Error(`no state after ${steps} steps`)
+    return readValue(state)
+  }
+  // Consecutive groups with the same key are one section: a 見取算 column's
+  // number (a ＋ − problem has the one), a 九九's multiplicand digit, and a
+  // ÷ problem's quotient digit, counted as each is placed.
+  let quotients = 0
+  const keys = groups.map((group) => {
+    switch (group.kind) {
+      case 'column':
+        return group.term ?? 0
+      case 'product':
+        return group.xPlace
+      case 'quotient':
+        return ++quotients
+      case 'subtract':
+        return quotients
+    }
+  })
+  const runs: number[][] = []
+  keys.forEach((key, index) => {
+    const run = runs[runs.length - 1]
+    if (run !== undefined && keys[run[0] ?? -1] === key) run.push(index)
+    else runs.push([index])
+  })
+  let steps = 0
+  return runs.map((run) => {
+    const start = steps
+    steps += run.reduce((sum, index) => sum + (groups[index]?.steps.length ?? 0), 0)
+    return sectionOf(problem, groups[run[0] ?? -1], run, reading(start), reading(steps))
+  })
+}
+
+// A section from the group that opens it and the readings around it.
+function sectionOf(
+  problem: Problem,
+  first: StepGroup | undefined,
+  groups: number[],
+  before: number,
+  after: number,
+): StepSection {
+  if (first === undefined) throw new Error('a section with no groups')
+  switch (first.kind) {
+    case 'column': {
+      const value = problem.op === 'mitori' ? (problem.terms[first.term ?? 0] ?? 0) : problem.op === 'sub' ? -problem.b : problem.op === 'add' ? problem.b : 0
+      return { kind: 'number', value, before, after, groups }
+    }
+    case 'product':
+      return { kind: 'multiply', x: first.x, multiplier: problem.op === 'mul' ? problem.b : 0, before, after, groups }
+    case 'quotient': {
+      // What is left is what lies below the quotient digit's rod; the
+      // quotient's digits sit above it.
+      const below = 10 ** first.place
+      return { kind: 'divide', q: first.q, before: before % below, after: after % below, groups }
+    }
+    case 'subtract':
+      throw new Error('a ÷ section opens with its quotient digit')
+  }
+}
+
 // Spec (multiplication) §3: each digit's move, which the app already
 // calibrates to the learner, plus recalling each 九九, plus typing the answer.
 // Spec (division) §2: a ÷ problem's 九九 are recalled the same way, and

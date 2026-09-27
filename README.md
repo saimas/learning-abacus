@@ -76,8 +76,11 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   the number being worked is highlighted, its bead moves stay coloured together, and the steps are
   grouped under a heading per number (「59をひく　77 → 18」).
 - **手順を見る** on every question, here and in 基礎の練習, opens the steps: ◀ ▶ play one bead move
-  at a time and 最初から goes back to the start. An answer given after opening it counts "with
-  help": it is tallied but does not move the fade ladder.
+  at a time and 最初から goes back to the start. The steps are grouped the way the learner thinks
+  of them — the number added or taken off, each multiplicand digit, each quotient digit — each
+  under a heading with what the soroban reads before and after it (「4×36　0 → 1440」), its bead
+  moves coloured together. An answer given after opening it counts "with help": it is tallied but
+  does not move the fade ladder.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
   わり算のやりかた; both can be replayed from links on Home. The ÷ walkthrough works 1692 ÷ 36

@@ -717,7 +717,7 @@ describe('QuestionView colouring the operation on show', () => {
   it.each([
     ['bead', 0, 'demo'],
     ['keypad', 3, 'silent'],
-  ] as const)('colours only the column on show in %s mode, and ◀ brings the last one back', (_mode, fade, coaching) => {
+  ] as const)('colours the whole number on show in %s mode, and ◀ steps its colouring back', (_mode, fade, coaching) => {
     renderView({ fade, coaching })
     fireEvent.press(screen.getByTestId('steps-open'))
     // The start, where the steps open: nothing has moved yet.
@@ -728,15 +728,16 @@ describe('QuestionView colouring the operation on show', () => {
     expect(rods()).toBe('0772')
     expect(tinted()).toEqual(['1 heaven group', '1 earth2 latest', '1 earth3 latest'])
 
-    // The tens column's first move is its carry onto the hundreds rod. The
-    // hundreds column's beads go back to wood.
+    // Spec (core rounds) §11: 385 is one operation, so the hundreds column's
+    // beads stay red as the tens column begins with its carry onto the
+    // hundreds rod, which moves earth bead 2 back up.
     step('step-next')
     expect(rods()).toBe('0872')
-    expect(tinted()).toEqual(['1 earth2 latest'])
-    // Its −2 on the tens rod: the carry's bead stays red, lighter now.
+    expect(tinted()).toEqual(['1 heaven group', '1 earth2 latest', '1 earth3 group'])
+    // Its −2 on the tens rod joins them.
     step('step-next')
     expect(rods()).toBe('0852')
-    expect(tinted()).toEqual(['1 earth2 group', '2 earth0 latest', '2 earth1 latest'])
+    expect(tinted()).toEqual(['1 heaven group', '1 earth2 group', '1 earth3 group', '2 earth0 latest', '2 earth1 latest'])
 
     step('step-back', 2)
     expect(rods()).toBe('0772')
