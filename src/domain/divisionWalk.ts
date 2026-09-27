@@ -6,8 +6,8 @@ import {
   playDigits,
   productDigits,
   rodsFor,
+  type PairProblem,
   type PlacedStep,
-  type Problem,
 } from './problem'
 import { emptySoroban, readValue, setValue, type Soroban } from './soroban'
 
@@ -108,7 +108,7 @@ export type WalkPutBack = { digit: number; place: number }
 // from the 九九 that stuck. The guess is never too small, so a digit that
 // comes through every 九九 is the quotient's, and the soroban ends where the
 // rounds' does.
-export function divisionWalk(problem: Problem): WalkStep[] {
+export function divisionWalk(problem: PairProblem): WalkStep[] {
   const n = problem.digits
   const rods = rodsFor(problem)
   const quotient = answerOf(problem)
@@ -325,7 +325,7 @@ export function walkFrames(walk: WalkStep[]): { frames: WalkFrame[]; groupStarts
 }
 
 // The soroban at the start, then after each bead step of the walk.
-export function walkStates(problem: Problem, walk: WalkStep[]): Soroban[] {
+export function walkStates(problem: PairProblem, walk: WalkStep[]): Soroban[] {
   let current = setValue(emptySoroban(rodsFor(problem)), problem.a)
   const states = [current]
   for (const step of walk) {

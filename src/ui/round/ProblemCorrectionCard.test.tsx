@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
+import { atomId, type Direction } from '@/domain/atoms'
+import type { MitoriProblem } from '@/domain/problem'
 import { colors } from '@/ui/theme'
 import { textOf } from '@/ui/session/testing'
 import { ActiveLayoutContext } from '@/ui/session/useActiveLineLayout'
+import { ja } from '@/i18n/ja'
 import { ProblemCorrectionCard } from './ProblemCorrectionCard'
 
 const colorOf = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style)?.color
@@ -155,6 +158,93 @@ describe('ProblemCorrectionCard', () => {
   it('leaves the answer line alone without expectedBeads', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
     expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
+  })
+
+  // Spec (見取算) §4. 47, +30, −23, +61, −19 = 96. 30's ones digit is 0, so
+  // it moves nothing and has no line.
+  const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
+  const atom = (rodValue: number, operand: number, direction: Direction) => ({
+    id: atomId(rodValue, operand, direction),
+    rodValue,
+    operand,
+    direction,
+  })
+
+  const backgroundOf = (testID: string) =>
+    StyleSheet.flatten(screen.getByTestId(testID).props.style)?.backgroundColor
+  // The card's lines and headings, in the order they are drawn.
+  const drawn = () =>
+    screen.root
+      .findAll((node) => typeof node.type === 'string' && /^correction-term-/.test(String(node.props.testID)))
+      .map((node) => node.props.testID as string)
+
+  // The owner (2026-09-27): it was hard to tell which lines were −59's and
+  // which +39's, so each number heads its own lines.
+  it('groups a 見取算 problem’s lines under a heading per number', () => {
+    render(<ProblemCorrectionCard problem={column} expected={96} />)
+    expect(textOf(screen.getByTestId('correction-term-1'))).toBe('30をたす　47 → 77')
+    expect(textOf(screen.getByTestId('correction-term-2'))).toBe('23をひく　77 → 54')
+    expect(textOf(screen.getByTestId('correction-term-3'))).toBe('61をたす　54 → 115')
+    expect(textOf(screen.getByTestId('correction-term-4'))).toBe('19をひく　115 → 96')
+    // Under its heading, a line reads as a ＋ − column's does. 47 + 30: the
+    // tens rod shows 4, and 3 is added to it; 30's ones digit moves nothing.
+    expect(textOf(screen.getByTestId('correction-term-1-1'))).toBe(ja.columnLine(1, atom(4, 3, 'add'), false))
+    expect(screen.queryByTestId('correction-term-1-0')).toBeNull()
+    // 77 − 23: the tens rod shows 7, then the ones rod 7.
+    expect(textOf(screen.getByTestId('correction-term-2-1'))).toBe(ja.columnLine(1, atom(7, 2, 'sub'), false))
+    expect(textOf(screen.getByTestId('correction-term-2-0'))).toBe(ja.columnLine(0, atom(7, 3, 'sub'), false))
+    expect(drawn()).toEqual([
+      'correction-term-1',
+      'correction-term-1-1',
+      'correction-term-2',
+      'correction-term-2-1',
+      'correction-term-2-0',
+      'correction-term-3',
+      'correction-term-3-1',
+      'correction-term-3-0',
+      'correction-term-4',
+      'correction-term-4-1',
+      'correction-term-4-0',
+    ])
+  })
+
+  it('shades the whole number stepped into, and highlights the move', () => {
+    // Groups: 30's tens (0), 30's ones (1, no line), 23's tens (2), 23's ones (3), ...
+    render(<ProblemCorrectionCard problem={column} expected={96} activeGroup={2} />)
+    for (const id of ['correction-term-2', 'correction-term-2-1', 'correction-term-2-0']) {
+      expect(backgroundOf(id)).toBe(colors.accentSoft)
+    }
+    for (const id of ['correction-term-1', 'correction-term-1-1', 'correction-term-3', 'correction-term-3-1']) {
+      expect(backgroundOf(id)).toBeUndefined()
+    }
+    expect(colorOf('correction-term-2-1')).toBe(colors.accent)
+    expect(colorOf('correction-term-2-0')).not.toBe(colors.accent)
+    // The heading of the number stepped into is in the accent too.
+    expect(colorOf('correction-term-2')).toBe(colors.accent)
+    expect(colorOf('correction-term-1')).not.toBe(colors.accent)
+  })
+
+  it('shades nothing before a step', () => {
+    render(<ProblemCorrectionCard problem={column} expected={96} />)
+    for (const id of drawn()) expect(backgroundOf(id)).toBeUndefined()
+  })
+
+  // The headings sit among the lines as their siblings, so the line stepped
+  // to still reports where it is for the scroll (useActiveLineLayout).
+  it('tells the scroll where the 見取算 line stepped to sits', () => {
+    const onActiveLayout = jest.fn()
+    render(
+      <ActiveLayoutContext.Provider value={onActiveLayout}>
+        <ProblemCorrectionCard problem={column} expected={96} activeGroup={3} />
+      </ActiveLayoutContext.Provider>,
+    )
+    const layout = (testID: string, y: number) =>
+      fireEvent(screen.getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y, width: 300, height: 16 } } })
+    layout('correction-term-2', 40)
+    layout('correction-term-2-1', 56)
+    expect(onActiveLayout).not.toHaveBeenCalled()
+    layout('correction-term-2-0', 72)
+    expect(onActiveLayout).toHaveBeenLastCalledWith(72, 16)
   })
 })
 

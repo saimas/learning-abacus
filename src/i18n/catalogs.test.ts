@@ -1,5 +1,6 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+import type { MitoriProblem } from '@/domain/problem'
 import { en } from './en'
 import { ja } from './ja'
 import { LOCALES } from './locale'
@@ -250,11 +251,27 @@ describe('multi-digit strings', () => {
     expect(en.problemPrompt({ op: 'div', digits: 2, a: 1692, b: 36 })).toBe('Divide 1692 by 36.')
   })
 
+  // Spec (見取算) §4: the column's VoiceOver label.
+  it('prompts a 見取算 column as one sentence', () => {
+    const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 85, -23, 61, -19] }
+    expect(ja.problemPrompt(column)).toBe('47、たす85、ひく23、たす61、ひく19。')
+    expect(en.problemPrompt(column)).toBe('47 + 85 − 23 + 61 − 19')
+  })
+
   it('reads a column as its rod and its move', () => {
     expect(ja.columnLine(1, atom(7, 8, 'add'), false)).toBe('十の位　十の繰上：8をたす = +10 − 2')
     expect(ja.columnLine(0, atom(6, 4, 'add'), true)).toBe(
       '一の位　十の繰上と五の分解：4をたす = +10 − 5 − 1（さらに上の位へ繰り上がる）',
     )
+  })
+
+  // Spec (見取算) §7: a 見取算 number's lines sit under a heading that says
+  // what is done with it and what the soroban reads before and after.
+  it('heads a 見取算 number with what it does to the running total', () => {
+    expect(ja.mitoriHeading(-59, 77, 18)).toBe('59をひく　77 → 18')
+    expect(ja.mitoriHeading(39, 18, 57)).toBe('39をたす　18 → 57')
+    expect(en.mitoriHeading(-59, 77, 18)).toBe('−59: 77 → 18')
+    expect(en.mitoriHeading(39, 18, 57)).toBe('+39: 18 → 57')
   })
 
   it('names all four rods', () => {

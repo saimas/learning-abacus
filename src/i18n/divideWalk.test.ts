@@ -1,9 +1,9 @@
 import { divisionWalk, type WalkStep } from '@/domain/divisionWalk'
-import type { Digits, Problem } from '@/domain/problem'
+import type { Digits, PairProblem } from '@/domain/problem'
 import { en } from './en'
 import { ja } from './ja'
 
-function division(q: number, d: number): Problem {
+function division(q: number, d: number): PairProblem {
   return { op: 'div', digits: String(d).length as Digits, a: q * d, b: d }
 }
 
@@ -15,7 +15,7 @@ function nth(walk: WalkStep[], index: number): WalkStep {
 }
 
 // The first step of a problem's walk that `match` accepts.
-function stepOf(problem: Problem, match: (step: WalkStep) => boolean): WalkStep {
+function stepOf(problem: PairProblem, match: (step: WalkStep) => boolean): WalkStep {
   const step = divisionWalk(problem).find(match)
   if (step === undefined) throw new Error('no such step')
   return step

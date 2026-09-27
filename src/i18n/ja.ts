@@ -6,6 +6,7 @@ import {
   divisorFirstDigit,
   type Digits,
   type Operation,
+  type PairProblem,
   type PracticeKind,
   type Problem,
 } from '@/domain/problem'
@@ -58,7 +59,7 @@ const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の
 // walkthrough's soroban.
 const PLACE_SHORT: readonly string[] = ['一', '十', '百', '千', '万', '十万', '百万']
 
-const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算' }
+const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算', mitori: '見取算' }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'まだ',
@@ -103,6 +104,22 @@ function productDigits(product: number, place: number): (readonly [digit: number
       [product % 10, place],
     ] as const
   ).filter(([digit]) => digit !== 0)
+}
+
+// One line of a problem's answer card: the rod, then the move worked on it,
+// read exactly as a single move's card reads it.
+function columnLine(place: number, atom: Atom, cascades: boolean): string {
+  return `${PLACE[place] ?? place}　${coaching(atom)}${
+    cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
+  }`
+}
+
+// Spec (見取算) §7: the heading over a 見取算 number's lines, which read as
+// ＋ − column lines under it: what is done with the number, then what the
+// soroban reads before and after it, so the learner can see where each
+// number's clicks end (the owner, 2026-09-27).
+function mitoriHeading(term: number, before: number, after: number): string {
+  return `${Math.abs(term)}を${term < 0 ? 'ひく' : 'たす'}　${before} → ${after}`
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -173,7 +190,7 @@ function quotientLine(
 // and every number in them is one the screen shows.
 export type WalkCaption = { what: string; math: string; note: string; rods: string }
 
-function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+function divideWalk(problem: PairProblem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
@@ -358,14 +375,14 @@ export const ja = {
         return `${problem.a}に${problem.b}をかける。`
       case 'div':
         return `${problem.a}を${problem.b}でわる。`
+      case 'mitori':
+        return `${problem.terms
+          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? 'ひく' : 'たす'}${Math.abs(term)}`))
+          .join('、')}。`
     }
   },
-  // One line of a problem's answer card: the rod, then the move worked on
-  // it, read exactly as a single move's card reads it.
-  columnLine: (place: number, atom: Atom, cascades: boolean) =>
-    `${PLACE[place] ?? place}　${coaching(atom)}${
-      cascades ? (atom.direction === 'add' ? '（さらに上の位へ繰り上がる）' : '（さらに上の位から繰り下がる）') : ''
-    }`,
+  columnLine,
+  mitoriHeading,
   productLine,
   quotientLine,
   subtractLine,

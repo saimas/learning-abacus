@@ -1,6 +1,6 @@
 import { startValue, type Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-import { answerOf, digitAt, divisorFirstDigit, type Operation, type PracticeKind, type Problem } from '@/domain/problem'
+import { answerOf, digitAt, divisorFirstDigit, type Operation, type PairProblem, type PracticeKind } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { CellState } from '@/domain/progress'
 import type { BlockKind, PracticePart } from '@/domain/session'
@@ -64,6 +64,7 @@ const OP_NAME: Record<Operation, string> = {
   sub: 'Subtraction',
   mul: 'Multiplication',
   div: 'Division',
+  mitori: 'Columns',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -104,6 +105,21 @@ function productDigits(product: number, place: number): (readonly [digit: number
       [product % 10, place],
     ] as const
   ).filter(([digit]) => digit !== 0)
+}
+
+function columnLine(place: number, atom: Atom, cascades: boolean): string {
+  return `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
+    cascades
+      ? atom.direction === 'add'
+        ? ' (and carries again into the next rod)'
+        : ' (borrowing from a rod further left)'
+      : ''
+  }`
+}
+
+// As ja's: the number, signed, then the soroban before and after it.
+function mitoriHeading(term: number, before: number, after: number): string {
+  return `${term < 0 ? '−' : '+'}${Math.abs(term)}: ${before} → ${after}`
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -158,7 +174,7 @@ function quotientLine(
 
 // The division walkthrough's words for one step, as ja's (spec: division
 // walkthrough §3).
-function divideWalk(problem: Problem, step: WalkStep): WalkCaption {
+function divideWalk(problem: PairProblem, step: WalkStep): WalkCaption {
   const { a, b } = problem
   const n = problem.digits
   const none: WalkCaption = { what: '', math: '', note: '', rods: '' }
@@ -344,18 +360,16 @@ export const en: Strings = {
         return `Multiply ${problem.a} by ${problem.b}.`
       case 'div':
         return `Divide ${problem.a} by ${problem.b}.`
+      case 'mitori':
+        return problem.terms
+          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? '−' : '+'} ${Math.abs(term)}`))
+          .join(' ')
       default:
         return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
     }
   },
-  columnLine: (place, atom, cascades) =>
-    `${PLACE_TITLE[place] ?? place}: ${coaching(atom)}${
-      cascades
-        ? atom.direction === 'add'
-          ? ' (and carries again into the next rod)'
-          : ' (borrowing from a rod further left)'
-        : ''
-    }`,
+  columnLine,
+  mitoriHeading,
   productLine,
   quotientLine,
   subtractLine,

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
 import { divisionWalk, walkFrames } from '@/domain/divisionWalk'
-import type { Problem } from '@/domain/problem'
+import type { PairProblem } from '@/domain/problem'
 import { ja, type WalkCaption } from '@/i18n/ja'
 import { beadModeScale, geometryFor } from '@/ui/abacus/geometry'
 import { textOf, tintedBeads } from '@/ui/session/testing'
@@ -10,7 +10,7 @@ import { DivideWalkthrough } from './DivideWalkthrough'
 
 // The owner's example (2026-09-24), as /divide-intro sets it up, in the
 // default locale: 14 steps, 23 frames.
-const PROBLEM: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const PROBLEM: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
 const WALK = divisionWalk(PROBLEM)
 
 // Step k's words in the default locale. src/i18n/divideWalk.test.ts pins

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { divisionWalk, walkFrames, walkStates, type WalkDigit, type WalkStep } from '@/domain/divisionWalk'
 import { stepColouring } from '@/domain/exercise'
-import { OPERATION_SYMBOL, rodsFor, type Problem } from '@/domain/problem'
+import { OPERATION_SYMBOL, rodsFor, type PairProblem } from '@/domain/problem'
 import { emptySoroban, readRod } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
@@ -38,7 +38,7 @@ export function DivideWalkthrough({
   finishLabel,
   onFinish,
 }: {
-  problem: Problem
+  problem: PairProblem
   finishLabel: string
   onFinish: () => void
 }) {

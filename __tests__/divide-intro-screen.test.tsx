@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 import { divisionWalk } from '@/domain/divisionWalk'
-import type { Problem } from '@/domain/problem'
+import type { PairProblem } from '@/domain/problem'
 import { emptyProgress } from '@/domain/progress'
 import { ja } from '@/i18n/ja'
 import * as store from '@/storage/progressStore'
@@ -47,7 +47,7 @@ const text = (testID: string) => textOf(screen.getByTestId(testID))
 
 // The route's example, and step k's words for it in the default locale.
 // src/i18n/divideWalk.test.ts pins the wording itself.
-const PROBLEM: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const PROBLEM: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
 const WALK = divisionWalk(PROBLEM)
 function what(k: number): string {
   const step = WALK[k]

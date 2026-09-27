@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
-import { problemSteps, type Problem, type StepGroup } from '@/domain/problem'
+import { problemSteps, type PairProblem, type StepGroup } from '@/domain/problem'
 import { DECK_PADDING, FRAME_PADDING, geometryFor, ROD_WIDTH } from '@/ui/abacus/geometry'
 import { textOf } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
@@ -13,7 +13,7 @@ import {
   TIMES_WIDTH,
 } from './OperandBoard'
 
-const problem: Problem = { op: 'mul', digits: 3, a: 472, b: 385 }
+const problem: PairProblem = { op: 'mul', digits: 3, a: 472, b: 385 }
 const groups = problemSteps(problem)
 
 // The 九九 of the digits at these places of a and b.
@@ -167,7 +167,7 @@ describe('operandScale', () => {
 // board shows only the divisor, and points at the digit whose 九九 is being
 // taken off.
 describe('OperandBoard for ÷', () => {
-  const division: Problem = { op: 'div', digits: 2, a: 1692, b: 36 }
+  const division: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
   const divisionGroups = problemSteps(division)
   const groupOf = (index: number): StepGroup => {
     const group = divisionGroups[index]

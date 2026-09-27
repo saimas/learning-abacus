@@ -5,7 +5,13 @@ import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
-import { beadModeScale, scaleToFit, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_HEIGHT } from '@/ui/abacus/geometry'
+import {
+  beadModeScale,
+  scaleToFit,
+  SHORT_WINDOW_BEAD_SCALE,
+  SHORT_WINDOW_HEIGHT,
+  SHORT_WINDOW_KEYPAD_SCALE,
+} from '@/ui/abacus/geometry'
 import { AnswerPad } from '@/ui/answer/AnswerPad'
 import { BUTTON_HEIGHT, Button } from '@/ui/kit/Button'
 import { parseAnswer } from '@/ui/parseAnswer'
@@ -47,6 +53,7 @@ export function QuestionView({
   demonstration,
   renderSteps,
   renderBeneath,
+  renderPrompt,
   track,
   maru,
   shownAt,
@@ -75,6 +82,13 @@ export function QuestionView({
   // right under the soroban; keypad mode after the prompt. Nothing for any
   // other question.
   renderBeneath?: (activeStep: number | undefined) => ReactNode
+  // Spec (見取算) §4: a problem drawn in place of the text prompt — a 見取算
+  // column — following the same `activeStep` as the step lines. `prompt`
+  // is not drawn when this is given. Drawn above the soroban in both the
+  // bead and keypad layouts (keypad mode's text prompt, for every other
+  // question, stays below the soroban as it always has). Nothing for any
+  // other question.
+  renderPrompt?: (activeStep: number | undefined) => ReactNode
   track: ReactNode
   // Counts correct answers, so each one remounts the 〇 and replays its fade.
   // 0 means the last answer was wrong, or there has not been one.
@@ -117,16 +131,23 @@ export function QuestionView({
   // The screen's gutters are space.xl on each side (Screen).
   const room = width - 2 * space.xl
   const fittedBeadScale = beadModeScale(exercise.rods, room)
-  // With a board beneath it, a short phone draws the soroban smaller, so the
-  // prompt above it and 手順を見る below keep their room (SHORT_WINDOW_HEIGHT).
+  // With a board beneath it or a column above it, a short phone draws the
+  // soroban smaller, so the prompt above it and 手順を見る below keep their
+  // room (SHORT_WINDOW_HEIGHT).
   const beadScale =
-    renderBeneath !== undefined && height < SHORT_WINDOW_HEIGHT
+    (renderBeneath !== undefined || renderPrompt !== undefined) && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
       : fittedBeadScale
   // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
   // (416 pt), or a 3けた division's seven, are wider than a 375 pt phone, so
-  // it has to shrink to fit too.
-  const keypadScale = scaleToFit(exercise.rods, room, 1)
+  // it has to shrink to fit too. With a column above it (renderPrompt), a
+  // short phone caps it further, at SHORT_WINDOW_KEYPAD_SCALE, so the five
+  // lines and the soroban both fit above the keypad (spec (見取算) §4).
+  const fittedKeypadScale = scaleToFit(exercise.rods, room, 1)
+  const keypadScale =
+    renderPrompt !== undefined && height < SHORT_WINDOW_HEIGHT
+      ? Math.min(fittedKeypadScale, SHORT_WINDOW_KEYPAD_SCALE)
+      : fittedKeypadScale
   // What the learner is told the answer is. A keypad answer is checked
   // against `expected` itself, so that is all it is ever told. A ÷ answer
   // given on the beads is checked against the final soroban reading instead
@@ -338,6 +359,15 @@ export function QuestionView({
     </View>
   )
 
+  const promptView =
+    renderPrompt === undefined ? (
+      <Text testID="prompt" style={styles.prompt}>
+        {prompt}
+      </Text>
+    ) : (
+      renderPrompt(activeStep)
+    )
+
   if (mode === 'beads') {
     // Layout A: the soroban takes the keypad's place, enlarged and within
     // thumb reach. Only the prompt above it and the step panel's lines below
@@ -374,9 +404,7 @@ export function QuestionView({
       <View style={styles.practice}>
         {track}
         <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
-          <Text testID="prompt" style={styles.prompt}>
-            {prompt}
-          </Text>
+          {promptView}
           {demonstrationLine}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
@@ -477,6 +505,11 @@ export function QuestionView({
           steps open before an answer, the step controls take its place
           alone, and the keypad comes back, with what was typed, at とじる. */}
       <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* Spec (見取算) §4: the column is what a keypad answer is read
+            from, so with a renderPrompt it is drawn above the soroban, as
+            in bead mode. Every other question keeps its text prompt below
+            the soroban, as today. */}
+        {renderPrompt !== undefined && promptView}
         <View style={styles.soroban}>
           <Abacus
             soroban={stepper.soroban ?? start}
@@ -486,9 +519,7 @@ export function QuestionView({
           />
           {stamp(110)}
         </View>
-        <Text testID="prompt" style={styles.prompt}>
-          {prompt}
-        </Text>
+        {renderPrompt === undefined && promptView}
         {demonstrationLine}
         {/* After the prompt rather than under the soroban, so it can never
             push the prompt off a short phone, but ahead of the step lines

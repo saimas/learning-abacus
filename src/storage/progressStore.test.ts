@@ -119,6 +119,14 @@ describe('practices', () => {
     )
     expect((await loadProgress()).practices).toEqual({ 'add:2': good })
   })
+
+  it('keeps 見取算 records and drops a size that does not exist', async () => {
+    const good = { fade: 1, consecutiveCorrect: 2, consecutiveWrong: 0, lastPractisedAt: 9 }
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({ ...emptyProgress(), practices: { 'mitori:3': good, 'mitori:4': good } }),
+    )
+    expect((await loadProgress()).practices).toEqual({ 'mitori:3': good })
+  })
 })
 
 describe('multiplyIntroDone', () => {

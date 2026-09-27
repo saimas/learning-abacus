@@ -12,6 +12,7 @@ import {
   type Problem,
 } from '@/domain/problem'
 import { useStrings } from '@/i18n'
+import { TermColumn } from '@/ui/mitori/TermColumn'
 import { OperandBoard } from '@/ui/multiply/OperandBoard'
 import { QuestionView, type Submission } from '@/ui/session/QuestionView'
 import { SessionSummary } from '@/ui/session/SessionSummary'
@@ -133,6 +134,22 @@ export function RoundRunner({
             showAnswer={showAnswer}
           />
         )}
+        // Spec (見取算) §2: a 見取算 problem is a column in the prompt's place,
+        // lighting the number the move stepped to belongs to.
+        renderPrompt={
+          problem.op === 'mitori'
+            ? (activeStep) => {
+              const group = groupOf(activeStep)
+              return (
+                <TermColumn
+                  terms={problem.terms}
+                  label={strings.problemPrompt(problem)}
+                  activeTerm={group?.kind === 'column' ? group.term : undefined}
+                />
+              )
+            }
+            : undefined
+        }
         // 両落とし leaves both numbers off the soroban, so a × problem shows
         // them on a board of their own beneath it, and 商除法 leaves the
         // divisor off, so a ÷ problem shows that (see OperandBoard).

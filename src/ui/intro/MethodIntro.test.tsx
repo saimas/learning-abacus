@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import type { Problem } from '@/domain/problem'
+import type { PairProblem } from '@/domain/problem'
 import { ja } from '@/i18n/ja'
 import { tintedBeads } from '@/ui/session/testing'
 import { REPLAY_STEP_MS } from '@/ui/session/useMoveReplay'
@@ -8,7 +8,7 @@ import { MethodIntro, type IntroTexts } from './MethodIntro'
 // The × walkthrough, as its route sets it up (app/multiply-intro.tsx), in
 // the default locale. ÷ moved to its own bead-by-bead DivideWalkthrough
 // (spec: division walkthrough §4); see DivideWalkthrough.test.tsx.
-const MULTIPLY: Problem = { op: 'mul', digits: 2, a: 47, b: 36 }
+const MULTIPLY: PairProblem = { op: 'mul', digits: 2, a: 47, b: 36 }
 const MULTIPLY_TEXTS: IntroTexts = {
   title: ja.introTitle,
   method: ja.introMethod,

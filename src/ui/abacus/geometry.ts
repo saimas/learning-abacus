@@ -35,6 +35,19 @@ export const BEAD_MODE_SCALE = 1.38
 export const SHORT_WINDOW_HEIGHT = 750
 export const SHORT_WINDOW_BEAD_SCALE = 1.1
 
+// Spec (見取算) §4: in keypad mode, with a 見取算 column drawn above the
+// soroban (QuestionView's `renderPrompt`), a short window caps the soroban
+// at this scale too, so the five lines and the soroban both fit above the
+// keypad on a 375 × 667 phone. The keypad's soroban only shows beads and
+// takes no taps, so it can shrink further than bead mode's. At 22 pt
+// (COLUMN_SHORT_FONT_SIZE) the column is about 152 pt (16 margin + 5 × 26 +
+// 4 + 2), and the soroban's frame (COLUMN_HEIGHT + 2 × (DECK_PADDING +
+// FRAME_PADDING) = 197 pt) at 0.7 plus its space.md margin is about 150 pt:
+// 152 + 150 = 302 pt, against a scroll about 307 pt tall above the keypad.
+// 0.8 would run to about 322 pt, too tall, so 0.7 is the largest tenth that
+// fits.
+export const SHORT_WINDOW_KEYPAD_SCALE = 0.7
+
 // The largest scale, up to `max`, at which `rods` rods fit `width`: the
 // frame is its rods plus the deck's and the frame's padding on each side.
 export function scaleToFit(rods: number, width: number, max: number): number {

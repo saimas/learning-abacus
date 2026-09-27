@@ -8,6 +8,7 @@ import {
   generateProblems,
   groupOfStep,
   isPracticeId,
+  MITORI_TERMS,
   MULTIPLY_RECALL_MS,
   OPERATION_SYMBOL,
   parsePracticeId,
@@ -20,7 +21,8 @@ import {
   startOf,
   TYPING_ALLOWANCE_MS,
   type Digits,
-  type Operation,
+  type MitoriProblem,
+  type PairProblem,
   type Problem,
   type StepGroup,
 } from './problem'
@@ -38,8 +40,20 @@ function seeded(seed: number): () => number {
   }
 }
 
-function problem(op: Operation, a: number, b: number): Problem {
+function problem(op: PairProblem['op'], a: number, b: number): PairProblem {
   return { op, digits: String(a).length as Digits, a, b }
+}
+
+function mitori(digits: Digits, terms: number[]): MitoriProblem {
+  return { op: 'mitori', digits, terms }
+}
+
+// The column groups of a 見取算 problem, as "term:place:moved", in order.
+function termColumns(p: MitoriProblem): string[] {
+  return problemSteps(p).map((g) => {
+    if (g.kind !== 'column') throw new Error(`unexpected ${g.kind} group`)
+    return `${g.term}:${g.place}:${g.steps.length > 0 ? 'moves' : 'still'}`
+  })
 }
 
 // Every rod stays on the soroban at every step, and the last state reads the answer.
@@ -61,7 +75,7 @@ function expectReplaysTo(p: Problem) {
 }
 
 describe('practice ids', () => {
-  it('names the twelve kinds', () => {
+  it('names the fifteen kinds', () => {
     expect(PRACTICE_KINDS.map(practiceId)).toEqual([
       'add:1',
       'add:2',
@@ -75,6 +89,9 @@ describe('practice ids', () => {
       'div:1',
       'div:2',
       'div:3',
+      'mitori:1',
+      'mitori:2',
+      'mitori:3',
     ])
   })
 
@@ -87,6 +104,8 @@ describe('practice ids', () => {
     expect(isPracticeId('mul:2')).toBe(true)
     expect(isPracticeId('div:1')).toBe(true)
     expect(isPracticeId('pow:1')).toBe(false)
+    expect(parsePracticeId('mitori:2')).toEqual({ op: 'mitori', digits: 2 })
+    expect(isPracticeId('mitori:4')).toBe(false)
   })
 })
 
@@ -113,11 +132,12 @@ describe('answerOf and rodsFor', () => {
 })
 
 describe('generateProblems', () => {
-  it.each(PRACTICE_KINDS)('gives 10 distinct problems of the right size for %o', (kind) => {
+  it.each(PRACTICE_KINDS.filter((kind) => kind.op !== 'mitori'))('gives 10 distinct problems of the right size for %o', (kind) => {
     const problems = generateProblems(kind, 10, seeded(7))
     expect(problems).toHaveLength(10)
-    expect(new Set(problems.map((p) => `${p.a},${p.b}`)).size).toBe(10)
+    expect(new Set(problems.map((p) => (p.op === 'mitori' ? p.terms.join(',') : `${p.a},${p.b}`))).size).toBe(10)
     for (const p of problems) {
+      if (p.op === 'mitori') throw new Error('expected a two-number problem')
       expect(p.op).toBe(kind.op)
       expect(p.digits).toBe(kind.digits)
       if (kind.op === 'div') {
@@ -334,7 +354,7 @@ describe('multiplication', () => {
 
   // ÷ written as its code point, since a look-alike would pass by eye.
   it('has a symbol for every operation', () => {
-    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×', div: '\u00F7' })
+    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×', div: '\u00F7', mitori: '±' })
   })
 })
 
@@ -344,7 +364,7 @@ describe('multiplication', () => {
 describe('division', () => {
   // A ÷ problem is × run backwards, so it is named by its quotient and
   // divisor, and its size is the divisor's (and the quotient's) digits.
-  function division(q: number, d: number): Problem {
+  function division(q: number, d: number): PairProblem {
     return { op: 'div', digits: String(d).length as Digits, a: q * d, b: d }
   }
 
@@ -369,7 +389,7 @@ describe('division', () => {
   // Every way a ÷ problem's replay can break the spec's invariants, as
   // messages, so an exhaustive run reports every problem that fails rather
   // than stopping at the first (and runs faster than an expect per rod).
-  function divisionFaults(p: Problem): string[] {
+  function divisionFaults(p: PairProblem): string[] {
     const faults: string[] = []
     const name = `${p.a} ÷ ${p.b}`
     const rods = rodsFor(p)
@@ -609,7 +629,10 @@ describe('division', () => {
   })
 
   it('works a large sample of 3けた problems down to their quotients', () => {
-    const faults = generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(17)).flatMap(divisionFaults)
+    const faults = generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(17)).flatMap((p) => {
+      if (p.op === 'mitori') throw new Error('expected a division')
+      return divisionFaults(p)
+    })
     expect(faults).toEqual([])
   })
 
@@ -630,5 +653,117 @@ describe('division', () => {
     expect(problemTargetMs(zero, 900)).toBe(
       moveTargets(zero) + 6 * MULTIPLY_RECALL_MS + 2 * DIVIDE_ESTIMATE_MS + 3 * TYPING_ALLOWANCE_MS,
     )
+  })
+})
+
+// Spec (見取算) §3: the first number starts on the soroban; each later number
+// is worked onto it from its highest digit down, each digit one move on its
+// rod, as a ＋ − problem's b is.
+describe('見取算', () => {
+  const example = mitori(2, [47, 30, -23, 61, -19])
+
+  it('adds up the signed numbers, starting from the first on N + 1 rods', () => {
+    expect(answerOf(example)).toBe(96)
+    expect(startOf(example)).toBe(47)
+    expect(rodsFor(example)).toBe(3)
+  })
+
+  it('has a symbol of its own', () => {
+    expect(OPERATION_SYMBOL.mitori).toBe('±')
+  })
+
+  it('works each later number from its highest digit, tagging each move with its number', () => {
+    // 30's ones digit is 0: it keeps its group but moves nothing.
+    expect(termColumns(example)).toEqual([
+      '1:1:moves',
+      '1:0:still',
+      '2:1:moves',
+      '2:0:moves',
+      '3:1:moves',
+      '3:0:moves',
+      '4:1:moves',
+      '4:0:moves',
+    ])
+    expectReplaysTo(example)
+  })
+
+  it('adds a positive number and subtracts a negative one', () => {
+    const groups = problemSteps(example)
+    const directionOf = (term: number) =>
+      groups.flatMap((g) => (g.kind === 'column' && g.term === term && g.atom !== null ? [g.atom.direction] : []))
+    expect(directionOf(1)).toEqual(['add'])
+    expect(directionOf(2)).toEqual(['sub', 'sub'])
+    expect(directionOf(3)).toEqual(['add', 'add'])
+    expect(directionOf(4)).toEqual(['sub', 'sub'])
+  })
+
+  it('cascades a carry through a 9: ＋15 onto 185', () => {
+    // 95 + 90 = 185; +15 makes the tens 9, so the ones' +5 carries through them.
+    const p = mitori(2, [95, 90, 15, -60, 22])
+    const ones = problemSteps(p).find((g) => g.kind === 'column' && g.term === 2 && g.place === 0)
+    expect(ones?.cascades).toBe(true)
+    expectReplaysTo(p)
+  })
+
+  it('cascades a borrow through a 0: −101 from 1000', () => {
+    const p = mitori(3, [500, 500, -101, 200, -300])
+    const ones = problemSteps(p).find((g) => g.kind === 'column' && g.term === 2 && g.place === 0)
+    expect(ones?.cascades).toBe(true)
+    expectReplaysTo(p)
+  })
+
+  it('works on from a running total of 0', () => {
+    // 5 − 5 leaves a blank soroban; 3 is then worked from 0.
+    expectReplaysTo(mitori(1, [5, -5, 3, 4, -2]))
+  })
+
+  it('reaches a four-digit total on four rods', () => {
+    expectReplaysTo(mitori(3, [999, 999, 999, -999, 999]))
+  })
+
+  it("targets each digit move's time plus typing the total, as ＋ − do", () => {
+    const moves = problemSteps(example).reduce(
+      (sum, g) => (g.kind === 'column' && g.atom !== null ? sum + latencyTargetMs(classify(g.atom), 900) : sum),
+      0,
+    )
+    expect(problemTargetMs(example, 900)).toBe(moves + 2 * TYPING_ALLOWANCE_MS)
+  })
+
+  // Spec (見取算) §3: five N-digit numbers, the first added, one or two of
+  // the rest subtracted, never below 0 on the way, never 0 at the end.
+  it.each([1, 2, 3] as const)('generates well-formed %i-digit columns', (digits) => {
+    const problems = generateProblems({ op: 'mitori', digits }, 200, seeded(digits))
+    expect(problems).toHaveLength(200)
+    expect(new Set(problems.map((p) => (p.op === 'mitori' ? p.terms.join(',') : ''))).size).toBe(200)
+    const subtractions = new Set<number>()
+    for (const p of problems) {
+      if (p.op !== 'mitori') throw new Error('expected a 見取算 problem')
+      expect(p.digits).toBe(digits)
+      expect(p.terms).toHaveLength(MITORI_TERMS)
+      for (const term of p.terms) expect(String(Math.abs(term))).toHaveLength(digits)
+      expect(p.terms[0]).toBeGreaterThan(0)
+      const negatives = p.terms.filter((term) => term < 0).length
+      expect(negatives).toBeGreaterThanOrEqual(1)
+      expect(negatives).toBeLessThanOrEqual(2)
+      subtractions.add(negatives)
+      let total = 0
+      for (const term of p.terms) {
+        total += term
+        expect(total).toBeGreaterThanOrEqual(0)
+      }
+      expect(total).toBeGreaterThan(0)
+      // A total equal to the first number would leave the beads exactly
+      // where they started (spec (見取算) §3), so こたえる could never be
+      // pressed to submit it.
+      expect(total).not.toBe(p.terms[0])
+      expectReplaysTo(p)
+    }
+    // Both counts occur.
+    expect([...subtractions].sort()).toEqual([1, 2])
+  })
+
+  it('generates the same columns for the same seed', () => {
+    const kind = { op: 'mitori', digits: 2 } as const
+    expect(generateProblems(kind, 10, seeded(5))).toEqual(generateProblems(kind, 10, seeded(5)))
   })
 })
