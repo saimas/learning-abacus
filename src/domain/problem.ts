@@ -154,7 +154,10 @@ function drawPair(op: PairOperation, digits: Digits, random: () => number): Pair
 
 // Five N-digit numbers; one or two of numbers 2–5, chosen at random, are
 // subtracted. Null if the running total would go below 0 on the way, which
-// the soroban cannot show, or end at 0, which reads as a blank soroban.
+// the soroban cannot show, or end at 0 or at the first number: either way
+// the soroban would read as untouched at the answer, and こたえる
+// (QuestionView's `moved`) stays disabled until the beads differ from the
+// start (spec (見取算) §3).
 function drawMitori(digits: Digits, random: () => number): MitoriProblem | null {
   const low = 10 ** (digits - 1)
   const high = 10 ** digits - 1
@@ -171,7 +174,7 @@ function drawMitori(digits: Digits, random: () => number): MitoriProblem | null 
     total += term
     if (total < 0) return null
   }
-  return total === 0 ? null : { op: 'mitori', digits, terms }
+  return total === 0 || total === terms[0] ? null : { op: 'mitori', digits, terms }
 }
 
 // A rod step with its rod named outright, since a problem's steps land on

@@ -752,6 +752,10 @@ describe('見取算', () => {
         expect(total).toBeGreaterThanOrEqual(0)
       }
       expect(total).toBeGreaterThan(0)
+      // A total equal to the first number would leave the beads exactly
+      // where they started (spec (見取算) §3), so こたえる could never be
+      // pressed to submit it.
+      expect(total).not.toBe(p.terms[0])
       expectReplaysTo(p)
     }
     // Both counts occur.

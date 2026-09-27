@@ -51,7 +51,7 @@ Out of scope: an exam mode or timer, other lengths (3口, 10口), 1けた/2け�
 - `MITORI_TERMS = 5`.
 
 ### Generation
-For a size N, each number is drawn uniformly from N-digit numbers (1–9, 10–99, 100–999). The first is added. The count of subtracted numbers is 1 or 2 with equal chance, at positions drawn uniformly from 2–5. The draw is rejected, and drawn again, if the running total after any number is below 0 or the final total is 0. No problem (the whole signed list) repeats within a round. The existing bound on tries (`count × 1000`) stays.
+For a size N, each number is drawn uniformly from N-digit numbers (1–9, 10–99, 100–999). The first is added. The count of subtracted numbers is 1 or 2 with equal chance, at positions drawn uniformly from 2–5. Rejection falls more often on two, so about 6 in 10 delivered columns have one subtraction. The draw is rejected, and drawn again, if the running total after any number is below 0, or the final total is 0 or equal to the first number: the soroban would then read as untouched at the answer, and こたえる is only enabled once the beads differ from the start. No problem (the whole signed list) repeats within a round. The existing bound on tries (`count × 1000`) stays.
 
 ### Rods, start, answer
 - `rodsFor`: N + 1, the default ＋ − already use: the total never exceeds 5 × (10^N − 1) < 10^(N+1).
@@ -87,7 +87,7 @@ As for ＋ −: the per-move target of each digit's atom, plus `TYPING_ALLOWANCE
 
 ## 5. Testing
 
-- **Generation**, over many seeds and every size: five N-digit terms; the first positive; one or two negative among terms 2–5; every running total ≥ 0; the total > 0; no repeats within a round.
+- **Generation**, over many seeds and every size: five N-digit terms; the first positive; one or two negative among terms 2–5; every running total ≥ 0; the total > 0; the total ≠ the first number; no repeats within a round.
 - **Steps**, over every generated problem of many seeds: replaying `problemStates` on N + 1 rods ends at the total; every step stays on the rods (no throw); each group's `term` is the number it belongs to, in order; a 0 digit gives an empty group. Two worked examples whose moves cascade: 2けた `[95, 90, 15, −60, 22]` (＋15 onto 185: the tens become 9, so the ones' carry ripples through them to 200) and 3けた `[500, 500, −101, 200, −300]` (−101 from 1000: the tens are 0, so the ones' borrow ripples through them to 899).
 - **Target**: equals the ＋ − formula summed over the digit moves.
 - **Ids and storage**: `parsePracticeId('mitori:2')`; a `mitori:3` record survives save and load; an unknown `mitori:4` is dropped.
