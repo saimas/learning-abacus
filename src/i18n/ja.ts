@@ -114,7 +114,7 @@ function columnLine(place: number, atom: Atom, cascades: boolean): string {
   }`
 }
 
-// Spec (見取算) §4: the heading over a 見取算 number's lines, which read as
+// Spec (見取算) §7: the heading over a 見取算 number's lines, which read as
 // ＋ − column lines under it: what is done with the number, then what the
 // soroban reads before and after it, so the learner can see where each
 // number's clicks end (the owner, 2026-09-27).

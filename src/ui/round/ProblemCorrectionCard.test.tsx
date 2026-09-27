@@ -219,6 +219,9 @@ describe('ProblemCorrectionCard', () => {
     }
     expect(colorOf('correction-term-2-1')).toBe(colors.accent)
     expect(colorOf('correction-term-2-0')).not.toBe(colors.accent)
+    // The heading of the number stepped into is in the accent too.
+    expect(colorOf('correction-term-2')).toBe(colors.accent)
+    expect(colorOf('correction-term-1')).not.toBe(colors.accent)
   })
 
   it('shades nothing before a step', () => {

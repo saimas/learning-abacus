@@ -20,8 +20,8 @@ export type Exercise = {
   // Where each operation begins in `states`, ascending from 0: a column of a
   // ＋ − problem, a number of a 見取算 problem, a 九九 of a × problem, a
   // quotient digit or a 九九 taken off in a ÷ problem, or the whole of a
-  // single move. The stepping soroban
-  // colours one operation's beads at a time.
+  // single move. The stepping soroban colours one operation's beads at a
+  // time.
   groupStarts: number[]
 }
 
@@ -39,7 +39,7 @@ export function exerciseForAtom(atom: Atom): Exercise {
 export function exerciseForProblem(problem: Problem): Exercise {
   // A column that adds 0 (or a 九九 of 0, or a quotient digit of 0) moves no
   // bead, so there is nothing of it to colour, and its start would be the
-  // next group's start again. Spec (見取算) §4: a 見取算 number is one
+  // next group's start again. Spec (見取算) §7: a 見取算 number is one
   // operation however many rods it moves, so its columns share one start
   // (the owner, 2026-09-27: it was hard to tell which clicks were −59's and
   // which +39's).

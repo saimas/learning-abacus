@@ -265,7 +265,7 @@ describe('multi-digit strings', () => {
     )
   })
 
-  // Spec (見取算) §4: a 見取算 number's lines sit under a heading that says
+  // Spec (見取算) §7: a 見取算 number's lines sit under a heading that says
   // what is done with it and what the soroban reads before and after.
   it('heads a 見取算 number with what it does to the running total', () => {
     expect(ja.mitoriHeading(-59, 77, 18)).toBe('59をひく　77 → 18')

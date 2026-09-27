@@ -69,7 +69,7 @@ describe('exerciseForProblem', () => {
     expect(exerciseForProblem({ op: 'add', digits: 3, a: 472, b: 305 }).groupStarts).toEqual([0, 2])
   })
 
-  // Spec (見取算) §4, the owner (2026-09-27): it was hard to tell which clicks
+  // Spec (見取算) §7, the owner (2026-09-27): it was hard to tell which clicks
   // were −59's and which +39's, so a 見取算 number is one operation, however
   // many rods it moves.
   it('starts one operation per 見取算 number, not per rod', () => {

@@ -131,7 +131,7 @@ type MitoriRow =
   | { kind: 'heading'; term: number; value: number; before: number; after: number; shaded: boolean }
   | { kind: 'line'; term: number; index: number; group: { place: number; atom: Atom; cascades: boolean }; shaded: boolean }
 
-// Spec (見取算) §4, the owner (2026-09-27: it was hard to tell which clicks
+// Spec (見取算) §7, the owner (2026-09-27: it was hard to tell which clicks
 // were −59's and which +39's): each number after the first heads its own
 // lines, with what the soroban reads before and after it, and the number
 // stepped into is shaded, heading and lines together. The rows are the
