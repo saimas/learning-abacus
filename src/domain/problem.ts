@@ -580,6 +580,21 @@ export function problemSections(problem: Problem): StepSection[] {
   })
 }
 
+// The signed number a column group works: its 見取算 number, or a ＋ − problem's
+// b, taken off for −. Only those two kinds have column groups.
+function numberOf(problem: Problem, term: number | undefined): number {
+  switch (problem.op) {
+    case 'mitori':
+      return problem.terms[term ?? 0] ?? 0
+    case 'add':
+      return problem.b
+    case 'sub':
+      return -problem.b
+    default:
+      throw new Error(`a ${problem.op} problem has no column groups`)
+  }
+}
+
 // A section from the group that opens it and the readings around it.
 function sectionOf(
   problem: Problem,
@@ -590,10 +605,8 @@ function sectionOf(
 ): StepSection {
   if (first === undefined) throw new Error('a section with no groups')
   switch (first.kind) {
-    case 'column': {
-      const value = problem.op === 'mitori' ? (problem.terms[first.term ?? 0] ?? 0) : problem.op === 'sub' ? -problem.b : problem.op === 'add' ? problem.b : 0
-      return { kind: 'number', value, before, after, groups }
-    }
+    case 'column':
+      return { kind: 'number', value: numberOf(problem, first.term), before, after, groups }
     case 'product':
       return { kind: 'multiply', x: first.x, multiplier: problem.op === 'mul' ? problem.b : 0, before, after, groups }
     case 'quotient': {

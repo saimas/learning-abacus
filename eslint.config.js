@@ -21,7 +21,8 @@ module.exports = defineConfig([
     },
   },
   {
-    // Generated and git-ignored: Expo's route types and the prebuilt iOS project.
-    ignores: ['dist/*', '.expo/*', 'ios/*'],
+    // Generated or scratch, and git-ignored: Expo's route types, the prebuilt
+    // iOS project, and the planning tools' working files.
+    ignores: ['dist/*', '.expo/*', 'ios/*', '.superpowers/*'],
   },
 ])

@@ -20,8 +20,8 @@ export type Exercise = {
   // Where each operation begins in `states`, ascending from 0: a section of
   // a problem (problemSections: the number of a ＋ − or 見取算 problem, a
   // multiplicand digit of a × problem, a quotient digit of a ÷ problem), or
-  // the whole of a single move. The stepping soroban colours one operation's beads at a
-  // time.
+  // the whole of a single move. The stepping soroban colours one
+  // operation's beads at a time.
   groupStarts: number[]
 }
 

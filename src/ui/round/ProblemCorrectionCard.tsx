@@ -8,10 +8,11 @@ import { colors, fonts } from '@/ui/theme'
 // The explanation of a problem, as the step panel shows it: the answer, then
 // how each group is worked, highest place first, in the same words as a
 // single move's card. A column group (＋ −, 見取算) reads as its rod and
-// move; a product group (×) reads as the 九九 and where its digits land. A ÷ problem alternates a
-// quotient group, read as how its digit is guessed by 九九 (lowered when too
-// big to take away) and where it is placed (割れる / 割れない), and a subtract
-// group per divisor digit, read as the 九九 and the rods its digits come off.
+// move; a product group (×) reads as the 九九 and where its digits land. A
+// ÷ problem alternates a quotient group, read as how its digit is guessed by
+// 九九 (lowered when too big to take away) and where it is placed (割れる /
+// 割れない), and a subtract group per divisor digit, read as the 九九 and
+// the rods its digits come off.
 // Spec (core rounds) §11 (the owner, 2026-09-27: "it is hard to tell upto
 // which click was for −59 and +39"): the lines sit under a heading per
 // section (problemSections) — a number added or taken off, a multiplicand
