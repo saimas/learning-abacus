@@ -9,6 +9,7 @@ import {
   type PairProblem,
   type PracticeKind,
   type Problem,
+  type StepSection,
 } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { CellState } from '@/domain/progress'
@@ -114,12 +115,21 @@ function columnLine(place: number, atom: Atom, cascades: boolean): string {
   }`
 }
 
-// Spec (見取算) §7: the heading over a 見取算 number's lines, which read as
-// ＋ − column lines under it: what is done with the number, then what the
-// soroban reads before and after it, so the learner can see where each
-// number's clicks end (the owner, 2026-09-27).
-function mitoriHeading(term: number, before: number, after: number): string {
-  return `${Math.abs(term)}を${term < 0 ? 'ひく' : 'たす'}　${before} → ${after}`
+// Spec (core rounds) §11: the heading over a section's lines — what the
+// section does, then what the soroban reads before and after it, or for ÷
+// what is left — so the learner can see where each section's clicks end
+// (the owner, 2026-09-27). A number is named without its sign: 「−59をひく」
+// would read as taking away −59.
+function sectionHeading(section: StepSection): string {
+  const change = `${section.before} → ${section.after}`
+  switch (section.kind) {
+    case 'number':
+      return `${Math.abs(section.value)}を${section.value < 0 ? 'ひく' : 'たす'}　${change}`
+    case 'multiply':
+      return `${section.x}×${section.multiplier}　${change}`
+    case 'divide':
+      return `商${section.q}　のこり ${change}`
+  }
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -382,7 +392,7 @@ export const ja = {
     }
   },
   columnLine,
-  mitoriHeading,
+  sectionHeading,
   productLine,
   quotientLine,
   subtractLine,

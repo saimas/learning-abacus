@@ -1,6 +1,6 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-import type { MitoriProblem } from '@/domain/problem'
+import type { MitoriProblem, StepSection } from '@/domain/problem'
 import { en } from './en'
 import { ja } from './ja'
 import { LOCALES } from './locale'
@@ -265,13 +265,21 @@ describe('multi-digit strings', () => {
     )
   })
 
-  // Spec (見取算) §7: a 見取算 number's lines sit under a heading that says
-  // what is done with it and what the soroban reads before and after.
-  it('heads a 見取算 number with what it does to the running total', () => {
-    expect(ja.mitoriHeading(-59, 77, 18)).toBe('59をひく　77 → 18')
-    expect(ja.mitoriHeading(39, 18, 57)).toBe('39をたす　18 → 57')
-    expect(en.mitoriHeading(-59, 77, 18)).toBe('−59: 77 → 18')
-    expect(en.mitoriHeading(39, 18, 57)).toBe('+39: 18 → 57')
+  // Spec (core rounds) §11: each section's lines sit under a heading that
+  // says what the section does and what the soroban reads before and after
+  // it (for ÷, what is left).
+  it('heads each section with what it does to the soroban', () => {
+    const number = (value: number, before: number, after: number): StepSection => ({ kind: 'number', value, before, after, groups: [] })
+    expect(ja.sectionHeading(number(-59, 77, 18))).toBe('59をひく　77 → 18')
+    expect(ja.sectionHeading(number(385, 472, 857))).toBe('385をたす　472 → 857')
+    expect(en.sectionHeading(number(-59, 77, 18))).toBe('−59: 77 → 18')
+    expect(en.sectionHeading(number(385, 472, 857))).toBe('+385: 472 → 857')
+    const multiply: StepSection = { kind: 'multiply', x: 4, multiplier: 36, before: 0, after: 1440, groups: [] }
+    expect(ja.sectionHeading(multiply)).toBe('4×36　0 → 1440')
+    expect(en.sectionHeading(multiply)).toBe('4 × 36: 0 → 1440')
+    const divide: StepSection = { kind: 'divide', q: 4, before: 1692, after: 252, groups: [] }
+    expect(ja.sectionHeading(divide)).toBe('商4　のこり 1692 → 252')
+    expect(en.sectionHeading(divide)).toBe('Quotient 4: 1692 → 252 left')
   })
 
   it('names all four rods', () => {

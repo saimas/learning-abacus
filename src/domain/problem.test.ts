@@ -14,6 +14,7 @@ import {
   parsePracticeId,
   PRACTICE_KINDS,
   practiceId,
+  problemSections,
   problemStates,
   problemSteps,
   problemTargetMs,
@@ -765,5 +766,75 @@ describe('見取算', () => {
   it('generates the same columns for the same seed', () => {
     const kind = { op: 'mitori', digits: 2 } as const
     expect(generateProblems(kind, 10, seeded(5))).toEqual(generateProblems(kind, 10, seeded(5)))
+  })
+})
+
+// Spec (core rounds) §11, the owner (2026-09-27/28): 手順を見る groups a
+// problem's steps the way the learner thinks of them — one number added or
+// taken off (＋ −, 見取算), one multiplicand digit times the whole multiplier
+// (×), one quotient digit placed and taken off (÷) — each with what the
+// soroban reads before and after it (for ÷, what is left).
+describe('problemSections', () => {
+  // Every group belongs to exactly one section, in order, and each section
+  // starts where the one before it ends.
+  function expectWholeAndChained(p: Problem) {
+    const sections = problemSections(p)
+    expect(sections.flatMap((section) => section.groups)).toEqual(problemSteps(p).map((_, index) => index))
+    for (let k = 1; k < sections.length; k++) expect(sections[k]?.before).toBe(sections[k - 1]?.after)
+  }
+
+  it('makes the number added one section for ＋, and the number taken off for −', () => {
+    expect(problemSections(problem('add', 472, 385))).toEqual([
+      { kind: 'number', value: 385, before: 472, after: 857, groups: [0, 1, 2] },
+    ])
+    expect(problemSections(problem('sub', 472, 385))).toEqual([
+      { kind: 'number', value: -385, before: 472, after: 87, groups: [0, 1, 2] },
+    ])
+  })
+
+  it('makes each later number of a 見取算 column a section', () => {
+    expect(problemSections(mitori(2, [47, 30, -23, 61, -19]))).toEqual([
+      { kind: 'number', value: 30, before: 47, after: 77, groups: [0, 1] },
+      { kind: 'number', value: -23, before: 77, after: 54, groups: [2, 3] },
+      { kind: 'number', value: 61, before: 54, after: 115, groups: [4, 5] },
+      { kind: 'number', value: -19, before: 115, after: 96, groups: [6, 7] },
+    ])
+  })
+
+  it('makes each multiplicand digit times the multiplier a section for ×', () => {
+    expect(problemSections(problem('mul', 47, 36))).toEqual([
+      { kind: 'multiply', x: 4, multiplier: 36, before: 0, after: 1440, groups: [0, 1] },
+      { kind: 'multiply', x: 7, multiplier: 36, before: 1440, after: 1692, groups: [2, 3] },
+    ])
+  })
+
+  it('keeps a section for a multiplicand digit of 0, which changes nothing', () => {
+    const sections = problemSections(problem('mul', 405, 123))
+    expect(sections.map((section) => (section.kind === 'multiply' ? section.x : null))).toEqual([4, 0, 5])
+    expect(sections[1]?.before).toBe(sections[1]?.after)
+    expect(sections[2]?.after).toBe(405 * 123)
+  })
+
+  it('makes each quotient digit a section for ÷, with what is left before and after', () => {
+    expect(problemSections({ op: 'div', digits: 2, a: 1692, b: 36 })).toEqual([
+      { kind: 'divide', q: 4, before: 1692, after: 252, groups: [0, 1, 2] },
+      { kind: 'divide', q: 7, before: 252, after: 0, groups: [3, 4, 5] },
+    ])
+  })
+
+  it('keeps a section for a quotient digit of 0, which places and takes off nothing', () => {
+    const sections = problemSections({ op: 'div', digits: 3, a: 202032, b: 976 })
+    expect(sections.map((section) => (section.kind === 'divide' ? section.q : null))).toEqual([2, 0, 7])
+    expect(sections.map((section) => [section.before, section.after])).toEqual([
+      [202032, 6832],
+      [6832, 6832],
+      [6832, 0],
+    ])
+  })
+
+  it('covers every step of every kind of problem, in order', () => {
+    for (const kind of PRACTICE_KINDS) {
+      for (const p of generateProblems(kind, 30, seeded(17))) expectWholeAndChained(p)
+    }
   })
 })

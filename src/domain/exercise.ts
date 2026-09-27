@@ -1,5 +1,5 @@
 import { expectedValue, moveStates, startValue, type Atom } from './atoms'
-import { answerOf, problemStates, problemSteps, rodsFor, startOf, type Problem } from './problem'
+import { answerOf, problemSections, problemStates, problemSteps, rodsFor, startOf, type Problem } from './problem'
 import { changedBeads, type PlacedBead, type Soroban } from './soroban'
 
 // Spec (multi-digit ＋ −) §4: what one question puts on the soroban, whether
@@ -17,11 +17,11 @@ export type Exercise = {
   expectedBeads?: number
   // The soroban at the start, then after each step, for the replay.
   states: Soroban[]
-  // Where each operation begins in `states`, ascending from 0: a column of a
-  // ＋ − problem, a number of a 見取算 problem, a 九九 of a × problem, a
-  // quotient digit or a 九九 taken off in a ÷ problem, or the whole of a
-  // single move. The stepping soroban colours one operation's beads at a
-  // time.
+  // Where each operation begins in `states`, ascending from 0: a section of
+  // a problem (problemSections: the number of a ＋ − or 見取算 problem, a
+  // multiplicand digit of a × problem, a quotient digit of a ÷ problem), or
+  // the whole of a single move. The stepping soroban colours one
+  // operation's beads at a time.
   groupStarts: number[]
 }
 
@@ -37,22 +37,19 @@ export function exerciseForAtom(atom: Atom): Exercise {
 }
 
 export function exerciseForProblem(problem: Problem): Exercise {
-  // A column that adds 0 (or a 九九 of 0, or a quotient digit of 0) moves no
-  // bead, so there is nothing of it to colour, and its start would be the
-  // next group's start again. Spec (見取算) §7: a 見取算 number is one
-  // operation however many rods it moves, so its columns share one start
-  // (the owner, 2026-09-27: it was hard to tell which clicks were −59's and
-  // which +39's).
+  // Spec (core rounds) §11: one operation per section — a number added or
+  // taken off, a multiplicand digit, a quotient digit — however many rods it
+  // moves, so its beads stay coloured together (the owner, 2026-09-27: it
+  // was hard to tell which clicks were −59's and which +39's). A section
+  // that moves no bead (a 0 digit) has nothing to colour, and its start
+  // would be the next one's again.
+  const groups = problemSteps(problem)
   const groupStarts: number[] = []
   let at = 0
-  let previousTerm: number | undefined
-  for (const group of problemSteps(problem)) {
-    if (group.steps.length > 0) {
-      const term = group.kind === 'column' ? group.term : undefined
-      if (term === undefined || term !== previousTerm) groupStarts.push(at)
-      previousTerm = term
-    }
-    at += group.steps.length
+  for (const section of problemSections(problem)) {
+    const steps = section.groups.reduce((sum, index) => sum + (groups[index]?.steps.length ?? 0), 0)
+    if (steps > 0) groupStarts.push(at)
+    at += steps
   }
   const expected = answerOf(problem)
   return {

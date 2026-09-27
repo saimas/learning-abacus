@@ -172,20 +172,24 @@ describe('ProblemCorrectionCard', () => {
 
   const backgroundOf = (testID: string) =>
     StyleSheet.flatten(screen.getByTestId(testID).props.style)?.backgroundColor
-  // The card's lines and headings, in the order they are drawn.
+  // The card's headings and lines, in the order they are drawn.
   const drawn = () =>
     screen.root
-      .findAll((node) => typeof node.type === 'string' && /^correction-term-/.test(String(node.props.testID)))
+      .findAll(
+        (node) =>
+          typeof node.type === 'string' &&
+          /^correction-(heading|term|column|product|quotient|subtract)-/.test(String(node.props.testID)),
+      )
       .map((node) => node.props.testID as string)
 
-  // The owner (2026-09-27): it was hard to tell which lines were −59's and
-  // which +39's, so each number heads its own lines.
+  // Spec (core rounds) §11, the owner (2026-09-27): it was hard to tell which
+  // lines were −59's and which +39's, so each number heads its own lines.
   it('groups a 見取算 problem’s lines under a heading per number', () => {
     render(<ProblemCorrectionCard problem={column} expected={96} />)
-    expect(textOf(screen.getByTestId('correction-term-1'))).toBe('30をたす　47 → 77')
-    expect(textOf(screen.getByTestId('correction-term-2'))).toBe('23をひく　77 → 54')
-    expect(textOf(screen.getByTestId('correction-term-3'))).toBe('61をたす　54 → 115')
-    expect(textOf(screen.getByTestId('correction-term-4'))).toBe('19をひく　115 → 96')
+    expect(textOf(screen.getByTestId('correction-heading-0'))).toBe('30をたす　47 → 77')
+    expect(textOf(screen.getByTestId('correction-heading-1'))).toBe('23をひく　77 → 54')
+    expect(textOf(screen.getByTestId('correction-heading-2'))).toBe('61をたす　54 → 115')
+    expect(textOf(screen.getByTestId('correction-heading-3'))).toBe('19をひく　115 → 96')
     // Under its heading, a line reads as a ＋ − column's does. 47 + 30: the
     // tens rod shows 4, and 3 is added to it; 30's ones digit moves nothing.
     expect(textOf(screen.getByTestId('correction-term-1-1'))).toBe(ja.columnLine(1, atom(4, 3, 'add'), false))
@@ -194,15 +198,15 @@ describe('ProblemCorrectionCard', () => {
     expect(textOf(screen.getByTestId('correction-term-2-1'))).toBe(ja.columnLine(1, atom(7, 2, 'sub'), false))
     expect(textOf(screen.getByTestId('correction-term-2-0'))).toBe(ja.columnLine(0, atom(7, 3, 'sub'), false))
     expect(drawn()).toEqual([
-      'correction-term-1',
+      'correction-heading-0',
       'correction-term-1-1',
-      'correction-term-2',
+      'correction-heading-1',
       'correction-term-2-1',
       'correction-term-2-0',
-      'correction-term-3',
+      'correction-heading-2',
       'correction-term-3-1',
       'correction-term-3-0',
-      'correction-term-4',
+      'correction-heading-3',
       'correction-term-4-1',
       'correction-term-4-0',
     ])
@@ -211,22 +215,77 @@ describe('ProblemCorrectionCard', () => {
   it('shades the whole number stepped into, and highlights the move', () => {
     // Groups: 30's tens (0), 30's ones (1, no line), 23's tens (2), 23's ones (3), ...
     render(<ProblemCorrectionCard problem={column} expected={96} activeGroup={2} />)
-    for (const id of ['correction-term-2', 'correction-term-2-1', 'correction-term-2-0']) {
+    for (const id of ['correction-heading-1', 'correction-term-2-1', 'correction-term-2-0']) {
       expect(backgroundOf(id)).toBe(colors.accentSoft)
     }
-    for (const id of ['correction-term-1', 'correction-term-1-1', 'correction-term-3', 'correction-term-3-1']) {
+    for (const id of ['correction-heading-0', 'correction-term-1-1', 'correction-heading-2', 'correction-term-3-1']) {
       expect(backgroundOf(id)).toBeUndefined()
     }
     expect(colorOf('correction-term-2-1')).toBe(colors.accent)
     expect(colorOf('correction-term-2-0')).not.toBe(colors.accent)
     // The heading of the number stepped into is in the accent too.
-    expect(colorOf('correction-term-2')).toBe(colors.accent)
-    expect(colorOf('correction-term-1')).not.toBe(colors.accent)
+    expect(colorOf('correction-heading-1')).toBe(colors.accent)
+    expect(colorOf('correction-heading-0')).not.toBe(colors.accent)
   })
 
   it('shades nothing before a step', () => {
     render(<ProblemCorrectionCard problem={column} expected={96} />)
     for (const id of drawn()) expect(backgroundOf(id)).toBeUndefined()
+  })
+
+  // Spec (core rounds) §11: the same for the other kinds. A ＋ − problem has
+  // the one number, so one heading over all its columns.
+  it('heads a ＋ − problem’s columns with the number added or taken off', () => {
+    render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 472, b: 385 }} expected={857} activeGroup={1} />)
+    expect(textOf(screen.getByTestId('correction-heading-0'))).toBe('385をたす　472 → 857')
+    expect(drawn()).toEqual(['correction-heading-0', 'correction-column-2', 'correction-column-1', 'correction-column-0'])
+    for (const id of drawn()) expect(backgroundOf(id)).toBe(colors.accentSoft)
+    expect(colorOf('correction-column-1')).toBe(colors.accent)
+    expect(colorOf('correction-column-2')).not.toBe(colors.accent)
+  })
+
+  it('heads each multiplicand digit’s 九九 in a multiplication', () => {
+    // 47 × 36: 4×3, 4×6 (groups 0, 1), then 7×3, 7×6 (groups 2, 3).
+    render(<ProblemCorrectionCard problem={{ op: 'mul', digits: 2, a: 47, b: 36 }} expected={1692} activeGroup={2} />)
+    expect(textOf(screen.getByTestId('correction-heading-0'))).toBe('4×36　0 → 1440')
+    expect(textOf(screen.getByTestId('correction-heading-1'))).toBe('7×36　1440 → 1692')
+    expect(drawn()).toEqual([
+      'correction-heading-0',
+      'correction-product-0',
+      'correction-product-1',
+      'correction-heading-1',
+      'correction-product-2',
+      'correction-product-3',
+    ])
+    for (const id of ['correction-heading-1', 'correction-product-2', 'correction-product-3']) {
+      expect(backgroundOf(id)).toBe(colors.accentSoft)
+    }
+    for (const id of ['correction-heading-0', 'correction-product-0', 'correction-product-1']) {
+      expect(backgroundOf(id)).toBeUndefined()
+    }
+    expect(colorOf('correction-product-2')).toBe(colors.accent)
+  })
+
+  it('heads each quotient digit and its 九九 taken off in a division, with what is left', () => {
+    // 1692 ÷ 36: place 4, take off 4×3 and 4×6 (groups 0–2); then 7 (3–5).
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} activeGroup={4} />)
+    expect(textOf(screen.getByTestId('correction-heading-0'))).toBe('商4　のこり 1692 → 252')
+    expect(textOf(screen.getByTestId('correction-heading-1'))).toBe('商7　のこり 252 → 0')
+    expect(drawn()).toEqual([
+      'correction-heading-0',
+      'correction-quotient-0',
+      'correction-subtract-1',
+      'correction-subtract-2',
+      'correction-heading-1',
+      'correction-quotient-3',
+      'correction-subtract-4',
+      'correction-subtract-5',
+    ])
+    for (const id of ['correction-heading-1', 'correction-quotient-3', 'correction-subtract-4', 'correction-subtract-5']) {
+      expect(backgroundOf(id)).toBe(colors.accentSoft)
+    }
+    expect(backgroundOf('correction-heading-0')).toBeUndefined()
+    expect(colorOf('correction-subtract-4')).toBe(colors.accent)
   })
 
   // The headings sit among the lines as their siblings, so the line stepped
@@ -240,7 +299,7 @@ describe('ProblemCorrectionCard', () => {
     )
     const layout = (testID: string, y: number) =>
       fireEvent(screen.getByTestId(testID), 'layout', { nativeEvent: { layout: { x: 0, y, width: 300, height: 16 } } })
-    layout('correction-term-2', 40)
+    layout('correction-heading-1', 40)
     layout('correction-term-2-1', 56)
     expect(onActiveLayout).not.toHaveBeenCalled()
     layout('correction-term-2-0', 72)

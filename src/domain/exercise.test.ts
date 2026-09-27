@@ -23,8 +23,9 @@ describe('exerciseForProblem', () => {
       start: 472,
       expected: 857,
       states: problemStates(problem),
-      // Hundreds +5 −2, tens +10 −2, ones +5.
-      groupStarts: [0, 2, 4],
+      // Spec (core rounds) §11: the number added is one operation, however
+      // many columns it takes (hundreds +5 −2, tens +10 −2, ones +5).
+      groupStarts: [0],
     })
   })
 
@@ -35,8 +36,9 @@ describe('exerciseForProblem', () => {
       start: 0,
       expected: 1692,
       states: problemStates(problem),
-      // 4×3 is +1 +2, 4×6 is +2 +4, 7×3 is +5 −3 then +5 −4, 7×6 is +4 +2.
-      groupStarts: [0, 2, 4, 8],
+      // One operation per multiplicand digit (spec (core rounds) §11): 4×3
+      // is +1 +2 and 4×6 is +2 +4; then 7×3 is +5 −3 then +5 −4, 7×6 +4 +2.
+      groupStarts: [0, 4],
     })
   })
 
@@ -51,9 +53,10 @@ describe('exerciseForProblem', () => {
       expected: 47,
       expectedBeads: 47000,
       states: problemStates(problem),
-      // Place 4 (+4); 4×3 is −1 then −2 as −5 +3; 4×6 is −2 −4; place 7 as
-      // +5 +2; 7×3 is −2 then −1 as −5 +4; 7×6 is −4 −2.
-      groupStarts: [0, 1, 4, 6, 8, 11],
+      // One operation per quotient digit (spec (core rounds) §11): place 4
+      // (+4), 4×3 is −1 then −2 as −5 +3, 4×6 is −2 −4; then place 7 as
+      // +5 +2, 7×3 is −2 then −1 as −5 +4, 7×6 is −4 −2.
+      groupStarts: [0, 6],
     })
   })
 
@@ -63,10 +66,12 @@ describe('exerciseForProblem', () => {
     }
   })
 
-  it('starts no operation at a column with nothing to add', () => {
-    // 472 + 305: the tens column adds 0, so it moves no bead and there is
-    // nothing of it to colour.
-    expect(exerciseForProblem({ op: 'add', digits: 3, a: 472, b: 305 }).groupStarts).toEqual([0, 2])
+  it('starts no operation for a section with nothing to move', () => {
+    // 405 × 123: the multiplicand's tens digit is 0, so its 九九 move no bead
+    // and there is nothing of it to colour: two operations, not three.
+    const { groupStarts } = exerciseForProblem({ op: 'mul', digits: 3, a: 405, b: 123 })
+    expect(groupStarts).toHaveLength(2)
+    expect(groupStarts[0]).toBe(0)
   })
 
   // Spec (見取算) §7, the owner (2026-09-27): it was hard to tell which clicks
@@ -96,8 +101,11 @@ describe('exerciseForProblem', () => {
 // The owner's request (2026-09-23): while stepping, the beads the current
 // operation has moved so far are coloured, the latest step's the deepest.
 describe('stepColouring', () => {
+  // stepColouring colours whatever operations it is given. These tests give
+  // it one per column of 472 + 385, which exercises every case it has.
   const add = exerciseForProblem({ op: 'add', digits: 3, a: 472, b: 385 })
-  const colouring = (index: number | null) => stepColouring(add.states, add.groupStarts, index)
+  const columns = [0, 2, 4]
+  const colouring = (index: number | null) => stepColouring(add.states, columns, index)
   const heaven = (rod: number) => ({ rod, bead: { kind: 'heaven' } as const })
   const earth = (rod: number, index: number) => ({ rod, bead: { kind: 'earth', index } as const })
 
@@ -135,8 +143,7 @@ describe('stepColouring', () => {
     // 10's complement whose carry meets a full tens rod, so the carry
     // ripples to the hundreds: 096 → 196 → 146 → 106 → 101 → 100.
     const cascade = exerciseForProblem({ op: 'add', digits: 2, a: 46, b: 54 })
-    expect(cascade.groupStarts).toEqual([0, 1])
-    const at = (index: number) => stepColouring(cascade.states, cascade.groupStarts, index)
+    const at = (index: number) => stepColouring(cascade.states, [0, 1], index)
     expect(at(1)).toEqual({ group: [heaven(1)], latest: [heaven(1)] })
     // The ones column starts with the carry on the hundreds rod, and the tens
     // column's heaven bead is left behind.
@@ -152,7 +159,7 @@ describe('stepColouring', () => {
     // 47 × 36's 7×3 = 21: +2 on the hundreds (+5 −3, 1400 → 1940 → 1640),
     // then +1 on the tens (+5 −4, 1640 → 1690 → 1650).
     const mul = exerciseForProblem({ op: 'mul', digits: 2, a: 47, b: 36 })
-    expect(stepColouring(mul.states, mul.groupStarts, 8)).toEqual({
+    expect(stepColouring(mul.states, [0, 2, 4, 8], 8)).toEqual({
       group: [
         heaven(1),
         earth(1, 1),

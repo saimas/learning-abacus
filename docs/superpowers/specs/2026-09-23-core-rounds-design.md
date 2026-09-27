@@ -97,3 +97,17 @@ After build 13 the owner said: "it's bit hard to see the motion as a group … w
 - While stepping (手順を見る, the miss review, the × walkthrough), every bead the current operation has moved so far is drawn red: a column for ＋ −, a 九九 (both digits and any cascade) for ×, the whole move for a single move. The beads moved by the latest step are the deepest red; earlier moves in the same operation a lighter red. A bead that moved and moved back within the operation stays coloured.
 - Moving into the next operation clears the previous one's colour; ◀ colours exactly as ▶ did, because the colouring depends only on the step on show. Nothing is coloured at the start state, when not stepping, or on the learner's own soroban.
 - `changedBeads` (soroban.ts), `Exercise.groupStarts` and `stepColouring` (exercise.ts) compute it; `Abacus`'s `tintedBeads` draws it (a tinted bead's testID gains `-group` / `-latest`).
+
+## 11. Addendum: steps grouped by number, for every kind (TestFlight build 24)
+
+見取算 build 23 grouped its steps by number (`2026-09-26-mitori-design.md` §7) after the owner found it "hard to tell upto which click was for −59 and +39". The owner then asked for the same in every kind of round: "i want that same approach for other operation lessons like multiplication, division, addition, subtraction."
+
+- **Sections.** `problemSections(problem)` (problem.ts) splits a problem's step groups into the units a learner thinks in, each with what the soroban reads before and after it:
+  - ＋ − and 見取算: one number added or taken off (a ＋ − problem has the one, b).
+  - ×: one multiplicand digit times the whole multiplier, its 九九 in turn (両落とし).
+  - ÷: one quotient digit placed and its 九九 taken off (商除法); before and after are what is left below the quotient's rods.
+  A 0 digit keeps its section, with nothing changing.
+- **Colouring** (§10) now follows the sections, not the columns or 九九: every bead a section has moved stays red, the latest step deepest, until the next section's first move. `Exercise.groupStarts` is each moving section's first step. Single moves (基礎) and the walkthroughs, which have their own groups, are unchanged.
+- **The card** (`ProblemCorrectionCard`) heads each section's lines, indented under it: 「385をたす　472 → 857」, 「4×36　0 → 1440」, 「商4　のこり 1692 → 252」 (en "+385: 472 → 857", "4 × 36: 0 → 1440", "Quotient 4: 1692 → 252 left"). The section stepped into is shaded, heading and lines; the line stepped to is highlighted as before; nothing is shaded before the first step. Headings are `correction-heading-<n>`, and they are the lines' siblings, so `useActiveLineLayout` still measures every line from the card's origin.
+- Unchanged: one bead per ▶, the step count, the operand board's highlight of the 九九 being worked, the lines' own words.
+
