@@ -72,8 +72,9 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   and subtracts each 九九 of quotient digit × divisor digit; the quotient is left on the soroban.
   The divisor is shown on the small read-only soroban. Division is always exact.
 - **±**, 見取算: five numbers in a column above the soroban, the first set on it at the start; one
-  or two of the others are subtracted, and the running total never goes below 0. The number being
-  worked is highlighted while stepping.
+  or two of the others are subtracted, and the running total never goes below 0. While stepping,
+  the number being worked is highlighted, its bead moves stay coloured together, and the steps are
+  grouped under a heading per number (「59をひく　77 → 18」).
 - **手順を見る** on every question, here and in 基礎の練習, opens the steps: ◀ ▶ play one bead move
   at a time and 最初から goes back to the start. An answer given after opening it counts "with
   help": it is tallied but does not move the fade ladder.

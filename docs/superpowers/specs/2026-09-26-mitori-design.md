@@ -1,7 +1,7 @@
 # learning-abacus — 見取算, a column of five numbers (roadmap P4)
 
 Date: 2026-09-26
-Status: Implemented on feature/mitori (TestFlight build 22). Sub-project P4 of `2026-09-23-n-by-n-roadmap.md`.
+Status: Implemented on feature/mitori (TestFlight build 22); steps grouped by number in build 23 (§7). Sub-project P4 of `2026-09-23-n-by-n-roadmap.md`.
 
 ## 1. Goal and decisions
 
@@ -39,7 +39,7 @@ Out of scope: an exam mode or timer, other lengths (3口, 10口), 1けた/2け�
 
   Digits right-aligned in tabular figures, the minus sign in a column of its own at the left, a rule under the last number. No ＋ on added numbers, as on exam paper.
 - **The soroban:** N + 1 rods, opened with the first number set (as ＋ − open with a). At F0–F2 the learner works the other four numbers onto the beads, then presses こたえる; the beads are checked against the total. From F3 the beads fade and the total is typed.
-- **手順を見る:** ◀ ▶ step one bead move at a time. Each line explains one digit's move and the soroban colours one digit's move at a time, as for ＋ −. The number that move belongs to is highlighted in the column (the accent colour, as the × board highlights its digits); nothing is highlighted before the first step. After とじる the column returns to plain.
+- **手順を見る:** ◀ ▶ step one bead move at a time. The lines are grouped under a heading per number, and the soroban colours a whole number's moves together (§7). The number that move belongs to is highlighted in the column (the accent colour, as the × board highlights its digits); nothing is highlighted before the first step. After とじる the column returns to plain.
 - **A miss:** the ✕, then the same panel with こたえは …, as everywhere.
 
 ## 3. Domain (`src/domain/problem.ts`)
@@ -78,11 +78,11 @@ As for ＋ −: the per-move target of each digit's atom, plus `TYPING_ALLOWANCE
 - **`src/ui/mitori/TermColumn.tsx`** (new): `{ terms, label, activeTerm?: number }`. Renders the column (§2) in the prompt's font at the prompt's 28 pt (line height 34), `fontVariant: ['tabular-nums']`; on a window shorter than `SHORT_WINDOW_HEIGHT` (750 pt, a 375 × 667 phone) at 22 pt (line height 26), so five lines leave the soroban and the controls their room. The active number's digits and sign are in `colors.accent`. It is one accessible element whose label is `label` (`strings.problemPrompt(problem)`), testID `prompt` (so tests find the prompt the same way as for the other kinds), with a testID per row (`term-0`…`term-4`).
 - **`QuestionView`** gains `renderPrompt?: (activeStep: number | undefined) => ReactNode`, drawn in place of the text prompt in both the bead and keypad layouts, following the same `activeStep` as `renderBeneath`. Without it, the text prompt is drawn as today. With a `renderPrompt`, the prompt is drawn above the soroban in both layouts — in keypad mode too, not only bead mode, since the column is what a keypad answer is read from; for every other question keypad mode's text prompt stays below the soroban, as today. The prompt's scroll area already sizes itself to what it holds. On a short window the bead-mode soroban is capped at `SHORT_WINDOW_BEAD_SCALE` with a `renderPrompt` as it already is with a `renderBeneath`, since the column takes the height a board would; the keypad-mode soroban is capped at `SHORT_WINDOW_KEYPAD_SCALE` (0.7) with a `renderPrompt`, so the five lines and the soroban both fit above the keypad.
 - **`RoundRunner`** passes `renderPrompt` for a 見取算 problem only: `<TermColumn terms={problem.terms} activeTerm={groupOf(activeStep)?.term} />`.
-- **`ProblemCorrectionCard.groupLine`**: a column group with `term` reads `strings.mitoriLine(terms[term], place, atom, cascades)`. Its line's testID is `correction-term-<term>-<place>`, since a place repeats across the numbers (a ＋ − column keeps `correction-column-<place>`).
+- **`ProblemCorrectionCard`**: a 見取算 problem's lines sit under a heading per number (§7). A line's testID is `correction-term-<term>-<place>`, since a place repeats across the numbers (a ＋ − column keeps `correction-column-<place>`); a heading's is `correction-term-<term>`.
 - **i18n** (ja / en):
   - `OP_NAME.mitori`: 見取算 / Columns (so `roundName` gives 2けたの見取算 / 2-digit columns).
   - `problemPrompt` for 見取算, used as the VoiceOver label: 「47、たす85、ひく23、たす61、ひく19。」 / "47 + 85 − 23 + 61 − 19".
-  - `mitoriLine(term, place, atom, cascades)`: the signed number, then the ＋ − column line: 「−23　十の位　…」 / "−23 · Tens: …". The sign is always shown here (＋85, −23), since after a miss the card lists every line with nothing highlighted, and each "十の位" must say which number it belongs to.
+  - `mitoriHeading(term, before, after)` (§7): 「59をひく　77 → 18」 / "−59: 77 → 18". It replaced build 22's `mitoriLine`, which prefixed every line with its signed number.
 - Home and the progress screen need no change beyond the new row that `OPERATIONS` gives `PracticeTable`. `app/round.tsx` needs no intro gate for 見取算.
 
 ## 5. Testing
@@ -104,3 +104,14 @@ As for ＋ −: the per-move target of each digit's atom, plus `TYPING_ALLOWANCE
 5. `TermColumn`, `QuestionView.renderPrompt`, `RoundRunner` and `ProblemCorrectionCard` wiring; the grid row.
 6. README (見取算 moves out of "Not in the app yet"), the roadmap's outcome, this spec's status.
 7. Simulator check, TestFlight build 22, PR.
+
+## 7. Addendum: steps grouped by number (build 23)
+
+After build 22 the owner, stepping through a miss: "it is hard for user to see which click animation was for which number operation … it is better if we group the operation by the number … right now it is hard to tell upto which click was for −59 and +39." Build 22 coloured one digit's moves at a time and listed one flat line per digit, each prefixed with its number, so by +39's tens −59's beads had lost their colour and the lines gave no sense of where one number ended.
+
+Decided with the owner:
+- **One operation per number.** `exerciseForProblem` starts one colouring group per 見取算 number, not per rod: every bead a number has moved stays red (the latest step deepest) until the next number's first move. ＋ − × ÷ keep their groups.
+- **Lines grouped under a heading per number.** Each number after the first heads its own lines with what is done with it and what the soroban reads before and after it: 「59をひく　77 → 18」 / "−59: 77 → 18". Its digit lines follow, indented, reading as ＋ − column lines (no prefix). The number stepped into is shaded, heading and lines together; the line stepped to is highlighted as before. Nothing is shaded before the first step.
+- The headings and lines are all direct children of the card, not wrapped per number, so `useActiveLineLayout` still measures every line from the card's origin and the line stepped to is scrolled into view as before.
+- Unchanged: one bead per ▶, the step count, the column's highlight of the number being worked.
+- The Japanese heading names the number without its sign (「59をひく」, not 「−59をひく」, which would read as taking away −59); the English keeps the sign, as the column does.

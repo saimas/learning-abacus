@@ -265,13 +265,13 @@ describe('multi-digit strings', () => {
     )
   })
 
-  // Spec (見取算) §4: a 見取算 line names its number, signed, before the ＋ −
-  // column line, since after a miss every line shows at once.
-  it('prefixes a 見取算 column line with its number', () => {
-    expect(ja.mitoriLine(-23, 1, atom(7, 2, 'sub'), false)).toBe(`−23　${ja.columnLine(1, atom(7, 2, 'sub'), false)}`)
-    expect(ja.mitoriLine(30, 1, atom(4, 3, 'add'), false)).toBe(`＋30　${ja.columnLine(1, atom(4, 3, 'add'), false)}`)
-    expect(en.mitoriLine(-23, 1, atom(7, 2, 'sub'), false)).toBe(`−23 · ${en.columnLine(1, atom(7, 2, 'sub'), false)}`)
-    expect(en.mitoriLine(30, 1, atom(4, 3, 'add'), false)).toBe(`+30 · ${en.columnLine(1, atom(4, 3, 'add'), false)}`)
+  // Spec (見取算) §4: a 見取算 number's lines sit under a heading that says
+  // what is done with it and what the soroban reads before and after.
+  it('heads a 見取算 number with what it does to the running total', () => {
+    expect(ja.mitoriHeading(-59, 77, 18)).toBe('59をひく　77 → 18')
+    expect(ja.mitoriHeading(39, 18, 57)).toBe('39をたす　18 → 57')
+    expect(en.mitoriHeading(-59, 77, 18)).toBe('−59: 77 → 18')
+    expect(en.mitoriHeading(39, 18, 57)).toBe('+39: 18 → 57')
   })
 
   it('names all four rods', () => {

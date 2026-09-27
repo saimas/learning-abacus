@@ -117,9 +117,9 @@ function columnLine(place: number, atom: Atom, cascades: boolean): string {
   }`
 }
 
-// As ja's: the number, signed, then the column line.
-function mitoriLine(term: number, place: number, atom: Atom, cascades: boolean): string {
-  return `${term < 0 ? '−' : '+'}${Math.abs(term)} · ${columnLine(place, atom, cascades)}`
+// As ja's: the number, signed, then the soroban before and after it.
+function mitoriHeading(term: number, before: number, after: number): string {
+  return `${term < 0 ? '−' : '+'}${Math.abs(term)}: ${before} → ${after}`
 }
 
 // One line of a × problem's answer card: the 九九, then where each non-zero
@@ -369,7 +369,7 @@ export const en: Strings = {
     }
   },
   columnLine,
-  mitoriLine,
+  mitoriHeading,
   productLine,
   quotientLine,
   subtractLine,

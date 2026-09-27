@@ -1,6 +1,6 @@
 import { ATOMS, atomId, expectedValue, moveStates, startValue } from './atoms'
 import { exerciseForAtom, exerciseForProblem, stepColouring } from './exercise'
-import { problemStates } from './problem'
+import { problemStates, problemSteps, type MitoriProblem } from './problem'
 import { emptySoroban, setValue, type Soroban } from './soroban'
 
 describe('exerciseForAtom', () => {
@@ -67,6 +67,29 @@ describe('exerciseForProblem', () => {
     // 472 + 305: the tens column adds 0, so it moves no bead and there is
     // nothing of it to colour.
     expect(exerciseForProblem({ op: 'add', digits: 3, a: 472, b: 305 }).groupStarts).toEqual([0, 2])
+  })
+
+  // Spec (見取算) §4, the owner (2026-09-27): it was hard to tell which clicks
+  // were −59's and which +39's, so a 見取算 number is one operation, however
+  // many rods it moves.
+  it('starts one operation per 見取算 number, not per rod', () => {
+    const problem: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
+    // Where each number's first bead step falls, counted over the steps.
+    const expected: number[] = []
+    let at = 0
+    let current: number | undefined
+    for (const group of problemSteps(problem)) {
+      if (group.kind === 'column' && group.steps.length > 0 && group.term !== current) {
+        expected.push(at)
+        current = group.term
+      }
+      at += group.steps.length
+    }
+    const { groupStarts } = exerciseForProblem(problem)
+    expect(groupStarts).toEqual(expected)
+    expect(groupStarts).toHaveLength(4)
+    // 47 + 30 is +5 − 2 on the tens rod, two steps; −23 starts after them.
+    expect(groupStarts.slice(0, 2)).toEqual([0, 2])
   })
 })
 

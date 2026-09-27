@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet } from 'react-native'
 import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
-import { setBeads } from '@/ui/session/testing'
+import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { RoundRunner } from './RoundRunner'
 
@@ -410,6 +410,26 @@ describe('RoundRunner with 見取算', () => {
     expect(lit()).toEqual([2])
     fireEvent.press(screen.getByTestId('step-restart'))
     expect(lit()).toEqual([])
+  })
+
+  // The owner (2026-09-27): it was hard to tell which clicks were −59's and
+  // which +39's. A number's beads stay coloured across its rods, and its
+  // heading and lines are shaded together, until the next number begins.
+  it('keeps a number coloured and shaded as one, across its rods', () => {
+    renderRound(mitoriRound)
+    answerBeads(95)
+    const tinted = () => tintedBeads(screen.getByTestId('soroban-wrap'), 3)
+    const shaded = (testID: string) =>
+      StyleSheet.flatten(screen.getByTestId(testID).props.style)?.backgroundColor === colors.accentSoft
+    // Into −23: its tens move (rod 1), then the first step of its ones (rod 2).
+    for (let i = 0; i < stepsOf(1) + 2; i++) fireEvent.press(screen.getByTestId('step-next'))
+    expect(tinted().some((bead) => bead.startsWith('1 ') && bead.endsWith(' group'))).toBe(true)
+    expect(tinted().some((bead) => bead.startsWith('2 ') && bead.endsWith(' latest'))).toBe(true)
+    expect([shaded('correction-term-1'), shaded('correction-term-2'), shaded('correction-term-2-1')]).toEqual([
+      false,
+      true,
+      true,
+    ])
   })
 
   it('shows the column above the keypad too', () => {
