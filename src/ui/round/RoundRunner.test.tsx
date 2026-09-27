@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { ScrollView, StyleSheet } from 'react-native'
 import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
-import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
+import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
@@ -416,6 +416,20 @@ describe('RoundRunner with 見取算', () => {
     renderRound({ ...mitoriRound, fade: 3 })
     expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
     expect(screen.getByTestId('term-4')).toBeTruthy()
+    // Spec (見取算) §4: the column is what a keypad answer is read from, so
+    // with a renderPrompt it is drawn above the soroban, as in bead mode.
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('prompt')).toBeLessThan(drawn.indexOf('abacus-frame'))
+  })
+
+  it('keeps the soroban before the text prompt in keypad mode for other problems', () => {
+    renderRound({ fade: 3 })
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('abacus-frame')).toBeLessThan(drawn.indexOf('prompt'))
   })
 
   // Review focus: 3けた can total four digits, and the keypad must take them.
@@ -455,6 +469,23 @@ describe('RoundRunner with 見取算', () => {
       restoreWindow = () => spy.mockRestore()
       renderRound(mitoriRound)
       const frame = within(screen.getByTestId('soroban-wrap')).getByTestId('abacus-frame')
+      expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
+    })
+
+    it.each([
+      ['a short window', 375, 667, SHORT_WINDOW_KEYPAD_SCALE],
+      ['a tall window', 402, 874, 1],
+    ])('caps the keypad soroban for %s too, so the column fits above it', (_window, width, height, scale) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
+      const reactNative = require('react-native')
+      const spy = jest
+        .spyOn(reactNative, 'useWindowDimensions')
+        .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+      restoreWindow = () => spy.mockRestore()
+      renderRound({ ...mitoriRound, fade: 3 })
+      // Keypad mode's soroban is not inside soroban-wrap, and there is only
+      // one soroban on screen for a 見取算 problem.
+      const frame = screen.getByTestId('abacus-frame')
       expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
     })
   })
