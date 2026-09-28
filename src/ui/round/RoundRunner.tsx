@@ -49,8 +49,6 @@ export function RoundRunner({
   // when the round mounts.
   const [shownAt, setShownAt] = useState(() => now())
   const [tally, setTally] = useState({ answered: 0, correct: 0 })
-  // As in SessionRunner: counts right answers so each one replays the 〇.
-  const [maru, setMaru] = useState(0)
   const finished = useRef(false)
 
   const problem = problems[index]
@@ -104,12 +102,7 @@ export function RoundRunner({
       answered: previous.answered + 1,
       correct: previous.correct + (correct ? 1 : 0),
     }))
-    if (correct) {
-      setMaru((previous) => previous + 1)
-      next(t)
-    } else {
-      setMaru(0)
-    }
+    if (correct) next(t)
   }
 
   // The count sits outside the keyed QuestionView, as SessionRunner's time
@@ -124,7 +117,6 @@ export function RoundRunner({
         fade={fade}
         coaching={coachingForFade(fade)}
         prompt={strings.problemPrompt(problem)}
-        demonstration={null}
         renderSteps={({ activeStep, showAnswer }) => (
           <ProblemCorrectionCard
             problem={problem}
@@ -158,8 +150,6 @@ export function RoundRunner({
             ? (activeStep) => <OperandBoard problem={problem} activeGroup={groupOf(activeStep)} />
             : undefined
         }
-        track={null}
-        maru={maru}
         shownAt={shownAt}
         now={now}
         onSubmit={submitted}

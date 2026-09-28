@@ -50,12 +50,9 @@ export function QuestionView({
   fade,
   coaching,
   prompt,
-  demonstration,
   renderSteps,
   renderBeneath,
   renderPrompt,
-  track,
-  maru,
   shownAt,
   now,
   onSubmit,
@@ -65,9 +62,6 @@ export function QuestionView({
   fade: FadeLevel
   coaching: Coaching
   prompt: string
-  // Said before the answer at F0 (spec §4). Null where there is nothing to
-  // demonstrate, as for a whole problem.
-  demonstration: string | null
   // The step panel's explanation lines. `activeStep` is the bead move the
   // learner has just stepped to, counted from 0, or undefined at the start
   // (where the panel opens) or when not stepping. `showAnswer` says whether
@@ -89,10 +83,6 @@ export function QuestionView({
   // question, stays below the soroban as it always has). Nothing for any
   // other question.
   renderPrompt?: (activeStep: number | undefined) => ReactNode
-  track: ReactNode
-  // Counts correct answers, so each one remounts the 〇 and replays its fade.
-  // 0 means the last answer was wrong, or there has not been one.
-  maru: number
   shownAt: number
   now: () => number
   onSubmit: (submission: Submission) => void
@@ -103,6 +93,9 @@ export function QuestionView({
   const [answer, setAnswer] = useState('')
   // Non-null while a missed question is held on screen for review.
   const [review, setReview] = useState<Review | null>(null)
+  // Spec (roll) §3: a right answer stays on screen under its 〇 until the
+  // round rolls on, and takes no second answer meanwhile.
+  const [answeredRight, setAnsweredRight] = useState(false)
   // Whether the learner has the step panel open before answering, from
   // 手順を見る.
   const [stepsOpen, setStepsOpen] = useState(false)
@@ -168,6 +161,7 @@ export function QuestionView({
     // a mistap, so nothing happens at all.
     const given = mode === 'beads' ? (moved ? readValue(shownBeads) : null) : parseAnswer(answer)
     if (given === null) return
+    if (answeredRight) return
 
     const t = now()
     if (guarded(t)) return
@@ -181,6 +175,7 @@ export function QuestionView({
     const correct = given === wanted
 
     if (correct) {
+      setAnsweredRight(true)
       AccessibilityInfo.announceForAccessibility(strings.correct)
     } else {
       guardFrom.current = t
@@ -249,23 +244,6 @@ export function QuestionView({
     return guardFrom.current !== null && t - guardFrom.current < NEXT_GUARD_MS
   }
 
-  // Spec §4: F0 is where the app demonstrates the move, so the substitution
-  // is shown *before* the answer, not after a miss. In keypad mode, under
-  // review or with the steps open before answering, the step panel says it
-  // instead. Bead mode keeps it on show with the panel open too: its top
-  // scroll is only as tall as what it holds, so the line going would move
-  // the soroban up under the prompt as the panel opens or the ✕ lands,
-  // which the owner (2026-09-24) asked never to happen (see the bead-mode
-  // layout below). The line repeats what the panel says, but a steady screen
-  // matters more than the repeat, and more than a blank where it was.
-  // Keypad mode's scroll keeps its share of the height whatever it holds,
-  // so there the line just goes.
-  const demonstrationLine =
-    demonstration !== null && (mode === 'beads' || (review === null && !stepsOpen)) ? (
-      <Text testID="demonstration" style={styles.demonstration}>
-        {demonstration}
-      </Text>
-    ) : null
   // Offered until the question is answered, and hidden while the panel it
   // opens is up. It stands where the step lines appear once opened: below
   // the soroban in bead mode, after the prompt in keypad mode. The owner
@@ -325,24 +303,15 @@ export function QuestionView({
     stepper.soroban !== null
       ? tintsFor(stepColouring(exercise.states, exercise.groupStarts, stepper.index))
       : undefined
-  // The 〇 over the next question after a right answer, or the ✕ over a
-  // missed one under review. Either is decoration and never takes a tap.
+  // The ✕ over a missed question under review, or the 〇 over a right one
+  // until the round rolls on. Either is decoration and never takes a tap.
   const stamp = (size: number) => {
-    if (review !== null) {
-      return (
-        <View style={styles.stampOverlay} pointerEvents="none">
-          <Batsu size={size} />
-        </View>
-      )
-    }
-    if (maru > 0) {
-      return (
-        <View style={styles.stampOverlay} pointerEvents="none">
-          <Maru key={maru} size={size} />
-        </View>
-      )
-    }
-    return null
+    if (review === null && !answeredRight) return null
+    return (
+      <View style={styles.stampOverlay} pointerEvents="none">
+        {review !== null ? <Batsu size={size} /> : <Maru size={size} />}
+      </View>
+    )
   }
   // こたえを見る only until the panel is open: from then on the panel's own
   // controls show the move again, and つぎへ takes the whole row.
@@ -375,7 +344,7 @@ export function QuestionView({
     // the buttons stay on screen even on a 375 × 667 phone.
     // The beads take no taps while the question is answered (under review)
     // or while they show the steps before an answer.
-    const locked = review !== null || beforeAnswer
+    const locked = review !== null || beforeAnswer || answeredRight
     // The owner's request (2026-09-23): the lines used to share the small
     // scroll above the soroban with the prompt, two lines on show at a
     // time, while below ◀ ▶ the screen stood empty. So with the panel open
@@ -402,10 +371,8 @@ export function QuestionView({
     ) : null
     return (
       <View style={styles.practice}>
-        {track}
         <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
           {promptView}
-          {demonstrationLine}
         </ScrollView>
         <View style={styles.sorobanWrap} testID="soroban-wrap">
           {/* `previous ?? start` relies on `start` staying constant for the
@@ -497,7 +464,6 @@ export function QuestionView({
 
   return (
     <View style={styles.practice}>
-      {track}
       {/* R9: the keypad below is always fully visible, pinned at the bottom.
           Everything here that can grow scrolls instead of pushing the keypad
           off a short screen. Under review the review buttons take its place,
@@ -520,7 +486,6 @@ export function QuestionView({
           {stamp(110)}
         </View>
         {renderPrompt === undefined && promptView}
-        {demonstrationLine}
         {/* After the prompt rather than under the soroban, so it can never
             push the prompt off a short phone, but ahead of the step lines
             (and 手順を見る, which stands where they appear), near the
@@ -569,17 +534,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.prompt,
     color: colors.ink,
     letterSpacing: 1,
-  },
-  demonstration: {
-    alignSelf: 'center',
-    marginTop: space.sm,
-    paddingVertical: 7,
-    paddingHorizontal: space.md,
-    borderRadius: radius.panel,
-    overflow: 'hidden',
-    backgroundColor: colors.soft,
-    color: colors.muted,
-    fontSize: fontSizes.small,
   },
   scroll: { flex: 1 },
   // Bead mode's top scroll, open or closed: only as tall as the prompt it
