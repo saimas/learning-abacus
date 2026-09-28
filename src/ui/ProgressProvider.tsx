@@ -5,17 +5,14 @@ import {
   dayKey,
   emptyProgress,
   markDayPracticed,
-  recordAttempt,
   recordPracticeAttempt,
   type Progress,
 } from '@/domain/progress'
 import { loadProgress, saveProgress } from '@/storage/progressStore'
-import type { AttemptResult } from '@/ui/session/SessionRunner'
 
 type ProgressApi = {
   progress: Progress
   hydrated: boolean
-  attempt: (result: AttemptResult) => void
   practise: (attempt: PracticeAttempt) => void
   flush: () => Promise<void>
   reset: () => Promise<void>
@@ -48,10 +45,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Spec §9 persists at block boundaries, so a crash costs at most one block.
-  // But the commonest way a five-minute commute habit actually ends is the
-  // app being backgrounded part-way through one, and that path wrote nothing
-  // at all — the block was silently discarded.
+  // A round's answers are saved when it ends (flush). But the commonest way a
+  // short practice habit actually ends is the app being backgrounded
+  // part-way through one, and without this that path would write nothing at
+  // all — the answers so far silently discarded.
   useEffect(() => {
     const persist = () => {
       // Before the load resolves `latest.current` is still the empty default.
@@ -69,22 +66,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const attempt = useCallback((result: AttemptResult) => {
-    const now = Date.now()
-    // Spec (core rounds) §5: an answer with help is practice, so it stamps
-    // the day, but it leaves the move's box and fade as they were.
-    const withAttempt = result.assisted
-      ? latest.current
-      : recordAttempt(latest.current, result.atomId, result.correct, result.latencyMs, now)
-    const next = markDayPracticed(withAttempt, dayKey(now))
-    latest.current = next
-    setProgress(next)
-  }, [])
-
   const practise = useCallback((attempt: PracticeAttempt) => {
     const now = Date.now()
-    // Spec (core rounds) §5: likewise, an answer with help leaves the kind's
-    // fade and streaks as they were.
+    // Spec (core rounds) §5: an answer with help leaves the kind's fade and
+    // streaks as they were.
     const withAttempt = attempt.assisted
       ? latest.current
       : recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, now)
@@ -129,7 +114,6 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       value={{
         progress,
         hydrated,
-        attempt,
         practise,
         flush,
         reset,

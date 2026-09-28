@@ -19,9 +19,8 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         {/* Paper behind every screen, so no white flashes between them. */}
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.paper } }}>
-          {/* The session and a round are left only through ✕ (which confirms
-              and saves) or おわる. A stray edge swipe must not skip either. */}
-          <Stack.Screen name="session" options={{ gestureEnabled: false }} />
+          {/* A round is left only through ✕ (which confirms and saves) or
+              おわる. A stray edge swipe must not skip either. */}
           <Stack.Screen name="round" options={{ gestureEnabled: false }} />
           <Stack.Screen name="multiply-intro" options={walkthroughOptions} />
           <Stack.Screen name="divide-intro" options={walkthroughOptions} />

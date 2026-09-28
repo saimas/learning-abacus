@@ -47,7 +47,7 @@ describe('ProgressProvider', () => {
     await waitFor(() => expect(getByTestId('probe').props.children).toBe('3'))
   })
 
-  it('does not write on every attempt', async () => {
+  it('does not write on every answer', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {
       // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
@@ -60,7 +60,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
     expect(mockSave).not.toHaveBeenCalled()
   })
 
@@ -82,29 +82,6 @@ describe('ProgressProvider', () => {
     await waitFor(() => {
       expect(api?.progress?.practices['sub:3']).toBeDefined()
       expect(api?.progress?.daysPracticed).toBe(1)
-    })
-  })
-
-  // Spec (core rounds) §5: an answer after 手順を見る counts "with help". It
-  // is still practice, so the day is stamped, but the ladder does not move.
-  it('attempt with help marks the day practised and leaves the moves as they were', async () => {
-    mockLoad.mockResolvedValue(emptyProgress())
-    let api: ReturnType<typeof useProgress> | null = null
-    function Capture() {
-      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
-      api = useProgress()
-      return null
-    }
-    render(
-      <ProgressProvider>
-        <Capture />
-      </ProgressProvider>,
-    )
-    await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: true }))
-    await waitFor(() => {
-      expect(api?.progress?.daysPracticed).toBe(1)
-      expect(api?.progress?.atoms).toEqual({})
     })
   })
 
@@ -229,14 +206,14 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
     expect(mockSave).not.toHaveBeenCalled()
 
     await act(async () => {
       appStateHandler?.('background')
     })
     expect(mockSave).toHaveBeenCalledTimes(1)
-    expect(mockSave.mock.calls[0]?.[0]?.atoms['1+3']).toBeDefined()
+    expect(mockSave.mock.calls[0]?.[0]?.practices['add:1']).toBeDefined()
   })
 
   it('flushes when the app merely goes inactive', async () => {
@@ -290,7 +267,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
 
     await act(async () => {
       unmount()
@@ -316,7 +293,7 @@ describe('ProgressProvider', () => {
     expect(mockSave).not.toHaveBeenCalled()
   })
 
-  it('flush picks up an attempt made in the same tick', async () => {
+  it('flush picks up an answer made in the same tick', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {
       // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
@@ -330,11 +307,11 @@ describe('ProgressProvider', () => {
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
     await act(async () => {
-      api?.attempt({ atomId: '1+3', correct: true, latencyMs: 500, assisted: false })
+      api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false })
       await api?.flush()
     })
     const call = mockSave.mock.calls[0]
     const saved = call?.[0]
-    expect(saved?.atoms['1+3']).toBeDefined()
+    expect(saved?.practices['add:1']).toBeDefined()
   })
 })
