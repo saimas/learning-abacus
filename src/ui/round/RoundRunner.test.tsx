@@ -1,11 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { ScrollView, StyleSheet } from 'react-native'
-import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
+import { AccessibilityInfo, Animated, ScrollView, StyleSheet } from 'react-native'
+import { problemSteps, problemTargetMs, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
-import { RoundRunner } from './RoundRunner'
+import { ROLL_HOLD_MS, ROLL_IN_MS, ROLL_OUT_MS, RoundRunner } from './RoundRunner'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -45,12 +45,23 @@ function answerBeads(value: number) {
   fireEvent.press(screen.getByTestId('submit'))
 }
 
+// Spec (roll) §3: after a right answer the problem is held under its 〇,
+// then rolls out and the next rolls in.
+function finishRightAnswerRoll() {
+  act(() => jest.advanceTimersByTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50))
+}
+// After a miss's つぎへ there is no hold, only the roll.
+function finishRoll() {
+  act(() => jest.advanceTimersByTime(ROLL_OUT_MS + ROLL_IN_MS + 50))
+}
+
 describe('RoundRunner', () => {
   it('plays the problems in order, counting them', () => {
     renderRound()
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
     expect(screen.getByTestId('round-count').props.children).toBe('1 / 3')
     answerBeads(81)
+    finishRightAnswerRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
     expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
   })
@@ -73,6 +84,7 @@ describe('RoundRunner', () => {
     expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true })
 
     // The next problem starts afresh.
+    finishRightAnswerRoll()
     answerBeads(100)
     expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
   })
@@ -92,6 +104,7 @@ describe('RoundRunner', () => {
     expect(screen.getByTestId('correction')).toBeTruthy()
     act(() => jest.advanceTimersByTime(500))
     fireEvent.press(screen.getByTestId('review-next'))
+    finishRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 
@@ -130,9 +143,10 @@ describe('RoundRunner', () => {
 
   it('ends with the summary after the last problem', () => {
     const { onFinish } = renderRound()
-    answerBeads(81)
-    answerBeads(100)
-    answerBeads(21)
+    for (const answer of [81, 100, 21]) {
+      answerBeads(answer)
+      finishRightAnswerRoll()
+    }
     expect(screen.getByTestId('summary-text').props.children).toBe('けたの練習おわり')
     expect(screen.getByTestId('summary-result').props.children).toBe('3問中 3問正解')
     fireEvent.press(screen.getByTestId('finish-button'))
@@ -287,6 +301,7 @@ describe('RoundRunner with ÷', () => {
     setBeads(onSoroban, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
     expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false })
+    finishRightAnswerRoll()
     expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
   })
 
@@ -508,5 +523,114 @@ describe('RoundRunner with 見取算', () => {
       const frame = screen.getByTestId('abacus-frame')
       expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
     })
+  })
+})
+
+describe('RoundRunner rolling from problem to problem', () => {
+  it('holds a right answer under its 〇, then rolls to the next problem', () => {
+    const { onAttempt } = renderRound()
+    answerBeads(81)
+    // Recorded at once; the answered problem stays, stamped, and cannot be
+    // answered again.
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(screen.getByTestId('maru')).toBeTruthy()
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
+    expect(screen.getByTestId('round-count').props.children).toBe('1 / 3')
+    // Still there just before the hold ends.
+    act(() => jest.advanceTimersByTime(ROLL_HOLD_MS - 50))
+    expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
+    finishRightAnswerRoll()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
+    expect(screen.queryByTestId('maru')).toBeNull()
+    expect(screen.queryByTestId('roll-blocker')).toBeNull()
+  })
+
+  it('rolls to the next problem after a miss’s つぎへ', () => {
+    renderRound()
+    answerBeads(80)
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
+    finishRoll()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+  })
+
+  it('rolls the summary in after the last problem', () => {
+    const { onFinish } = renderRound({ problems: [{ op: 'add', digits: 2, a: 23, b: 58 }] })
+    answerBeads(81)
+    expect(screen.queryByTestId('summary-text')).toBeNull()
+    finishRightAnswerRoll()
+    expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
+    fireEvent.press(screen.getByTestId('finish-button'))
+    expect(onFinish).toHaveBeenCalledTimes(1)
+  })
+
+  // Review focus: the next problem's clock starts when it has arrived.
+  it('times the next problem from its arrival, not from the last answer', () => {
+    let clock = 0
+    const onAttempt = jest.fn()
+    render(
+      <RoundRunner
+        kind={{ op: 'add', digits: 2 }}
+        problems={problems}
+        fade={3}
+        calibrationMs={900}
+        onAttempt={onAttempt}
+        onFinish={jest.fn()}
+        now={() => clock}
+      />,
+    )
+    clock = 1_000
+    for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    clock = 10_000
+    finishRightAnswerRoll()
+    clock = 12_000
+    for (const digit of '100') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    // pace is latency over the problem's target, so latency = pace × target.
+    // 81 took 1 000 ms from the round's start (clock 0); 100 took 2 000 ms
+    // from its arrival at 10 000 — not the 11 000 since the last answer.
+    const target = (a: number, b: number) => problemTargetMs({ op: 'add', digits: 2, a, b }, 900)
+    expect(onAttempt.mock.calls[0][0].pace * target(23, 58)).toBeCloseTo(1_000, 5)
+    expect(onAttempt.mock.calls[1][0].pace * target(46, 54)).toBeCloseTo(2_000, 5)
+  })
+
+  // Review focus: leaving mid-roll keeps the answer and fires nothing later.
+  it('keeps the answer and fires nothing once unmounted mid-roll', () => {
+    const { onAttempt } = renderRound()
+    answerBeads(81)
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+    screen.unmount()
+    expect(() => act(() => jest.advanceTimersByTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50))).not.toThrow()
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+  })
+
+  // The roll runs on the native thread, so mounting the next problem as it
+  // slides in cannot make it stutter.
+  it('slides on the native driver', () => {
+    const timing = jest.spyOn(Animated, 'timing')
+    renderRound()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    const slides = timing.mock.calls.filter(
+      ([, config]) => config.duration === ROLL_OUT_MS || config.duration === ROLL_IN_MS,
+    )
+    expect(slides).toHaveLength(2)
+    for (const [, config] of slides) expect(config.useNativeDriver).toBe(true)
+    timing.mockRestore()
+  })
+
+  it('fades instead of sliding with Reduce Motion on, and gets to the same place', async () => {
+    // Once only: restoring RN's own jest mock of it would leave it returning
+    // undefined for the tests after this one.
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true)
+    renderRound()
+    await act(async () => {})
+    answerBeads(81)
+    finishRightAnswerRoll()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 })

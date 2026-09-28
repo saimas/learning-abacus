@@ -49,10 +49,11 @@ describe('RootLayout', () => {
     expect(swipeBack(name, {})).toBe(true)
   })
 
-  it('never lets a swipe leave a session or a round', async () => {
+  it('never lets a swipe leave a round', async () => {
     render(<RootLayout />)
     await act(async () => {})
-    expect(swipeBack('session', undefined)).toBe(false)
     expect(swipeBack('round', { kind: 'div:2' })).toBe(false)
+    // Spec (roll) §2: 基礎の練習's session screen is gone.
+    expect(Object.keys(mockScreenOptions)).not.toContain('session')
   })
 })

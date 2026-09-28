@@ -1,4 +1,4 @@
-import { startValue, type Atom } from '@/domain/atoms'
+import type { Atom } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 import {
   answerOf,
@@ -10,35 +10,8 @@ import {
   type StepSection,
 } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
-import type { CellState } from '@/domain/progress'
-import type { BlockKind, PracticePart } from '@/domain/session'
 import type { WalkStep } from '@/domain/divisionWalk'
 import type { Strings, WalkCaption } from './ja'
-
-const CELL_STATE: Record<CellState, string> = {
-  unseen: 'unseen',
-  learning: 'learning',
-  reflex: 'reflex',
-  mental: 'mental',
-}
-
-const BLOCK_LABEL: Record<BlockKind, string> = {
-  warmup: 'Warm-up',
-  focus: 'Focus',
-  faderep: 'Fade',
-  close: 'Close',
-}
-
-function moves(count: number): string {
-  return `${count} ${count === 1 ? 'move' : 'moves'}`
-}
-
-// What each part holds, as the chooser's detail line.
-const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
-  warmup: (count) => `Review · ${moves(count)}`,
-  focus: () => 'New and shaky moves',
-  faderep: (count) => `Fading the beads · ${moves(count)}`,
-}
 
 // A rod's name by its place, 0 being the ones rod, in a sentence and as a
 // line's heading. A 3×3 multiplication's product can take six rods, and a
@@ -321,15 +294,6 @@ export const en: Strings = {
   notYetToday: 'Not practised yet today',
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
-  chooseTitle: 'What would you like to practise?',
-  chooseAll: 'Everything',
-  chooseAllDetail: `${BLOCK_LABEL.warmup} → ${BLOCK_LABEL.focus} → ${BLOCK_LABEL.faderep} · 5 min`,
-  chooseOnly: (part) => `${BLOCK_LABEL[part]} only`,
-  chooseDetail: (part, count) => CHOOSE_DETAIL[part](count),
-  chooseEmpty: 'Nothing right now',
-  chooseClose: 'Close',
-  basicsTitle: 'Basics',
-  basicsDetail: 'Single-rod moves · 5 min',
   homeHowTo: 'How multiplication works',
   homeHowToDivide: 'How division works',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
@@ -339,15 +303,9 @@ export const en: Strings = {
   resetAll: 'Reset all progress',
   resetConfirm: 'Really erase all progress?',
 
-  sessionComplete: 'Session complete',
   sessionResult: (answered, correct) => `${answered} answered, ${correct} correct`,
   done: 'Done',
   answer: 'Answer',
-  prompt: (atom) =>
-    `The soroban shows ${startValue(atom)}. ${atom.direction === 'add' ? 'Add' : 'Subtract'} ${atom.operand}.`,
-  coaching,
-  coachingLead,
-  blockLabel: (kind) => BLOCK_LABEL[kind],
   correctionAnswer,
   correctionAnswerOnBeads,
   correct: 'Correct',
@@ -396,12 +354,6 @@ export const en: Strings = {
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind, stage) => `${roundName(kind)}, ${PRACTICE_STAGE[stage]}`,
 
-  atomSummary: (mental, total) => `${mental} of ${total} moves are mental`,
-  cellLabel: (atomId, state) => `${atomId} ${CELL_STATE[state]}`,
-  cellStateName: (state) => CELL_STATE[state],
-  mapAdd: 'Addition',
-  mapSub: 'Subtraction',
-  mapAxis: "Rows: the rod's value (0–9) · Columns: the number added or taken away (1–9)",
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',

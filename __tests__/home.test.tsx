@@ -111,6 +111,14 @@ describe('Home', () => {
     expect(queryByTestId('start')).toBeNull()
   })
 
+  // Spec (roll) §2: 基礎の練習 is gone; Home is the grid and its links.
+  it('has no 基礎の練習 card', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId, queryByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    expect(queryByTestId('home-basics')).toBeNull()
+  })
+
   it('starts a round by pressing its cell in the grid', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
@@ -235,63 +243,5 @@ describe('Home', () => {
 
     await waitFor(() => expect(getByTestId('seal-outline')).toBeTruthy())
     expect(getByTestId('today-status').props.children).toBe('今日の練習はまだです')
-  })
-})
-
-// Spec (choosing what to practise) §4: the 基礎の練習 card asks what to practise.
-describe('Home choosing what to practise', () => {
-  async function openChooser() {
-    mockLoad.mockResolvedValue(learner({}))
-    const utils = renderHome()
-    await waitFor(() => expect(utils.getByTestId('home-basics')).toBeTruthy())
-    fireEvent.press(utils.getByTestId('home-basics'))
-    return utils
-  }
-
-  it('asks before starting anything', async () => {
-    const { getByTestId } = await openChooser()
-    expect(getByTestId('part-chooser')).toBeTruthy()
-    expect(mockPush).not.toHaveBeenCalled()
-  })
-
-  it('starts the full session from ぜんぶ', async () => {
-    const { getByTestId, queryByTestId } = await openChooser()
-    fireEvent.press(getByTestId('choose-all'))
-    expect(mockPush).toHaveBeenCalledWith('/session')
-    expect(queryByTestId('part-chooser')).toBeNull()
-  })
-
-  it('starts just the chosen part', async () => {
-    const { getByTestId } = await openChooser()
-    fireEvent.press(getByTestId('choose-focus'))
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/session', params: { part: 'focus' } })
-  })
-
-  // startRound and openHowTo guard against the sheet being open, since its
-  // backdrop should otherwise catch the tap first.
-  it('ignores the grid and the やりかた link while the sheet is open', async () => {
-    const { getByTestId } = await openChooser()
-    fireEvent.press(getByTestId('practice-cell-add:2'))
-    fireEvent.press(getByTestId('home-howto'))
-    expect(mockPush).not.toHaveBeenCalled()
-  })
-
-  it('ignores the わり算のやりかた link while the sheet is open', async () => {
-    const { getByTestId } = await openChooser()
-    fireEvent.press(getByTestId('home-howto-div'))
-    expect(mockPush).not.toHaveBeenCalled()
-  })
-
-  it('offers 準備 only when something is due', async () => {
-    // A learner who has answered nothing has nothing due.
-    const { getByTestId } = await openChooser()
-    expect(getByTestId('choose-warmup').props.accessibilityState).toMatchObject({ disabled: true })
-  })
-
-  it('closes without starting anything', async () => {
-    const { getByTestId, queryByTestId } = await openChooser()
-    fireEvent.press(getByTestId('chooser-backdrop'))
-    expect(queryByTestId('part-chooser')).toBeNull()
-    expect(mockPush).not.toHaveBeenCalled()
   })
 })

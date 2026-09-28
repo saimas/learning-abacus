@@ -1,10 +1,9 @@
-import { expectedValue, moveStates, startValue, type Atom } from './atoms'
 import { answerOf, problemSections, problemStates, problemSteps, rodsFor, startOf, type Problem } from './problem'
 import { changedBeads, type PlacedBead, type Soroban } from './soroban'
 
-// Spec (multi-digit ＋ −) §4: what one question puts on the soroban, whether
-// it is a single move or a whole problem. The words that go with it (the
-// prompt, the correction) are the i18n catalogues' business.
+// Spec (multi-digit ＋ −) §4: what one problem puts on the soroban. The
+// words that go with it (the prompt, the correction) are the i18n
+// catalogues' business.
 export type Exercise = {
   rods: number
   start: number
@@ -19,21 +18,9 @@ export type Exercise = {
   states: Soroban[]
   // Where each operation begins in `states`, ascending from 0: a section of
   // a problem (problemSections: the number of a ＋ − or 見取算 problem, a
-  // multiplicand digit of a × problem, a quotient digit of a ÷ problem), or
-  // the whole of a single move. The stepping soroban colours one
-  // operation's beads at a time.
+  // multiplicand digit of a × problem, a quotient digit of a ÷ problem). The
+  // stepping soroban colours one operation's beads at a time.
   groupStarts: number[]
-}
-
-export function exerciseForAtom(atom: Atom): Exercise {
-  return {
-    rods: 2,
-    start: startValue(atom),
-    expected: expectedValue(atom),
-    states: moveStates(atom),
-    // A single move is one operation, however many bead steps it takes.
-    groupStarts: [0],
-  }
 }
 
 export function exerciseForProblem(problem: Problem): Exercise {

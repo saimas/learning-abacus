@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
@@ -39,12 +39,9 @@ function renderView(overrides: Partial<Parameters<typeof QuestionView>[0]> = {})
       fade={0}
       coaching="demo"
       prompt="472に385をたす。"
-      demonstration={null}
       renderSteps={({ activeStep, showAnswer }) => (
         <Text testID="card">{`${String(activeStep)} ${String(showAnswer)}`}</Text>
       )}
-      track={null}
-      maru={0}
       shownAt={0}
       now={() => (clock += 1_000)}
       onSubmit={onSubmit}
@@ -199,6 +196,31 @@ describe('QuestionView with a 3-digit problem', () => {
     clock = 2_500
     fireEvent.press(screen.getByTestId('review-next'))
     expect(onMoveOn).toHaveBeenCalledWith(2_500)
+  })
+
+  // つぎへ takes こたえる's place under a miss, so a double tap on こたえる
+  // would land on it and skip the review (NEXT_GUARD_MS). Ported from the
+  // removed session's tests (spec (roll) §2): the guard is QuestionView's.
+  it('ignores つぎへ in the moment after a miss, so a double tap on こたえる cannot skip the review', () => {
+    let clock = 0
+    const { onMoveOn } = renderView({ now: () => clock })
+    setBeads(screen.getByTestId, 800, 4)
+    clock = 1_000
+    fireEvent.press(screen.getByTestId('submit'))
+    clock = 1_200
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).not.toHaveBeenCalled()
+    clock = 1_500
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).toHaveBeenCalledWith(1_500)
+  })
+
+  it('hides the keypad while a keypad answer is reviewed', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('key-8')).toBeNull()
+    expect(screen.getByTestId('review-next')).toBeTruthy()
   })
 })
 
@@ -362,26 +384,6 @@ describe('QuestionView before an answer, with 手順を見る', () => {
     expect(rods()).toBe('0472')
   })
 
-  // Keypad mode lets the open panel stand in for the demonstration; bead
-  // mode keeps it on show, so the soroban under it does not move (see
-  // 'keeps the demonstration line on show in bead mode' below).
-  it('offers 手順を見る with the demonstration at F0, which the open panel stands in for in keypad mode', () => {
-    renderView({ demonstration: '385は…' })
-    expect(screen.getByTestId('demonstration')).toBeTruthy()
-    expect(screen.getByTestId('steps-open')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('steps-open'))
-    expect(screen.getByTestId('demonstration')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('steps-close'))
-    expect(screen.getByTestId('demonstration')).toBeTruthy()
-
-    screen.unmount()
-    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…' })
-    expect(screen.getByTestId('demonstration')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('steps-open'))
-    expect(screen.queryByTestId('demonstration')).toBeNull()
-    fireEvent.press(screen.getByTestId('steps-close'))
-    expect(screen.getByTestId('demonstration')).toBeTruthy()
-  })
 })
 
 // The owner's request (2026-09-24): 手順を見る sat under the prompt, while the
@@ -396,11 +398,9 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
       .map((node) => node.props.testID as string)
 
   it('offers it below the soroban and the board in bead mode, above もどす and こたえる', () => {
-    renderView({ demonstration: '385は…', renderBeneath: beneath })
+    renderView({ renderBeneath: beneath })
     const top = within(screen.getByTestId('question-scroll'))
     expect(top.queryByTestId('steps-open')).toBeNull()
-    // The demonstration stays under the prompt.
-    expect(top.getByTestId('demonstration')).toBeTruthy()
     const drawn = order()
     expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('soroban-wrap'))
     expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
@@ -454,11 +454,10 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
   })
 
   it('offers it in the scroll after the prompt and the board in keypad mode, where the lines go', () => {
-    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…', renderBeneath: beneath })
+    renderView({ fade: 3, coaching: 'silent', renderBeneath: beneath })
     expect(within(screen.getByTestId('question-scroll')).getByTestId('steps-open')).toBeTruthy()
     const drawn = order()
     expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('prompt'))
-    expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('demonstration'))
     expect(drawn.indexOf('steps-open')).toBeGreaterThan(drawn.indexOf('beneath'))
 
     fireEvent.press(screen.getByTestId('steps-open'))
@@ -526,13 +525,12 @@ describe('QuestionView with the step lines below the controls', () => {
   const fitted = { flexGrow: 0, flexShrink: 1 }
 
   it('fits the top scroll to the prompt before an answer, whether the steps are open or not', () => {
-    renderView({ demonstration: '385は…' })
+    renderView()
     expect(topScroll()).toEqual(fitted)
     fireEvent.press(screen.getByTestId('steps-open'))
     expect(topScroll()).toEqual(fitted)
     const top = within(screen.getByTestId('question-scroll'))
     expect(top.getByTestId('prompt')).toBeTruthy()
-    expect(top.getByTestId('demonstration')).toBeTruthy()
     expect(top.queryByTestId('steps-open')).toBeNull()
 
     fireEvent.press(screen.getByTestId('steps-close'))
@@ -595,47 +593,6 @@ describe('QuestionView with the step lines below the controls', () => {
     fireEvent.press(screen.getByTestId('review-show'))
     expect(within(slot()).getByTestId('step-next')).toBeTruthy()
     expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
-  })
-
-  // At F0 the demonstration line under the prompt used to give way to the
-  // open panel, which says the same. In the fitted scroll its going would
-  // move the soroban up after all, so in bead mode it stays on show, and
-  // VoiceOver still reads it, while the panel is open: before an answer and
-  // as a miss opens the panel. The owner would rather see it twice than see
-  // the soroban move, or a blank where it was (2026-09-24).
-  it('keeps the demonstration line on show in bead mode while the panel is open', () => {
-    renderView({ demonstration: '385は…' })
-    const shown = () => within(screen.getByTestId('question-scroll')).getByTestId('demonstration')
-    expect(textOf(shown())).toBe('385は…')
-
-    fireEvent.press(screen.getByTestId('steps-open'))
-    expect(screen.getByTestId('step-lines')).toBeTruthy()
-    expect(textOf(shown())).toBe('385は…')
-    expect(StyleSheet.flatten(shown().props.style).opacity).toBeUndefined()
-    expect(shown().props.accessibilityElementsHidden).toBeUndefined()
-    expect(shown().props.importantForAccessibility).toBeUndefined()
-
-    fireEvent.press(screen.getByTestId('steps-close'))
-    expect(textOf(shown())).toBe('385は…')
-
-    // A miss at F0 opens the panel with the ✕, and the line stays too.
-    setBeads(screen.getByTestId, 800, 4)
-    fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.getByTestId('step-lines')).toBeTruthy()
-    expect(textOf(shown())).toBe('385は…')
-  })
-
-  // Keypad mode's scroll keeps its share of the height, so nothing moves
-  // there when the line goes: the panel stands in for it, open before an
-  // answer and under review.
-  it('lets the demonstration line go in keypad mode while the panel is open', () => {
-    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…' })
-    fireEvent.press(screen.getByTestId('steps-open'))
-    expect(screen.queryByTestId('demonstration')).toBeNull()
-    fireEvent.press(screen.getByTestId('steps-close'))
-    for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.queryByTestId('demonstration')).toBeNull()
   })
 
   // Keypad mode keeps the lines in the top scroll, with the prompt, so the
@@ -799,11 +756,10 @@ describe('QuestionView with something beneath the soroban', () => {
   })
 
   it('draws it in the scroll after the prompt in keypad mode, with the step on show', () => {
-    renderView({ fade: 3, coaching: 'silent', demonstration: '385は…', renderBeneath: beneath })
+    renderView({ fade: 3, coaching: 'silent', renderBeneath: beneath })
     expect(within(screen.getByTestId('question-scroll')).getByTestId('beneath')).toBeTruthy()
     const drawn = order()
     expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('prompt'))
-    expect(drawn.indexOf('beneath')).toBeGreaterThan(drawn.indexOf('demonstration'))
     // Ahead of 手順を見る, which stands where the step lines will appear.
     expect(drawn.indexOf('beneath')).toBeLessThan(drawn.indexOf('steps-open'))
 
@@ -940,10 +896,7 @@ describe('QuestionView with a 3×3 multiplication', () => {
         fade={3}
         coaching="silent"
         prompt="472に385をかける。"
-        demonstration={null}
         renderSteps={() => null}
-        track={null}
-        maru={0}
         shownAt={0}
         now={() => 0}
         onSubmit={jest.fn()}
@@ -953,5 +906,43 @@ describe('QuestionView with a 3×3 multiplication', () => {
     const padding = StyleSheet.flatten(screen.getByTestId('abacus-frame').props.style).padding
     expect(padding).toBeLessThan(FRAME_PADDING)
     spy.mockRestore()
+  })
+})
+
+// Spec (roll) §3: a right answer's 〇 is stamped on the answered question,
+// which stays as answered, and a second こたえる does nothing.
+describe('QuestionView after a right answer', () => {
+  it('stamps the 〇 over its own soroban and takes no second answer', () => {
+    const { onSubmit } = renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    expect(screen.queryByTestId('maru')).toBeNull()
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(onSubmit.mock.calls[0][0]).toEqual(expect.objectContaining({ correct: true }))
+    expect(screen.getByTestId('maru')).toBeTruthy()
+    // The beads stay as answered, and take no taps.
+    expect(rods()).toBe('0857')
+    fireEvent(screen.getByTestId('rod-3'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } })
+    expect(rods()).toBe('0857')
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+  })
+
+  // Spec (roll) §3: the 〇 goes out with its problem, so it holds, unfaded,
+  // for as long as the round keeps the problem on screen — past the ~0.8 s a
+  // stamp otherwise lasts.
+  it('keeps the 〇 fully drawn until the question goes', () => {
+    renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    act(() => jest.advanceTimersByTime(1_500))
+    expect(StyleSheet.flatten(screen.getByTestId('maru').props.style).opacity).toBe(1)
+  })
+
+  it('stamps nothing on a wrong answer', () => {
+    renderView()
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('maru')).toBeNull()
   })
 })

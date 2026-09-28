@@ -40,6 +40,17 @@ describe('ProgressScreen', () => {
     expect(getByTestId('link-today').props.children).toBe('/')
   })
 
+  // Spec (roll) §2: the 180-move map went with 基礎の練習.
+  it('shows the practice table and no 180-move map', async () => {
+    const { getByTestId, queryByTestId } = render(
+      <ProgressProvider>
+        <ProgressScreen />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    expect(queryByTestId('atom-map-add')).toBeNull()
+  })
+
   it('shows practice-table', async () => {
     const { getByTestId } = render(
       <ProgressProvider>
