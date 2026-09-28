@@ -1,16 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { StageIndex } from '@/domain/curriculum'
 import { isPracticeRecord } from '@/domain/practice'
 import { isPracticeId } from '@/domain/problem'
 import { emptyProgress, SCHEMA_VERSION, type Progress } from '@/domain/progress'
 
 export const STORAGE_KEY = 'learning-abacus/progress/v1'
-
-// Narrows to the union rather than trusting any number: a stored 9 would put
-// the learner on a stage that does not exist.
-function asStageIndex(value: unknown, fallback: StageIndex): StageIndex {
-  return value === 0 || value === 1 || value === 2 || value === 3 || value === 4 ? value : fallback
-}
 
 // Keeps each record it can trust and drops the rest, rather than discarding
 // the learner's whole history over one bad entry.
@@ -33,14 +26,12 @@ export async function loadProgress(): Promise<Progress> {
     if (candidate.schemaVersion !== SCHEMA_VERSION) return emptyProgress()
 
     const base = emptyProgress()
-    const atoms =
-      typeof candidate.atoms === 'object' && candidate.atoms !== null && !Array.isArray(candidate.atoms)
-        ? candidate.atoms
-        : base.atoms
 
+    // Spec (roll) §2: a document written while 基礎の練習 existed also holds
+    // its per-move records and stage. They are not read, so the next save
+    // drops them.
     return {
       schemaVersion: SCHEMA_VERSION,
-      atoms,
       daysPracticed:
         typeof candidate.daysPracticed === 'number' && Number.isFinite(candidate.daysPracticed)
           ? candidate.daysPracticed
@@ -54,13 +45,11 @@ export async function loadProgress(): Promise<Progress> {
           ? candidate.calibrationMs
           : base.calibrationMs,
       tutorialDone: typeof candidate.tutorialDone === 'boolean' ? candidate.tutorialDone : base.tutorialDone,
-      // Added without a schema bump: documents written before the latch
-      // existed simply pick up the default here rather than being discarded.
-      highestStage: asStageIndex(candidate.highestStage, base.highestStage),
-      // Added without a schema bump, like highestStage.
+      // Added without a schema bump: a document written before it existed
+      // simply has none.
       practices: asPractices(candidate.practices),
-      // Added without a schema bump, like highestStage: a document written
-      // before it existed has not seen the walkthrough.
+      // Added without a schema bump: a document written before it existed
+      // has not seen the walkthrough.
       multiplyIntroDone:
         typeof candidate.multiplyIntroDone === 'boolean' ? candidate.multiplyIntroDone : base.multiplyIntroDone,
       // Added without a schema bump, like multiplyIntroDone.
@@ -76,6 +65,6 @@ export async function saveProgress(progress: Progress): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
   } catch {
-    // A failed write costs at most one block of history; never crash a session over it.
+    // A failed write costs at most the answers since the last save; never crash a round over it.
   }
 }

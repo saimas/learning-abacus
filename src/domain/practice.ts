@@ -24,10 +24,9 @@ export function newPracticeRecord(now: number): PracticeRecord {
   return { fade: 0, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: now }
 }
 
-// The same ladder as a single move's (fluency.applyAttempt): five fast
-// correct answers in a row promote one level, two misses demote one, and an
-// untimed bead answer counts on accuracy alone only while the record's own
-// level is still a bead level.
+// The fade ladder (fade.ts): five fast correct answers in a row promote one
+// level, two misses demote one, and an untimed bead answer counts on accuracy
+// alone only while the record's own level is still a bead level.
 export function applyPracticeAttempt(
   record: PracticeRecord,
   correct: boolean,

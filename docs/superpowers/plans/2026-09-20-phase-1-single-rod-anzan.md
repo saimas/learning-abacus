@@ -1,5 +1,7 @@
 # learning-abacus Phase 1 Implementation Plan
 
+> 2026-09-28: 基礎の練習 (the single-move daily session this describes) was removed from the app at the owner's request; see docs/superpowers/specs/2026-09-28-remove-basics-and-roll-design.md. Kept as history.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship an offline iOS app that teaches all 180 single-rod soroban atoms to reflex speed and fades the beads away until the learner performs each move mentally.

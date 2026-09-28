@@ -41,37 +41,43 @@ describe('catalog parity', () => {
   })
 })
 
-describe('coaching', () => {
+// A move's coaching sentence, as a ＋ − or 見取算 step line reads it after
+// its rod's name (spec (roll) §2: the single-move card that also used it is
+// gone, the sentence is not).
+const jaMove = (a: Atom) => ja.columnLine(0, a, false).replace(/^一の位　/, '')
+const enMove = (a: Atom) => en.columnLine(0, a, false).replace(/^Ones: /, '')
+
+describe('a move’s coaching sentence', () => {
   it('names the technique in Japanese for every class and direction', () => {
     // The six atoms are the ones src/domain/explain.test.ts already pins
     // describeSteps against, so only the Japanese wrapper is new here.
-    expect(ja.coaching(atom(1, 3, 'add'))).toBe('3をたす = +3')
-    expect(ja.coaching(atom(3, 4, 'add'))).toBe('五の合成：4をたす = +5 − 1')
-    expect(ja.coaching(atom(7, 8, 'add'))).toBe('十の繰上：8をたす = +10 − 2')
-    expect(ja.coaching(atom(6, 4, 'sub'))).toBe('五の分解：4をひく = −5 + 1')
-    expect(ja.coaching(atom(7, 8, 'sub'))).toBe('十の繰下：8をひく = −10 + 2')
-    expect(ja.coaching(atom(7, 6, 'add'))).toBe('十の繰上と五の分解：6をたす = +10 − 5 + 1')
-    expect(ja.coaching(atom(2, 6, 'sub'))).toBe('十の繰下と五の合成：6をひく = −10 + 5 − 1')
+    expect(jaMove(atom(1, 3, 'add'))).toBe('3をたす = +3')
+    expect(jaMove(atom(3, 4, 'add'))).toBe('五の合成：4をたす = +5 − 1')
+    expect(jaMove(atom(7, 8, 'add'))).toBe('十の繰上：8をたす = +10 − 2')
+    expect(jaMove(atom(6, 4, 'sub'))).toBe('五の分解：4をひく = −5 + 1')
+    expect(jaMove(atom(7, 8, 'sub'))).toBe('十の繰下：8をひく = −10 + 2')
+    expect(jaMove(atom(7, 6, 'add'))).toBe('十の繰上と五の分解：6をたす = +10 − 5 + 1')
+    expect(jaMove(atom(2, 6, 'sub'))).toBe('十の繰下と五の合成：6をひく = −10 + 5 − 1')
   })
 
   // Spec §3 (curriculum design): the rewiring has happened when "add 8" *means* "+10 − 2" and never means "8". The sentence is the substitution, stated as an identity.
   it('keeps the English wording that explainMove had', () => {
-    expect(en.coaching(atom(7, 8, 'add'))).toBe('Add 8 = +10 − 2')
-    expect(en.coaching(atom(6, 4, 'sub'))).toBe('Subtract 4 = −5 + 1')
+    expect(enMove(atom(7, 8, 'add'))).toBe('Add 8 = +10 − 2')
+    expect(enMove(atom(6, 4, 'sub'))).toBe('Subtract 4 = −5 + 1')
   })
 
   // Every one of the 180 atoms has to produce a sentence; a hole in the
   // TECHNIQUE table would otherwise only surface on the learner's screen.
-  it('produces a non-empty sentence for all 180 atoms in both locales', () => {
+  it('produces a sentence ending in its steps for all 180 atoms in both locales', () => {
     for (const a of ATOMS) {
-      expect(ja.coaching(a).length).toBeGreaterThan(0)
-      expect(en.coaching(a).length).toBeGreaterThan(0)
+      expect(jaMove(a).endsWith(describeSteps(a))).toBe(true)
+      expect(enMove(a).endsWith(describeSteps(a))).toBe(true)
     }
   })
 
   it('prefixes a technique name for every class except direct', () => {
     for (const a of ATOMS) {
-      const named = ja.coaching(a).includes('：')
+      const named = jaMove(a).includes('：')
       expect(named).toBe(classify(a) !== 'direct')
     }
   })
@@ -96,14 +102,6 @@ describe('breakdown, via readingFeedback', () => {
   })
 })
 
-describe('cellLabel', () => {
-  it('translates the cell state', () => {
-    expect(ja.cellLabel('7+8', 'mental')).toBe('7+8 暗算')
-    expect(ja.cellLabel('7+8', 'unseen')).toBe('7+8 未学習')
-    expect(en.cellLabel('7+8', 'mental')).toBe('7+8 mental')
-  })
-})
-
 describe('sealDays', () => {
   it('stacks the count over its unit', () => {
     expect(ja.sealDays(12)).toBe('12\n日')
@@ -112,19 +110,6 @@ describe('sealDays', () => {
 
   it('keeps the English singular', () => {
     expect(en.sealDays(1)).toBe('1\nday')
-  })
-})
-
-describe('blockLabel', () => {
-  it('names every block kind in both locales', () => {
-    for (const kind of ['warmup', 'focus', 'faderep', 'close'] as const) {
-      expect(ja.blockLabel(kind).length).toBeGreaterThan(0)
-      expect(en.blockLabel(kind).length).toBeGreaterThan(0)
-    }
-  })
-
-  it('calls fade rep the anzan block in Japanese', () => {
-    expect(ja.blockLabel('faderep')).toBe('暗算')
   })
 })
 
@@ -145,22 +130,6 @@ describe('correctionAnswerOnBeads', () => {
   })
 })
 
-describe('cellStateName', () => {
-  it('uses the same names as the cell labels', () => {
-    expect(ja.cellStateName('mental')).toBe('暗算')
-    expect(en.cellStateName('unseen')).toBe('unseen')
-  })
-})
-
-describe('prompt', () => {
-  it('reads the start value, so a borrowing subtraction starts at 13', () => {
-    expect(ja.prompt(atom(3, 5, 'sub'))).toBe('13から5をひく。')
-    expect(ja.prompt(atom(7, 4, 'add'))).toBe('7に4をたす。')
-    expect(en.prompt(atom(3, 5, 'sub'))).toBe('The soroban shows 13. Subtract 5.')
-    expect(en.prompt(atom(7, 4, 'add'))).toBe('The soroban shows 7. Add 4.')
-  })
-})
-
 describe('rodName', () => {
   it('names the ones and tens rods', () => {
     expect(ja.rodName(0)).toBe('一の位')
@@ -172,55 +141,6 @@ describe('rodName', () => {
 
 // Spec (miss review) §5: the answer card prints the lead, then each step as
 // its own span, and has to read exactly as the coaching sentence does.
-describe('coachingLead', () => {
-  it('is the coaching sentence up to its steps, for all 180 atoms in both locales', () => {
-    for (const a of ATOMS) {
-      expect(`${ja.coachingLead(a)}${describeSteps(a)}`).toBe(ja.coaching(a))
-      expect(`${en.coachingLead(a)}${describeSteps(a)}`).toBe(en.coaching(a))
-    }
-  })
-
-  it('names the technique and the move', () => {
-    expect(ja.coachingLead(atom(7, 8, 'add'))).toBe('十の繰上：8をたす = ')
-    expect(ja.coachingLead(atom(1, 3, 'add'))).toBe('3をたす = ')
-    expect(en.coachingLead(atom(7, 8, 'add'))).toBe('Add 8 = ')
-  })
-})
-
-// Spec (choosing what to practise) §4: the chooser's rows.
-describe('the part chooser', () => {
-  it('names the full session and each part', () => {
-    expect(ja.chooseTitle).toBe('なにを練習しますか')
-    expect(ja.chooseAll).toBe('ぜんぶ')
-    expect(ja.chooseAllDetail).toBe('準備 → 集中 → 暗算・5分')
-    expect(ja.chooseOnly('warmup')).toBe('準備だけ')
-    expect(ja.chooseOnly('focus')).toBe('集中だけ')
-    expect(ja.chooseOnly('faderep')).toBe('暗算だけ')
-    expect(ja.chooseEmpty).toBe('今はありません')
-    expect(ja.chooseClose).toBe('閉じる')
-    expect(en.chooseTitle).toBe('What would you like to practise?')
-    expect(en.chooseAll).toBe('Everything')
-    expect(en.chooseAllDetail).toBe('Warm-up → Focus → Fade · 5 min')
-    expect(en.chooseOnly('warmup')).toBe('Warm-up only')
-    expect(en.chooseEmpty).toBe('Nothing right now')
-    expect(en.chooseClose).toBe('Close')
-  })
-
-  it('says what each part holds', () => {
-    expect(ja.chooseDetail('warmup', 3)).toBe('おさらい・3つの動き')
-    expect(ja.chooseDetail('focus', 2)).toBe('新しい動きと苦手な動き')
-    expect(ja.chooseDetail('faderep', 4)).toBe('珠を消す・4つの動き')
-    expect(en.chooseDetail('warmup', 3)).toBe('Review · 3 moves')
-    expect(en.chooseDetail('focus', 2)).toBe('New and shaky moves')
-    expect(en.chooseDetail('faderep', 4)).toBe('Fading the beads · 4 moves')
-  })
-
-  it('keeps the English singular', () => {
-    expect(en.chooseDetail('warmup', 1)).toBe('Review · 1 move')
-    expect(en.chooseDetail('faderep', 1)).toBe('Fading the beads · 1 move')
-  })
-})
-
 describe('the review step', () => {
   it('labels its buttons and announces a miss', () => {
     expect(ja.showAnswer).toBe('こたえを見る')

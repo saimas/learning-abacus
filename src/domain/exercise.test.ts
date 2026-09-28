@@ -1,19 +1,7 @@
-import { ATOMS, atomId, expectedValue, moveStates, startValue } from './atoms'
-import { exerciseForAtom, exerciseForProblem, stepColouring } from './exercise'
+import { ATOMS, atomId, moveStates } from './atoms'
+import { exerciseForProblem, stepColouring } from './exercise'
 import { problemStates, problemSteps, type MitoriProblem } from './problem'
 import { emptySoroban, setValue, type Soroban } from './soroban'
-
-describe('exerciseForAtom', () => {
-  it.each(ATOMS.map((atom) => [atom.id, atom] as const))('matches today’s question for %s', (_, atom) => {
-    expect(exerciseForAtom(atom)).toEqual({
-      rods: 2,
-      start: startValue(atom),
-      expected: expectedValue(atom),
-      states: moveStates(atom),
-      groupStarts: [0],
-    })
-  })
-})
 
 describe('exerciseForProblem', () => {
   it('sets a on a rod per digit plus one, and expects the sum', () => {
@@ -185,12 +173,11 @@ describe('stepColouring', () => {
     })
   })
 
-  it('treats a single move as one operation', () => {
+  it('colours a single move as one operation', () => {
     // 4 + 3 is +5 −2.
     const atom = ATOMS.find((candidate) => candidate.id === atomId(4, 3, 'add'))
     if (atom === undefined) throw new Error('no atom 4 + 3')
-    const exercise = exerciseForAtom(atom)
-    expect(stepColouring(exercise.states, exercise.groupStarts, 2)).toEqual({
+    expect(stepColouring(moveStates(atom), [0], 2)).toEqual({
       group: [heaven(1), earth(1, 2), earth(1, 3)],
       latest: [earth(1, 2), earth(1, 3)],
     })

@@ -45,11 +45,6 @@ describe('loadProgress', () => {
     expect(mockGetItem).toHaveBeenCalledWith(STORAGE_KEY)
   })
 
-  it('discards a wrong-typed atoms field in favour of the default', async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, atoms: 'garbage' }))
-    expect((await loadProgress()).atoms).toEqual(emptyProgress().atoms)
-  })
-
   it('discards a wrong-typed daysPracticed field in favour of the default', async () => {
     mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, daysPracticed: 'many' }))
     expect((await loadProgress()).daysPracticed).toBe(0)
@@ -58,7 +53,6 @@ describe('loadProgress', () => {
   it('defaults a missing field while keeping the rest of a valid document', async () => {
     const withoutTutorialDone = {
       schemaVersion: SCHEMA_VERSION,
-      atoms: {},
       daysPracticed: 3,
       lastSessionDay: null,
       calibrationMs: emptyProgress().calibrationMs,
@@ -69,40 +63,27 @@ describe('loadProgress', () => {
     expect(result.tutorialDone).toBe(emptyProgress().tutorialDone)
   })
 
-  it('survives a document stored before highestStage existed', async () => {
-    // The field was added without a SCHEMA_VERSION bump, so every document
-    // already on a learner's phone arrives without it. It must load intact
-    // and simply pick up the default, not be discarded.
-    const beforeTheLatch = {
-      schemaVersion: SCHEMA_VERSION,
-      atoms: { '1+3': { atomId: '1+3', box: 4, fade: 3, consecutiveCorrect: 2, consecutiveWrong: 0, recentLatencyMs: [400, 420, 390], dueAt: 0 } },
-      daysPracticed: 41,
-      lastSessionDay: '2026-09-20',
-      calibrationMs: 730,
-      tutorialDone: true,
-    }
-    mockGetItem.mockResolvedValue(JSON.stringify(beforeTheLatch))
-    const result = await loadProgress()
-    expect(result.highestStage).toBe(1)
-    expect(result.daysPracticed).toBe(41)
-    expect(result.calibrationMs).toBe(730)
-    expect(result.tutorialDone).toBe(true)
-    expect(result.lastSessionDay).toBe('2026-09-20')
-    expect(result.atoms['1+3']?.box).toBe(4)
+  // Spec (roll) §2: 基礎's fields are no longer read. A document written with
+  // them still loads, and keeps everything else.
+  it('loads a document that still has 基礎’s moves and stage, without them', async () => {
+    const practices = { 'add:2': { fade: 3, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: 5 } }
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({
+        ...emptyProgress(),
+        atoms: { '1+3': { atomId: '1+3', box: 4, fade: 6 } },
+        highestStage: 3,
+        daysPracticed: 12,
+        calibrationMs: 700,
+        practices,
+      }),
+    )
+    const loaded = await loadProgress()
+    expect(loaded).not.toHaveProperty('atoms')
+    expect(loaded).not.toHaveProperty('highestStage')
+    expect(loaded.daysPracticed).toBe(12)
+    expect(loaded.calibrationMs).toBe(700)
+    expect(loaded.practices).toEqual(practices)
   })
-
-  it('keeps a stored highestStage', async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, highestStage: 3 }))
-    expect((await loadProgress()).highestStage).toBe(3)
-  })
-
-  it.each([['two'], [9], [-1], [2.5], [null]])(
-    'discards a highestStage of %p in favour of the default',
-    async (highestStage) => {
-      mockGetItem.mockResolvedValue(JSON.stringify({ schemaVersion: SCHEMA_VERSION, highestStage }))
-      expect((await loadProgress()).highestStage).toBe(1)
-    },
-  )
 })
 
 describe('practices', () => {
@@ -131,7 +112,7 @@ describe('practices', () => {
 
 describe('multiplyIntroDone', () => {
   it('loads a document written before the flag existed as not yet seen', async () => {
-    // Added without a SCHEMA_VERSION bump, like highestStage: a document
+    // Added without a SCHEMA_VERSION bump: a document
     // already on a learner's phone arrives without it and must load intact.
     const { multiplyIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5 }
     mockGetItem.mockResolvedValue(JSON.stringify(old))

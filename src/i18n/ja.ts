@@ -1,4 +1,4 @@
-import { classify, startValue, type Atom, type AtomClass } from '@/domain/atoms'
+import { classify, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 import {
   answerOf,
@@ -12,8 +12,6 @@ import {
   type StepSection,
 } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
-import type { CellState } from '@/domain/progress'
-import type { BlockKind, PracticePart } from '@/domain/session'
 import type { WalkStep } from '@/domain/divisionWalk'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
@@ -25,30 +23,6 @@ const TECHNIQUE: Record<AtomClass, { add: string; sub: string }> = {
   five: { add: '五の合成', sub: '五の分解' },
   ten: { add: '十の繰上', sub: '十の繰下' },
   both: { add: '十の繰上と五の分解', sub: '十の繰下と五の合成' },
-}
-
-const CELL_STATE: Record<CellState, string> = {
-  unseen: '未学習',
-  learning: '学習中',
-  reflex: '即答',
-  mental: '暗算',
-}
-
-// Fade rep is where anzan is actually built, so it is named for that.
-const BLOCK_LABEL: Record<BlockKind, string> = {
-  warmup: '準備',
-  focus: '集中',
-  faderep: '暗算',
-  close: 'まとめ',
-}
-
-// What each part holds, as the chooser's detail line. Focus's size changes as
-// new moves join during the session, so it names the kind of move instead of
-// a count.
-const CHOOSE_DETAIL: Record<PracticePart, (count: number) => string> = {
-  warmup: (count) => `おさらい・${count}つの動き`,
-  focus: () => '新しい動きと苦手な動き',
-  faderep: (count) => `珠を消す・${count}つの動き`,
 }
 
 // A rod's name by its place, 0 being the ones rod. A 3-digit problem's
@@ -322,15 +296,6 @@ export const ja = {
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
-  chooseTitle: 'なにを練習しますか',
-  chooseAll: 'ぜんぶ',
-  chooseAllDetail: `${BLOCK_LABEL.warmup} → ${BLOCK_LABEL.focus} → ${BLOCK_LABEL.faderep}・5分`,
-  chooseOnly: (part: PracticePart) => `${BLOCK_LABEL[part]}だけ`,
-  chooseDetail: (part: PracticePart, count: number) => CHOOSE_DETAIL[part](count),
-  chooseEmpty: '今はありません',
-  chooseClose: '閉じる',
-  basicsTitle: '基礎の練習',
-  basicsDetail: '1けたの動き・5分',
   homeHowTo: 'かけ算のやりかた',
   homeHowToDivide: 'わり算のやりかた',
   sealDays: (days: number) => `${days}\n日`,
@@ -340,17 +305,9 @@ export const ja = {
   resetAll: 'すべての進捗を消す',
   resetConfirm: '本当にすべての進捗を消しますか？',
 
-  sessionComplete: '今日の練習おわり',
   sessionResult: (answered: number, correct: number) => `${answered}問中 ${correct}問正解`,
   done: 'おわる',
   answer: 'こたえる',
-  prompt: (atom: Atom) =>
-    atom.direction === 'add'
-      ? `${startValue(atom)}に${atom.operand}をたす。`
-      : `${startValue(atom)}から${atom.operand}をひく。`,
-  coaching,
-  coachingLead,
-  blockLabel: (kind: BlockKind) => BLOCK_LABEL[kind],
   correctionAnswer,
   correctionAnswerOnBeads,
   correct: '正解',
@@ -403,12 +360,6 @@ export const ja = {
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
   practiceCellLabel: (kind: PracticeKind, stage: PracticeStage) => `${roundName(kind)}、${PRACTICE_STAGE[stage]}`,
 
-  atomSummary: (mental: number, total: number) => `全${total}問中 ${mental}問が暗算`,
-  cellLabel: (atomId: string, state: CellState) => `${atomId} ${CELL_STATE[state]}`,
-  cellStateName: (state: CellState) => CELL_STATE[state],
-  mapAdd: 'たし算',
-  mapSub: 'ひき算',
-  mapAxis: '縦：いまのけたの数（0〜9）　横：たす数・ひく数（1〜9）',
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',

@@ -1,5 +1,7 @@
 # learning-abacus — Curriculum and App Design
 
+> 2026-09-28: 基礎の練習 (the single-move daily session this describes) was removed from the app at the owner's request; see docs/superpowers/specs/2026-09-28-remove-basics-and-roll-design.md. Kept as history.
+
 Date: 2026-09-20
 Status: Approved design, pre-implementation
 

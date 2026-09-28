@@ -1,29 +1,15 @@
 import type { AtomClass } from './atoms'
-import { answerModeForFade, nextFadeLevel, type FadeLevel } from './fade'
 
-export type AtomRecord = {
-  atomId: string
-  box: number
-  fade: FadeLevel
-  consecutiveCorrect: number
-  consecutiveWrong: number
-  recentLatencyMs: number[]
-  dueAt: number
-}
-
+// The time targets of the 180 single-rod moves, by technique class, scaled
+// to the learner's calibration. A round's time target is built from them,
+// one move at a time (problemTargetMs). The per-move records and schedule
+// that once used them went with 基礎の練習 (spec (roll) §2).
 export const CLASS_TARGET_MS: Record<AtomClass, number> = {
   direct: 900,
   five: 1200,
   ten: 1400,
   both: 1800,
 }
-
-export const LEITNER_MAX_BOX = 5
-export const REFLEX_MIN_BOX = 4
-export const LATENCY_WINDOW = 3
-
-const MINUTE = 60_000
-const BOX_INTERVAL_MS = [0, 10 * MINUTE, 60 * MINUTE, 24 * 60 * MINUTE, 3 * 24 * 60 * MINUTE, 7 * 24 * 60 * MINUTE]
 
 // The promotion gate is "median latency under target", and the target is
 // derived from the learner's own rolling median. Without a margin above that
@@ -46,82 +32,8 @@ export const MAX_TARGET_MS = 8_000
 // Spec §12: these are first estimates. They need calibration against real
 // usage data before they can be trusted as anything more.
 
-export function newRecord(atomId: string, now: number): AtomRecord {
-  return {
-    atomId,
-    box: 1,
-    fade: 0,
-    consecutiveCorrect: 0,
-    consecutiveWrong: 0,
-    recentLatencyMs: [],
-    dueAt: now,
-  }
-}
-
-export function medianLatencyMs(record: AtomRecord): number | null {
-  if (record.recentLatencyMs.length === 0) return null
-  const sorted = [...record.recentLatencyMs].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  if (sorted.length % 2 === 1) return sorted[mid] ?? null
-  const lower = sorted[mid - 1]
-  const upper = sorted[mid]
-  if (lower === undefined || upper === undefined) return null
-  return (lower + upper) / 2
-}
-
 export function latencyTargetMs(cls: AtomClass, calibrationMs: number): number {
   const scale = Math.max(MIN_SCALE, calibrationMs / CLASS_TARGET_MS.direct)
   const target = CLASS_TARGET_MS[cls] * scale * TARGET_MARGIN
   return Math.min(MAX_TARGET_MS, Math.max(MIN_TARGET_MS, target))
-}
-
-export function isReflex(record: AtomRecord, cls: AtomClass, calibrationMs: number): boolean {
-  if (record.box < REFLEX_MIN_BOX) return false
-  if (record.recentLatencyMs.length < LATENCY_WINDOW) return false
-  const median = medianLatencyMs(record)
-  if (median === null) return false
-  return median < latencyTargetMs(cls, calibrationMs)
-}
-
-// `latencyMs` is null for an untimed attempt: one answered by moving the
-// beads (F0–F2). Speed only becomes a mastery signal once the work is
-// mental, so an untimed correct answer counts toward the promotion streak on
-// accuracy alone only while the atom's own level is still a bead level
-// (F0–F2); its time never reaches the median or the calibration either way.
-// A session plan freezes each item's presented fade at session start, so an
-// atom promoted past F2 mid-session can still be shown with beads and
-// answered untimed — at that point an untimed correct answer must not
-// advance the streak, or every bead answer would carry the atom straight
-// through the timed levels with no speed ever measured.
-export function applyAttempt(
-  record: AtomRecord,
-  cls: AtomClass,
-  correct: boolean,
-  latencyMs: number | null,
-  calibrationMs: number,
-  now: number,
-): AtomRecord {
-  const box = correct ? Math.min(LEITNER_MAX_BOX, record.box + 1) : 1
-  const waived = latencyMs === null && answerModeForFade(record.fade) === 'beads'
-  const fastEnough =
-    correct && (waived || (latencyMs !== null && latencyMs < latencyTargetMs(cls, calibrationMs)))
-  const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
-  const consecutiveWrong = correct ? 0 : record.consecutiveWrong + 1
-  const recentLatencyMs =
-    latencyMs === null
-      ? record.recentLatencyMs
-      : [...record.recentLatencyMs, latencyMs].slice(-LATENCY_WINDOW)
-  const fade = nextFadeLevel(record.fade, consecutiveCorrect, consecutiveWrong)
-  const fadeChanged = fade !== record.fade
-
-  return {
-    ...record,
-    box,
-    fade,
-    // A fade change makes the atom a different exercise, so its streaks restart.
-    consecutiveCorrect: fadeChanged ? 0 : consecutiveCorrect,
-    consecutiveWrong: fadeChanged ? 0 : consecutiveWrong,
-    recentLatencyMs: fadeChanged ? [] : recentLatencyMs,
-    dueAt: now + (BOX_INTERVAL_MS[box] ?? 0),
-  }
 }
