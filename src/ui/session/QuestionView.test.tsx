@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
@@ -196,6 +196,31 @@ describe('QuestionView with a 3-digit problem', () => {
     clock = 2_500
     fireEvent.press(screen.getByTestId('review-next'))
     expect(onMoveOn).toHaveBeenCalledWith(2_500)
+  })
+
+  // つぎへ takes こたえる's place under a miss, so a double tap on こたえる
+  // would land on it and skip the review (NEXT_GUARD_MS). Ported from the
+  // removed session's tests (spec (roll) §2): the guard is QuestionView's.
+  it('ignores つぎへ in the moment after a miss, so a double tap on こたえる cannot skip the review', () => {
+    let clock = 0
+    const { onMoveOn } = renderView({ now: () => clock })
+    setBeads(screen.getByTestId, 800, 4)
+    clock = 1_000
+    fireEvent.press(screen.getByTestId('submit'))
+    clock = 1_200
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).not.toHaveBeenCalled()
+    clock = 1_500
+    fireEvent.press(screen.getByTestId('review-next'))
+    expect(onMoveOn).toHaveBeenCalledWith(1_500)
+  })
+
+  it('hides the keypad while a keypad answer is reviewed', () => {
+    renderView({ fade: 3, coaching: 'silent' })
+    for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('key-8')).toBeNull()
+    expect(screen.getByTestId('review-next')).toBeTruthy()
   })
 })
 
@@ -901,6 +926,17 @@ describe('QuestionView after a right answer', () => {
     expect(rods()).toBe('0857')
     fireEvent.press(screen.getByTestId('submit'))
     expect(onSubmit).toHaveBeenCalledTimes(1)
+  })
+
+  // Spec (roll) §3: the 〇 goes out with its problem, so it holds, unfaded,
+  // for as long as the round keeps the problem on screen — past the ~0.8 s a
+  // stamp otherwise lasts.
+  it('keeps the 〇 fully drawn until the question goes', () => {
+    renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    act(() => jest.advanceTimersByTime(1_500))
+    expect(StyleSheet.flatten(screen.getByTestId('maru').props.style).opacity).toBe(1)
   })
 
   it('stamps nothing on a wrong answer', () => {

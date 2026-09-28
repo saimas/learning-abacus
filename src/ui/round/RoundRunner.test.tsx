@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
+import { AccessibilityInfo, Animated, ScrollView, StyleSheet } from 'react-native'
 import { problemSteps, problemTargetMs, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
@@ -608,13 +608,29 @@ describe('RoundRunner rolling from problem to problem', () => {
     expect(onAttempt).toHaveBeenCalledTimes(1)
   })
 
+  // The roll runs on the native thread, so mounting the next problem as it
+  // slides in cannot make it stutter.
+  it('slides on the native driver', () => {
+    const timing = jest.spyOn(Animated, 'timing')
+    renderRound()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    const slides = timing.mock.calls.filter(
+      ([, config]) => config.duration === ROLL_OUT_MS || config.duration === ROLL_IN_MS,
+    )
+    expect(slides).toHaveLength(2)
+    for (const [, config] of slides) expect(config.useNativeDriver).toBe(true)
+    timing.mockRestore()
+  })
+
   it('fades instead of sliding with Reduce Motion on, and gets to the same place', async () => {
-    const spy = jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true)
+    // Once only: restoring RN's own jest mock of it would leave it returning
+    // undefined for the tests after this one.
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true)
     renderRound()
     await act(async () => {})
     answerBeads(81)
     finishRightAnswerRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
-    spy.mockRestore()
   })
 })

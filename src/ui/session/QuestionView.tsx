@@ -309,7 +309,7 @@ export function QuestionView({
     if (review === null && !answeredRight) return null
     return (
       <View style={styles.stampOverlay} pointerEvents="none">
-        {review !== null ? <Batsu size={size} /> : <Maru size={size} />}
+        {review !== null ? <Batsu size={size} /> : <Maru size={size} lasting />}
       </View>
     )
   }

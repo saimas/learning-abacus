@@ -81,12 +81,14 @@ export function RoundRunner({
 
   // Rolls to problem `to` (or the summary, past the last): out, swap, in.
   // The new problem's clock starts once it has arrived (spec (roll) §3).
+  // translateX and opacity run on the native driver, so the next problem
+  // mounting as it slides in cannot make the slide stutter.
   function roll(to: number) {
     setRolling(true)
     const fade = reduceMotion.current
     const out = fade
-      ? Animated.timing(opacity, { toValue: 0, duration: ROLL_OUT_MS, useNativeDriver: false })
-      : Animated.timing(offset, { toValue: -width, duration: ROLL_OUT_MS, useNativeDriver: false })
+      ? Animated.timing(opacity, { toValue: 0, duration: ROLL_OUT_MS, useNativeDriver: true })
+      : Animated.timing(offset, { toValue: -width, duration: ROLL_OUT_MS, useNativeDriver: true })
     out.start(({ finished: gone }) => {
       if (!gone) return
       setIndex(to)
@@ -95,8 +97,8 @@ export function RoundRunner({
       if (fade) opacity.setValue(0)
       else offset.setValue(width)
       const into = fade
-        ? Animated.timing(opacity, { toValue: 1, duration: ROLL_IN_MS, useNativeDriver: false })
-        : Animated.timing(offset, { toValue: 0, duration: ROLL_IN_MS, useNativeDriver: false })
+        ? Animated.timing(opacity, { toValue: 1, duration: ROLL_IN_MS, useNativeDriver: true })
+        : Animated.timing(offset, { toValue: 0, duration: ROLL_IN_MS, useNativeDriver: true })
       into.start(({ finished: arrived }) => {
         if (!arrived) return
         setShownAt(now())
