@@ -3,6 +3,7 @@ import {
   DEFAULT_CALIBRATION_MS,
   emptyProgress,
   markDayPracticed,
+  markLessonSeen,
   recordPracticeAttempt,
   SCHEMA_VERSION,
 } from './progress'
@@ -19,12 +20,18 @@ describe('emptyProgress', () => {
     expect(p.daysPracticed).toBe(0)
   })
 
-  it('has not yet shown how multiplication works', () => {
-    expect(emptyProgress().multiplyIntroDone).toBe(false)
+  it('has done no lessons yet', () => {
+    expect(emptyProgress().lessonsSeen).toEqual([])
   })
+})
 
-  it('has not yet shown how division works', () => {
-    expect(emptyProgress().divideIntroDone).toBe(false)
+// Spec (howto tutorial) §4: the lessons done, each once.
+describe('markLessonSeen', () => {
+  it('adds a lesson once', () => {
+    const once = markLessonSeen(emptyProgress(), 'add:five')
+    expect(once.lessonsSeen).toEqual(['add:five'])
+    expect(markLessonSeen(once, 'add:five')).toBe(once)
+    expect(markLessonSeen(once, 'mul:2').lessonsSeen).toEqual(['add:five', 'mul:2'])
   })
 })
 

@@ -35,10 +35,12 @@ const NO_STEP: WalkStep = {
 // what is left.
 export function DivideWalkthrough({
   problem,
+  title,
   finishLabel,
   onFinish,
 }: {
   problem: PairProblem
+  title: string
   finishLabel: string
   onFinish: () => void
 }) {
@@ -112,13 +114,13 @@ export function DivideWalkthrough({
     <View style={styles.walkthrough}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
-          {strings.divideIntroTitle}
+          {title}
         </Text>
         {/* One dot per step, not per ▶, so the dots count explanations. A
             stuck step's dot is a ring whether reached or not, so the two
             places a guess turns out too big stay in sight among the reached
             dots. */}
-        <View style={styles.dots}>
+        <View testID="walk-dots" style={styles.dots}>
           {walk.map((each, i) => (
             <View
               key={i}
@@ -132,7 +134,7 @@ export function DivideWalkthrough({
           everything above them scrolls, so a short phone still reaches the
           note. */}
       <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.problemRow}>
+        <View testID="walk-problem-row" style={styles.problemRow}>
           {/* The divisor's digits the step uses are underlined: a guess is
               made with the first alone, and each 九九 with one of them. The
               size is capped as the answer boxes' is, so both boxes stay on
@@ -353,22 +355,30 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
   },
   title: { flexShrink: 1, fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.ink },
-  dots: { flexDirection: 'row', gap: 5 },
+  // The title keeps at least half the header; the dots wrap into the rest,
+  // so a lesson with many pages (÷ 3けた has 25 steps) squeezes neither the
+  // title to a sliver nor its dots off the screen (final review).
+  dots: { flexDirection: 'row', flexShrink: 1, flexWrap: 'wrap', maxWidth: '50%', justifyContent: 'flex-end', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.track },
   dotReached: { backgroundColor: colors.accent },
   // After dotReached, so a reached stuck step stays a ring.
   dotStuck: { borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.accentSoft },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: space.sm },
+  // Where the problem and the answer boxes do not fit one row (121088 ÷ 256
+  // and three boxes on a 375 pt phone), the boxes wrap under the problem,
+  // kept at the right (answers' marginLeft), rather than run off the edge.
   problemRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    rowGap: space.sm,
     marginTop: space.lg,
   },
   problem: { fontFamily: fonts.display, fontSize: fontSizes.prompt, color: colors.ink },
   divisorInUse: { color: colors.accent, textDecorationLine: 'underline' },
-  answers: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  answers: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
   answerLabel: { fontSize: fontSizes.small, color: colors.muted },
   // Wide enough for "5?", and it grows rather than clip at a larger text
   // size.

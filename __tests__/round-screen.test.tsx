@@ -84,57 +84,65 @@ describe('Round screen', () => {
     expect(queryByTestId('soroban-wrap')).toBeNull()
   })
 
-  it('shows how multiplication works before the first × round', async () => {
-    mockParams.current = { kind: 'mul:2' }
-    const { queryByTestId } = renderRound()
-    await waitFor(() =>
-      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/multiply-intro', params: { kind: 'mul:2' } }),
-    )
-    expect(queryByTestId('prompt')).toBeNull()
-  })
+  // Spec (howto tutorial) §4: a × or ÷ kind never played opens its own
+  // 桁数's lesson first, unless that lesson is done.
+  it.each([['mul:1'], ['mul:2'], ['mul:3'], ['div:1'], ['div:2'], ['div:3']])(
+    'opens the %s lesson before a first round of it',
+    async (kind) => {
+      mockParams.current = { kind }
+      const { queryByTestId } = renderRound()
+      await waitFor(() =>
+        expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/lesson/[id]', params: { id: kind, kind } }),
+      )
+      expect(queryByTestId('prompt')).toBeNull()
+    },
+  )
 
-  it('plays a × round once the walkthrough has been seen', async () => {
+  it('plays a × round once its lesson is done', async () => {
     mockParams.current = { kind: 'mul:2' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['mul:2'] })
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
     expect(getByTestId('prompt').props.children).toMatch(/^\d{2}に\d{2}をかける。$/)
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 
-  // Spec (division) §3.
-  it('shows how division works before the first ÷ round', async () => {
+  it('plays a ÷ round once its lesson is done', async () => {
     mockParams.current = { kind: 'div:2' }
-    // Seeing the × walkthrough does not count for ÷.
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
-    const { queryByTestId } = renderRound()
-    await waitFor(() =>
-      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/divide-intro', params: { kind: 'div:2' } }),
-    )
-    expect(queryByTestId('prompt')).toBeNull()
-  })
-
-  it('plays a ÷ round once the walkthrough has been seen', async () => {
-    mockParams.current = { kind: 'div:2' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['div:2'] })
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
-    // A 2けた ÷ problem draws a 2-digit quotient and a 2-digit divisor and
-    // multiplies them for the dividend (10 × 10 = 100 up to 99 × 99 = 9801),
-    // so the dividend is 3 or 4 digits, not always 4.
-    expect(getByTestId('prompt').props.children).toMatch(/^\d{3,4}を\d{2}でわる。$/)
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 
-  // The ÷ walkthrough is not the × one: a learner who has seen only the ÷
-  // one still sees how to multiply first.
-  it('still shows how multiplication works when only the ÷ walkthrough has been seen', async () => {
-    mockParams.current = { kind: 'mul:1' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+  // Another size's lesson does not count for this one.
+  it('opens the lesson for the round’s own 桁数', async () => {
+    mockParams.current = { kind: 'mul:3' }
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['mul:2'] })
     renderRound()
     await waitFor(() =>
-      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/multiply-intro', params: { kind: 'mul:1' } }),
+      expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/lesson/[id]', params: { id: 'mul:3', kind: 'mul:3' } }),
     )
+  })
+
+  // A learner who has played a kind is not interrupted by its new lesson.
+  it('plays a kind already practised without opening its lesson', async () => {
+    mockParams.current = { kind: 'mul:3' }
+    mockLoad.mockResolvedValue({
+      ...emptyProgress(),
+      tutorialDone: true,
+      practices: { 'mul:3': { fade: 0, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: 0 } },
+    })
+    const { getByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  it('never opens a lesson before ＋ or −', async () => {
+    mockParams.current = { kind: 'add:1' }
+    const { getByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(mockRedirect).not.toHaveBeenCalled()
   })
 
   it('starts a kind with no record in bead mode', async () => {

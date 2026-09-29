@@ -6,6 +6,7 @@ import {
   divisorFirstDigit,
   type Digits,
   type Operation,
+  type PairOperation,
   type PairProblem,
   type PracticeKind,
   type Problem,
@@ -13,6 +14,7 @@ import {
 } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { WalkStep } from '@/domain/divisionWalk'
+import { techniqueOf, type Lesson, type TechniqueOperation } from '@/domain/lessons'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
 // `both` names the two substitutions in the order they are performed: a
@@ -30,6 +32,53 @@ const TECHNIQUE: Record<AtomClass, { add: string; sub: string }> = {
 // 3けた division works on seven: the dividend's six and the quotient's
 // highest digit left of them.
 const PLACE: readonly string[] = ['一の位', '十の位', '百の位', '千の位', '万の位', '十万の位', '百万の位']
+
+// Spec (howto tutorial) §2–3: the やりかた lessons' names and words.
+const HOW_TO_SYMBOL: Record<PairOperation, string> = { add: '＋', sub: '−', mul: '×', div: '÷' }
+
+function techniqueName(op: TechniqueOperation, technique: AtomClass): string {
+  return technique === 'direct' ? 'そのまま' : TECHNIQUE[technique][op]
+}
+
+function lessonExample(problem: PairProblem): string {
+  return `${problem.a}${HOW_TO_SYMBOL[problem.op]}${problem.b}`
+}
+
+function lessonRow(lesson: Lesson): string {
+  const move = techniqueOf(lesson)
+  const example = lessonExample(lesson.example)
+  return move === null ? example : `${techniqueName(move.op, move.technique)}　${example}`
+}
+
+// What each move is and when it is used, with the lesson's own example.
+const TECHNIQUE_INTRO: Record<TechniqueOperation, Record<AtomClass, string>> = {
+  add: {
+    direct: 'たす数の一の珠や五の珠が、その位にそのまま入るときは、そのまま入れます。3に1をたすなら、一の珠を1つ上げます。',
+    five: 'たす数の一の珠が足りないときは、五の珠を入れて、入れすぎた分の一の珠をはらいます（五の合成）。4に3をたすなら、+5 −2 です。',
+    ten: 'その位が10をこえるときは、左の位に1を入れて（+10）、入れすぎた分をはらいます（十の繰上）。8に5をたすなら、+10 −5 です。',
+    both: '左の位に1を入れて（+10）から入れすぎた分をはらうとき、一の珠だけではらえなければ、五の珠をはらって一の珠を入れます。6に7をたすなら、+10 −3 で、−3 は −5 +2 です。',
+  },
+  sub: {
+    direct: 'ひく数の一の珠や五の珠が、その位からそのままはらえるときは、そのままはらいます。4から3をひくなら、一の珠を3つ下げます。',
+    five: 'ひく数の一の珠が足りないときは、五の珠をはらって、はらいすぎた分の一の珠を入れます（五の分解）。6から3をひくなら、−5 +2 です。',
+    ten: 'その位からひけないときは、左の位から1をはらって（−10）、ひきすぎた分を入れます（十の繰下）。13から5をひくなら、−10 +5 です。',
+    both: '左の位から1をはらって（−10）からひきすぎた分を入れるとき、一の珠だけで入れられなければ、五の珠を入れて一の珠をはらいます。12から6をひくなら、−10 +4 で、+4 は +5 −1 です。',
+  },
+}
+
+// The ＋ − 2けた and 3けた lessons' method: by place, from the highest.
+const LESSON_METHOD: Record<TechniqueOperation, string> = {
+  add: 'たし算は、上の位から順に、位ごとにたしていきます。その位が10をこえたら、左の位に1を入れます（繰り上がり）。左の位が9のときは、その1がさらに左の位へ上がります。',
+  sub: 'ひき算は、上の位から順に、位ごとにひいていきます。その位からひけないときは、左の位から1をかります（繰り下がり）。',
+}
+
+// Where a 九九's digits go, stated for each size (spec §2): the 2けた rule is
+// the one the × walkthrough has always given.
+const MULTIPLY_PLACEMENT: Record<Digits, string> = {
+  1: '九九の答えは、十の位を左の位に、一の位をその右の一の位に入れます。',
+  2: '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
+  3: '九九の答えの一の位は、かけた二つの数の位を合わせた位に入れます。一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしや百の位と一の位なら百の位、百の位と十の位なら千の位、百の位どうしなら万の位です。十の位は、その一つ上の位です。',
+}
 // A rod's name in one or two characters, for the row under the division
 // walkthrough's soroban.
 const PLACE_SHORT: readonly string[] = ['一', '十', '百', '千', '万', '十万', '百万']
@@ -309,18 +358,33 @@ export const ja = {
   navProgress: '進捗',
   navSettings: '設定',
 
-  homeTitle: '今日の五分',
   start: 'はじめる',
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
-  homeHowTo: 'かけ算のやりかた',
-  homeHowToDivide: 'わり算のやりかた',
-  // The heading over the two walkthrough buttons, and the buttons' own short
-  // labels; VoiceOver reads the full names above.
+  // The heading over Home's lesson buttons (spec (howto tutorial) §3).
   homeHowToSection: 'やりかた',
-  homeHowToButton: '× かけ算',
-  homeHowToDivideButton: '÷ わり算',
+  // Spec (howto tutorial) §3: Home's four tiles, each a symbol over its
+  // name, and each operation's page title, which VoiceOver reads for its
+  // tile too.
+  howToSymbol: (op: PairOperation) => HOW_TO_SYMBOL[op],
+  howToName: (op: PairOperation) => OP_NAME[op],
+  howToTitle: (op: PairOperation) => `${OP_NAME[op]}のやりかた`,
+  // A lesson: its title, its row on the operation page (and what VoiceOver
+  // reads for the row, done or not), its words and its result.
+  lessonTitle: (lesson: Lesson) => {
+    const move = techniqueOf(lesson)
+    return move === null ? roundName({ op: lesson.op, digits: lesson.digits }) : techniqueName(move.op, move.technique)
+  },
+  lessonRow,
+  lessonRowLabel: (lesson: Lesson, done: boolean) => `${lessonRow(lesson)}${done ? '、できた' : ''}`,
+  techniqueIntro: (op: TechniqueOperation, technique: AtomClass) => TECHNIQUE_INTRO[op][technique],
+  lessonMethod: (op: TechniqueOperation) => LESSON_METHOD[op],
+  multiplyPlacement: (digits: Digits) => MULTIPLY_PLACEMENT[digits],
+  lessonResult: (problem: PairProblem, answer: number) => `${lessonExample(problem)} = ${answer}`,
+  lessonTry: 'やってみよう',
+  lessonAgain: 'もう一問',
+  lessonStartRound: '練習をはじめる',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 
@@ -394,21 +458,14 @@ export const ja = {
   readingFeedback: (target: number) => `ちがいます。このけたは${target}です。${breakdown(target)}。`,
   readingTitle: 'そろばんの読み方',
 
-  // The multiplication walkthrough (spec: multiplication §4), and the
-  // chooser's link that replays it.
-  introTitle: 'かけ算のやりかた',
+  // How 両落とし works: the × lessons' first page (spec (howto tutorial) §2).
   introMethod:
     'かけ算は、答えだけをそろばんに入れていきます（両落とし（りょうおとし））。かけられる数の上の位から順に、その一つ一つに、かける数の上の位から順にかけて、九九の答えをたしていきます。',
-  introPlacement:
-    '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
-  introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward.
   introBack: 'もどる',
   // The walkthroughs' ✕, read by VoiceOver.
   introExit: '説明をやめる',
-  // The division walkthrough's title (spec: division walkthrough §4).
-  divideIntroTitle: 'わり算のやりかた',
   // The division walkthrough, guess by guess (spec: division walkthrough §3).
   divideWalk,
   // What VoiceOver reads as a walkthrough step opens: its words, then its

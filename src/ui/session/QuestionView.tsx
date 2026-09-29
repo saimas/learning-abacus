@@ -27,6 +27,13 @@ import { useStepper } from './useStepper'
 // steps with 手順を見る before answering (spec (core rounds) §5).
 export type Submission = { correct: boolean; latencyMs: number | null; t: number; assisted: boolean }
 
+// Outside a round (a lesson's やってみよう, spec (howto tutorial) §2): once
+// the question is answered, right or wrong, its bottom row offers leaving,
+// or another problem through onMoveOn, in place of もどす/こたえる, the
+// keypad, or つぎへ. A round leaves it out: a right answer rolls on by
+// itself, and a miss has つぎへ.
+export type AfterAnswer = { leaveLabel: string; onLeave: () => void; againLabel: string }
+
 // A missed question held on screen until つぎへ: only whether its step panel
 // is open needs keeping — open at once where coaching still speaks (F0–F1),
 // and after こたえを見る at silent levels.
@@ -57,6 +64,7 @@ export function QuestionView({
   now,
   onSubmit,
   onMoveOn,
+  afterAnswer,
 }: {
   exercise: Exercise
   fade: FadeLevel
@@ -89,6 +97,7 @@ export function QuestionView({
   now: () => number
   onSubmit: (submission: Submission) => void
   onMoveOn: (t: number) => void
+  afterAnswer?: AfterAnswer
 }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
@@ -176,11 +185,13 @@ export function QuestionView({
     const wanted = mode === 'beads' ? (exercise.expectedBeads ?? exercise.expected) : exercise.expected
     const correct = given === wanted
 
+    // Either way, the moment after an answer takes no つぎへ, もう一問 or
+    // おわる: a double tap on こたえる must not skip the 〇 or the review.
+    guardFrom.current = t
     if (correct) {
       setAnsweredRight(true)
       AccessibilityInfo.announceForAccessibility(strings.correct)
     } else {
-      guardFrom.current = t
       // The number alone teaches nothing. Where coaching still speaks, the
       // panel with the substitution comes up with the ✕; at silent levels it
       // waits to be asked for.
@@ -253,7 +264,7 @@ export function QuestionView({
   // bottom of the screen, and should be where they are, to keep it
   // consistent.
   const stepsOpenButton =
-    review === null && !stepsOpen ? (
+    review === null && !stepsOpen && !answeredRight ? (
       <Pressable
         testID="steps-open"
         accessibilityRole="button"
@@ -282,6 +293,24 @@ export function QuestionView({
   // steps take the soroban over, beside the answer in the card instead.
   const answered = review !== null || answeredRight
   const given = mode === 'beads' && reviewing ? readValue(shownBeads) : undefined
+  const afterAnswerRow =
+    afterAnswer !== undefined && answered ? (
+      <View style={styles.buttonRow}>
+        <View style={styles.reviewSlot}>
+          <Button
+            testID="after-leave"
+            variant="outline"
+            label={afterAnswer.leaveLabel}
+            onPress={() => {
+              if (!guarded(now())) afterAnswer.onLeave()
+            }}
+          />
+        </View>
+        <View style={styles.reviewSlot}>
+          <Button testID="after-again" label={afterAnswer.againLabel} onPress={moveOn} />
+        </View>
+      </View>
+    ) : null
   // The step panel in its two places: the controls sit in the fixed area
   // just above the bottom buttons, where the thumb is, so ◀ ▶ cannot scroll
   // off a short phone, and in keypad mode the lines scroll with the prompt
@@ -462,7 +491,7 @@ export function QuestionView({
         {/* Before an answer, the steps' とじる stands in for もどす and
             こたえる: the learner answers once they have closed the steps.
             The step lines take that row's height meanwhile. */}
-        {review !== null ? (
+        {afterAnswerRow ?? (review !== null ? (
           reviewButtons
         ) : beforeAnswer ? null : (
           <View style={styles.buttonRow}>
@@ -478,7 +507,7 @@ export function QuestionView({
               <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
             </View>
           </View>
-        )}
+        ))}
       </View>
     )
   }
@@ -515,7 +544,12 @@ export function QuestionView({
         {stepsOpenButton}
         {stepLines}
       </ScrollView>
-      {review !== null ? (
+      {afterAnswerRow !== null ? (
+        <>
+          {review !== null ? stepControls : null}
+          {afterAnswerRow}
+        </>
+      ) : review !== null ? (
         <>
           {stepControls}
           {reviewButtons}

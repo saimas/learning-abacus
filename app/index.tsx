@@ -1,16 +1,15 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { practiceId, type PracticeKind } from '@/domain/problem'
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { practiceId, type PairOperation, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
-import { Button } from '@/ui/kit/Button'
 import { IconButton } from '@/ui/kit/IconButton'
 import { Screen } from '@/ui/kit/Screen'
 import { Seal, type SealState } from '@/ui/kit/Seal'
 import { PracticeTable } from '@/ui/progress/PracticeTable'
 import { useProgress } from '@/ui/ProgressProvider'
-import { colors, fonts, fontSizes, space } from '@/ui/theme'
+import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
 
 // Spec (core rounds) §6: Home is built around けたの練習 — the grid below is
 // the practice table itself, tap a cell to start that round — with the
@@ -18,9 +17,6 @@ import { colors, fonts, fontSizes, space } from '@/ui/theme'
 // §2: the single-move session (基礎の練習) and its card are gone.
 export default function Home() {
   const { progress, hydrated } = useProgress()
-  // From a large text size up, the walkthrough buttons' labels no longer fit
-  // half the width, so the buttons stack instead of wrapping them.
-  const stackHowTos = useWindowDimensions().fontScale >= HOW_TO_STACK_SCALE
   const strings = useStrings()
   // Never read fresh from Date.now() during render: react-hooks/purity
   // forbids calling an impure function while rendering. Home stays mounted
@@ -80,11 +76,12 @@ export default function Home() {
     leaving.current = true
     router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
   }
-  const openHowTo = (pathname: '/multiply-intro' | '/divide-intro') => {
+  const openHowTo = (op: PairOperation) => {
     if (leaving.current) return
     leaving.current = true
-    router.push(pathname)
+    router.push({ pathname: '/howto/[op]', params: { op } })
   }
+
 
   return (
     <Screen>
@@ -98,8 +95,6 @@ export default function Home() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{strings.homeTitle}</Text>
-
         <View style={styles.streak}>
           <Seal
             testID={`seal-${seal}`}
@@ -118,49 +113,44 @@ export default function Home() {
         </View>
 
         <PracticeTable progress={progress} onChoose={startRound} />
-        {/* Spec (division) §3: each walkthrough can be replayed from here,
-            in the grid's order, × then ÷. The owner (2026-09-29) found the
-            small links hard to see and to tap, so they are full-size
-            buttons under a heading of their own. */}
+        {/* Spec (howto tutorial) §3: each operation's lessons, from its own
+            tile. The owner (2026-09-29) found small links hard to see, then
+            full-size buttons too big: one row of tiles in the grid cells'
+            tan, a symbol over its name, each a quarter of the width and still
+            well past the 44 pt tap size. */}
         <Text style={styles.sectionTitle}>{strings.homeHowToSection}</Text>
-        <View testID="home-howtos" style={[styles.howTos, stackHowTos && styles.howTosStacked]}>
-          <View style={!stackHowTos && styles.howTo}>
-            <Button
-              testID="home-howto"
-              variant="outline"
-              label={strings.homeHowToButton}
-              accessibilityLabel={strings.homeHowTo}
-              onPress={() => openHowTo('/multiply-intro')}
-            />
-          </View>
-          <View style={!stackHowTos && styles.howTo}>
-            <Button
-              testID="home-howto-div"
-              variant="outline"
-              label={strings.homeHowToDivideButton}
-              accessibilityLabel={strings.homeHowToDivide}
-              onPress={() => openHowTo('/divide-intro')}
-            />
-          </View>
+        <View testID="home-howto-row" style={styles.howTos}>
+          {HOW_TO_OPS.map((op) => (
+            <Pressable
+              key={op}
+              testID={`home-howto-${op}`}
+              accessibilityRole="button"
+              accessibilityLabel={strings.howToTitle(op)}
+              onPress={() => openHowTo(op)}
+              style={({ pressed }) => [styles.howTo, pressed && styles.pressed]}
+            >
+              <Text maxFontSizeMultiplier={HOW_TO_TEXT_CAP} style={styles.howToSymbol}>
+                {strings.howToSymbol(op)}
+              </Text>
+              <Text maxFontSizeMultiplier={HOW_TO_TEXT_CAP} style={styles.howToName}>
+                {strings.howToName(op)}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </ScrollView>
     </Screen>
   )
 }
 
-// The text size from which the walkthrough buttons stack: "× Multiply" fills
-// half a 375 pt phone's width at about 1.25×.
-const HOW_TO_STACK_SCALE = 1.2
+// How far the tiles' words grow with the text size: at 1.4× "Subtract",
+// the longest name, still fits a quarter of a 375 pt phone's width.
+const HOW_TO_TEXT_CAP = 1.4
+
+const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
-  title: {
-    marginTop: space.md,
-    fontFamily: fonts.display,
-    fontSize: fontSizes.display,
-    letterSpacing: 2,
-    color: colors.ink,
-  },
   streak: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.lg },
   streakText: { flex: 1, gap: 2 },
   days: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
@@ -178,8 +168,20 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.title,
     color: colors.ink,
   },
-  // Side by side, each half the width; stacked, each the full width.
-  howTos: { flexDirection: 'row', gap: space.md },
-  howTosStacked: { flexDirection: 'column' },
-  howTo: { flex: 1 },
+  // One row of tiles, each an equal share of it.
+  howTos: { flexDirection: 'row', gap: space.sm },
+  howTo: {
+    flex: 1,
+    minHeight: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: space.sm,
+    borderRadius: 8,
+    backgroundColor: cellColors.unseen,
+  },
+  // As the grid's cells.
+  pressed: { opacity: 0.85 },
+  howToSymbol: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
+  howToName: { fontSize: fontSizes.small, color: colors.ink },
 })

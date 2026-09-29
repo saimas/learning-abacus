@@ -5,15 +5,14 @@ import { tintedBeads } from '@/ui/session/testing'
 import { REPLAY_STEP_MS } from '@/ui/session/useMoveReplay'
 import { MethodIntro, type IntroTexts } from './MethodIntro'
 
-// The × walkthrough, as its route sets it up (app/multiply-intro.tsx), in
+// The × walkthrough, as the × 2けた lesson sets it up (lessonIntro), in
 // the default locale. ÷ moved to its own bead-by-bead DivideWalkthrough
 // (spec: division walkthrough §4); see DivideWalkthrough.test.tsx.
 const MULTIPLY: PairProblem = { op: 'mul', digits: 2, a: 47, b: 36 }
 const MULTIPLY_TEXTS: IntroTexts = {
-  title: ja.introTitle,
-  method: ja.introMethod,
-  placement: ja.introPlacement,
-  result: ja.introResult,
+  title: '2けたのかけ算',
+  pages: [ja.introMethod, ja.multiplyPlacement(2)],
+  result: ja.lessonResult(MULTIPLY, 1692),
 }
 
 function renderMultiply(finishLabel: string, onFinish: () => void) {
@@ -53,7 +52,7 @@ describe('MethodIntro for ×', () => {
     // The method leads straight to the placement.
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toContain('百の位')
-    expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
+    expect(screen.getByTestId('intro-text').props.children).toBe(ja.multiplyPlacement(2))
     fireEvent.press(screen.getByTestId('intro-next'))
     expect(screen.getByTestId('intro-text').props.children).toBe('4×3=12　千の位に1、百の位に2')
     playOut()
@@ -161,7 +160,7 @@ describe('MethodIntro for ×', () => {
 
   it('shows the title and the problem it is given', () => {
     renderMultiply('はじめる', jest.fn())
-    expect(screen.getByText('かけ算のやりかた')).toBeTruthy()
+    expect(screen.getByText('2けたのかけ算')).toBeTruthy()
     expect(screen.getByText('47 × 36')).toBeTruthy()
   })
 
@@ -176,7 +175,7 @@ describe('MethodIntro for ×', () => {
     it('returns from the placement page to the method page', () => {
       renderMultiply('はじめる', jest.fn())
       fireEvent.press(screen.getByTestId('intro-next'))
-      expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
+      expect(screen.getByTestId('intro-text').props.children).toBe(ja.multiplyPlacement(2))
       fireEvent.press(screen.getByTestId('intro-back'))
       expect(screen.getByTestId('intro-text').props.children).toContain('両落とし')
     })
@@ -188,7 +187,7 @@ describe('MethodIntro for ×', () => {
       playOut()
       expect([0, 1, 2, 3].map(rod)).toEqual(['1', '2', '0', '0'])
       fireEvent.press(screen.getByTestId('intro-back'))
-      expect(screen.getByTestId('intro-text').props.children).toBe(ja.introPlacement)
+      expect(screen.getByTestId('intro-text').props.children).toBe(ja.multiplyPlacement(2))
       expect([0, 1, 2, 3].map(rod)).toEqual(['0', '0', '0', '0'])
     })
 

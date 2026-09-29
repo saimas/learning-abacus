@@ -5,10 +5,12 @@ import {
   dayKey,
   emptyProgress,
   markDayPracticed,
+  markLessonSeen,
   recordPracticeAttempt,
   type Progress,
 } from '@/domain/progress'
 import { loadProgress, saveProgress } from '@/storage/progressStore'
+import type { LessonId } from '@/domain/lessons'
 
 type ProgressApi = {
   progress: Progress
@@ -17,8 +19,7 @@ type ProgressApi = {
   flush: () => Promise<void>
   reset: () => Promise<void>
   completeTutorial: () => Promise<void>
-  completeMultiplyIntro: () => Promise<void>
-  completeDivideIntro: () => Promise<void>
+  completeLesson: (id: LessonId) => Promise<void>
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null)
@@ -97,17 +98,15 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     await saveProgress(next)
   }, [])
 
-  // Saved at once, as completeTutorial is: a walkthrough is shown only
-  // until it has been seen, so a crash before the next flush must not bring
-  // it back.
-  const markIntroDone = useCallback(async (flag: 'multiplyIntroDone' | 'divideIntroDone') => {
-    const next = { ...latest.current, [flag]: true }
+  // Saved at once, as completeTutorial is: a lesson that opens before a
+  // round does so only until it is done, so a crash before the next flush
+  // must not bring it back.
+  const completeLesson = useCallback(async (id: LessonId) => {
+    const next = markLessonSeen(latest.current, id)
     latest.current = next
     setProgress(next)
     await saveProgress(next)
   }, [])
-  const completeMultiplyIntro = useCallback(() => markIntroDone('multiplyIntroDone'), [markIntroDone])
-  const completeDivideIntro = useCallback(() => markIntroDone('divideIntroDone'), [markIntroDone])
 
   return (
     <ProgressContext.Provider
@@ -118,8 +117,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         flush,
         reset,
         completeTutorial,
-        completeMultiplyIntro,
-        completeDivideIntro,
+        completeLesson,
       }}
     >
       {children}
