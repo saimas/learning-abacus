@@ -156,4 +156,33 @@ describe('Divide intro screen', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockSave).toHaveBeenCalledTimes(1)
   })
+
+  // The owner (2026-09-29): a way out at any point, part-way through too.
+  it('leaves part-way through ✕, marking it seen, without starting the round', async () => {
+    mockParams.current = { kind: 'div:2' }
+    render(
+      <ProgressProvider>
+        <DivideIntroScreen />
+      </ProgressProvider>,
+    )
+    await act(async () => {})
+    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('walk-next'))
+    fireEvent.press(screen.getByTestId('intro-exit'))
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ divideIntroDone: true, daysPracticed: 4 })
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('leaves for Home through ✕ when there is nothing to go back to', async () => {
+    mockCanGoBack.current = false
+    render(
+      <ProgressProvider>
+        <DivideIntroScreen />
+      </ProgressProvider>,
+    )
+    await act(async () => {})
+    fireEvent.press(screen.getByTestId('intro-exit'))
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'))
+    expect(mockBack).not.toHaveBeenCalled()
+  })
 })

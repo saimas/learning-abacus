@@ -12,12 +12,12 @@
       "icon": "./assets/app.icon",
       "supportsTablet": false,
       "bundleIdentifier": "com.saimas.learningabacus",
-      "buildNumber": "25",
+      "buildNumber": "26",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "CFBundleDisplayName": "まいにち5分！そろばん暗算"
+        "CFBundleDisplayName": "まいにち5分！そろばん練習"
       }
     },
     "plugins": [

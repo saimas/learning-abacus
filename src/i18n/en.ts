@@ -372,6 +372,8 @@ export const en: Strings = {
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward.
   introBack: 'Back',
+  // The walkthroughs' ✕, read by VoiceOver.
+  introExit: 'Close the walkthrough',
   // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'How to divide',
   divideWalk,

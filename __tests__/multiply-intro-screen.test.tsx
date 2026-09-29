@@ -119,4 +119,36 @@ describe('Multiply intro screen', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockSave).toHaveBeenCalledTimes(1)
   })
+
+  // The owner (2026-09-29): a way out at any point. ✕ marks the walkthrough
+  // seen and goes Home, even when it was shown before the first round, which
+  // it then does not start.
+  it('leaves from its first page through ✕, marking it seen, without starting the round', async () => {
+    mockParams.current = { kind: 'mul:2' }
+    render(
+      <ProgressProvider>
+        <MultiplyIntroScreen />
+      </ProgressProvider>,
+    )
+    await act(async () => {})
+    expect(screen.getByTestId('intro-exit').props.accessibilityLabel).toBe('説明をやめる')
+    fireEvent.press(screen.getByTestId('intro-exit'))
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockSave).toHaveBeenCalledTimes(1)
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ multiplyIntroDone: true, daysPracticed: 4 })
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('leaves once even when ✕ is tapped twice quickly', async () => {
+    render(
+      <ProgressProvider>
+        <MultiplyIntroScreen />
+      </ProgressProvider>,
+    )
+    await act(async () => {})
+    fireEvent.press(screen.getByTestId('intro-exit'))
+    fireEvent.press(screen.getByTestId('intro-exit'))
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockSave).toHaveBeenCalledTimes(1)
+  })
 })

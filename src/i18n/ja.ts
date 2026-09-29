@@ -379,6 +379,8 @@ export const ja = {
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward.
   introBack: 'もどる',
+  // The walkthroughs' ✕, read by VoiceOver.
+  introExit: '説明をやめる',
   // The division walkthrough's title (spec: division walkthrough §4).
   divideIntroTitle: 'わり算のやりかた',
   // The division walkthrough, guess by guess (spec: division walkthrough §3).
