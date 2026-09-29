@@ -1,21 +1,16 @@
-import type { PairProblem } from '@/domain/problem'
-import { DivideWalkthrough } from '@/ui/intro/DivideWalkthrough'
+import { lessonById } from '@/domain/lessons'
 import { IntroScreen } from '@/ui/intro/IntroScreen'
+import { LessonWalkthrough } from '@/ui/lesson/LessonWalkthrough'
 import { useProgress } from '@/ui/ProgressProvider'
 
-// Spec (division walkthrough) §1: the × walkthrough's 47 × 36 run backwards,
-// a 2けた problem whose two quotient digits both land one rod left of the
-// head (割れない) and each need their 九九 guess fixed down by one, with a
-// 九九 taken off per divisor digit after each.
-const EXAMPLE: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
+const LESSON = lessonById('div:2')
 
 function Walkthrough({ finishLabel, onFinish }: { finishLabel: string; onFinish: () => void }) {
-  return <DivideWalkthrough problem={EXAMPLE} finishLabel={finishLabel} onFinish={onFinish} />
+  return LESSON === null ? null : <LessonWalkthrough lesson={LESSON} finishLabel={finishLabel} onFinish={onFinish} />
 }
 
-// The bead-by-bead walkthrough of 商除法, guess and all (spec: division
-// walkthrough §2, §4), shown before the first ÷ round and from Home's
-// わり算のやりかた link.
+// The ÷ 2けた lesson, before the first ÷ round and from Home's わり算 button,
+// until /lesson/[id] takes over (spec (howto tutorial) §3).
 export default function DivideIntroScreen() {
   const { completeLesson } = useProgress()
   return <IntroScreen op="div" complete={() => completeLesson('div:2')} walkthrough={Walkthrough} />

@@ -22,7 +22,7 @@ function caption(k: number): WalkCaption {
 }
 
 function renderWalk(onFinish = jest.fn()) {
-  render(<DivideWalkthrough problem={PROBLEM} finishLabel="はじめる" onFinish={onFinish} />)
+  render(<DivideWalkthrough problem={PROBLEM} title="わり算のやりかた" finishLabel="はじめる" onFinish={onFinish} />)
   return onFinish
 }
 

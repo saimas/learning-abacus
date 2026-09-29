@@ -451,19 +451,13 @@ export const en: Strings = {
   readingFeedback: (target) => `Not quite. This rod shows ${target}: ${breakdown(target)}.`,
   readingTitle: 'Reading the soroban',
 
-  introTitle: 'How to multiply',
   introMethod:
     'Only the answer goes on the soroban (両落とし). Take the first number’s digits from the highest, times the second number’s digits from the highest, and add each times-table answer onto the rods.',
-  introPlacement:
-    'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
-  introResult: (a, b, product) => `${a} × ${b} = ${product}`,
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward.
   introBack: 'Back',
   // The walkthroughs' ✕, read by VoiceOver.
   introExit: 'Close the walkthrough',
-  // The division walkthrough's title (spec: division walkthrough §4).
-  divideIntroTitle: 'How to divide',
   divideWalk,
   // Its words, then its sum, as two sentences.
   divideWalkSpoken: (what, math) => (math === '' ? what : `${what}. ${math}`),

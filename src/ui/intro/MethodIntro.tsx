@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { stepColouring } from '@/domain/exercise'
-import { answerOf, OPERATION_SYMBOL, problemStates, problemSteps, rodsFor, type PairProblem } from '@/domain/problem'
+import { OPERATION_SYMBOL, problemStates, problemSteps, rodsFor, type PairProblem } from '@/domain/problem'
 import { emptySoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
@@ -12,27 +12,24 @@ import { groupLine } from '@/ui/round/ProblemCorrectionCard'
 import { useMoveReplay } from '@/ui/session/useMoveReplay'
 import { colors, fonts, fontSizes, space } from '@/ui/theme'
 
-// What the × walkthrough says around its worked problem: its title, what the
-// method does, where each digit goes, and the result. The group pages need
-// no text of their own: they read as the answer card's lines.
+// What a lesson's walkthrough says around its worked problem: its title, the
+// pages before the steps (what the move or method is, and for × where each
+// digit goes), and the result. The step pages need no text of their own:
+// they read as the answer card's lines.
 export type IntroTexts = {
   title: string
-  method: string
-  placement: string
-  result: (a: number, b: number, answer: number) => string
+  pages: string[]
+  result: string
 }
 
-// The pages: the method, where each digit goes, one page per step group (its
-// bead steps play as the page opens), and the result. A group is a 九九 of
-// the × problem this walkthrough works through.
-type Page = { kind: 'method' } | { kind: 'placement' } | { kind: 'group'; index: number } | { kind: 'result' }
+// The pages: the text pages, one page per step group (its bead steps play as
+// the page opens), and the result.
+type Page = { kind: 'text'; index: number } | { kind: 'group'; index: number } | { kind: 'result' }
 
-// Spec (multiplication) §4: the × walkthrough shown before its first round,
-// working 47 × 36 through on the soroban (両落とし), with both numbers on
-// the board beneath. ÷ used to share this component with its own text
-// pages; it now has DivideWalkthrough (spec: division walkthrough §4), so
-// this stays generic over the problem it is given but is only ever handed
-// a × one.
+// Spec (howto tutorial) §2: a ＋ − × lesson's walkthrough, working its
+// example through on the soroban from its start (the first number for ＋
+// −; nothing for ×, since 両落とし builds only the product), with × 's two
+// numbers on the board beneath. ÷ has DivideWalkthrough.
 export function MethodIntro({
   problem,
   intro,
@@ -53,8 +50,7 @@ export function MethodIntro({
   const states = problemStates(problem)
   const rods = rodsFor(problem)
   const pages: Page[] = [
-    { kind: 'method' },
-    { kind: 'placement' },
+    ...intro.pages.map((_, index) => ({ kind: 'text' as const, index })),
     ...groups.map((_, index) => ({ kind: 'group' as const, index })),
     { kind: 'result' },
   ]
@@ -64,8 +60,8 @@ export function MethodIntro({
   const starts = groups.reduce<number[]>((acc, group, i) => [...acc, (acc[i] ?? 0) + group.steps.length], [0])
 
   const current = pages[page] ?? { kind: 'result' }
-  // Before the first group plays, the soroban is empty: 両落とし builds
-  // only the product.
+  // Before the first group plays, the soroban shows the example's start: the
+  // first number for ＋ −, nothing for × (両落とし builds only the product).
   const shown = replay.soroban ?? states[current.kind === 'result' ? states.length - 1 : 0] ?? emptySoroban(rods)
 
   // What a group's page replays: the soroban before its first step, then
@@ -85,9 +81,8 @@ export function MethodIntro({
 
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward. Landing on a group page replays it from its own start,
-  // same as opening it going forward; landing on the method or placement
-  // page just stops the replay, so `shown` falls back to that page's first
-  // state (the empty soroban). Page 0 has no ◀ to press; should that change,
+  // same as opening it going forward; landing on a text page just
+  // stops the replay, so `shown` falls back to the example's start. Page 0 has no ◀ to press; should that change,
   // it has no page before it, so the same guard as next()'s stops it.
   function back() {
     const target = pages[page - 1]
@@ -111,12 +106,10 @@ export function MethodIntro({
   const group = current.kind === 'group' ? groups[current.index] : undefined
   function pageText(): string {
     switch (current.kind) {
-      case 'method':
-        return intro.method
-      case 'placement':
-        return intro.placement
+      case 'text':
+        return intro.pages[current.index] ?? ''
       case 'result':
-        return intro.result(problem.a, problem.b, answerOf(problem))
+        return intro.result
       case 'group':
         return group === undefined ? '' : (groupLine(strings, problem, group) ?? '')
     }
@@ -148,9 +141,11 @@ export function MethodIntro({
             tintedBeads={tintedBeads}
           />
         </View>
-        {/* The board under the soroban, as in a round: both numbers, with
-            a 九九's page pointing at its digits for as long as it is open. */}
-        <OperandBoard problem={problem} activeGroup={group} />
+        {/* × only: 両落とし leaves both numbers off the soroban, so they
+            are on a board beneath it, a 九九's page pointing at its digits
+            for as long as it is open. ＋ − start with the first number on
+            the soroban itself. */}
+        {problem.op === 'mul' ? <OperandBoard problem={problem} activeGroup={group} /> : null}
         <Text testID="intro-text" style={styles.text}>
           {text}
         </Text>

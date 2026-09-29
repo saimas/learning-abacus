@@ -73,7 +73,7 @@ describe('Multiply intro screen', () => {
       </ProgressProvider>,
     )
     await act(async () => {})
-    expect(screen.getByText('かけ算のやりかた')).toBeTruthy()
+    expect(screen.getByText('2けたのかけ算')).toBeTruthy()
     expect(screen.getByText('47 × 36')).toBeTruthy()
     expect(screen.getByTestId('intro-text').props.children).toContain('両落とし')
     for (let i = 0; i < 6; i++) fireEvent.press(screen.getByTestId('intro-next'))

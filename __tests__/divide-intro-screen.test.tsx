@@ -92,7 +92,7 @@ describe('Divide intro screen', () => {
 
   it('walks through 1692 ÷ 36 a bead at a time', async () => {
     await renderScreen()
-    expect(screen.getByText('わり算のやりかた')).toBeTruthy()
+    expect(screen.getByText('2けたのわり算')).toBeTruthy()
     expect(text('walk-problem')).toContain('1692')
     // The divisor's digits are nested Texts of their own, underlined a digit
     // at a time as each 九九 uses it.

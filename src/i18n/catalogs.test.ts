@@ -257,12 +257,8 @@ describe('multiplication strings', () => {
     expect([4, 5].map(en.rodName)).toEqual(['ten-thousands rod', 'hundred-thousands rod'])
   })
 
-  it('gives the walkthrough its title, its explanations and its result', () => {
-    expect(ja.introTitle).toBe('かけ算のやりかた')
+  it('explains how the × walkthrough works', () => {
     expect(ja.introMethod).toContain('両落とし')
-    expect(ja.introPlacement).toContain('百の位')
-    expect(ja.introResult(47, 36, 1692)).toBe('47×36 = 1692')
-    expect(en.introResult(47, 36, 1692)).toBe('47 × 36 = 1692')
   })
 
   it('reads the operand board as the problem', () => {
@@ -408,11 +404,6 @@ describe('division strings', () => {
   // The walkthrough's own explanations and result now come from divideWalk,
   // one step at a time (spec: division walkthrough §3); see divisionWalk's
   // and DivideWalkthrough's own tests.
-  it('gives the walkthrough its title', () => {
-    expect(ja.divideIntroTitle).toBe('わり算のやりかた')
-    expect(en.divideIntroTitle).toBe('How to divide')
-  })
-
   it('names Home’s link to the walkthrough beside the × one', () => {
     expect(ja.homeHowToDivide).toBe('わり算のやりかた')
     expect(en.homeHowToDivide).toBe('How division works')

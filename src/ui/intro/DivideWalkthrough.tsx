@@ -35,10 +35,12 @@ const NO_STEP: WalkStep = {
 // what is left.
 export function DivideWalkthrough({
   problem,
+  title,
   finishLabel,
   onFinish,
 }: {
   problem: PairProblem
+  title: string
   finishLabel: string
   onFinish: () => void
 }) {
@@ -112,7 +114,7 @@ export function DivideWalkthrough({
     <View style={styles.walkthrough}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
-          {strings.divideIntroTitle}
+          {title}
         </Text>
         {/* One dot per step, not per ▶, so the dots count explanations. A
             stuck step's dot is a ring whether reached or not, so the two

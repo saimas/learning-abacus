@@ -462,21 +462,14 @@ export const ja = {
   readingFeedback: (target: number) => `ちがいます。このけたは${target}です。${breakdown(target)}。`,
   readingTitle: 'そろばんの読み方',
 
-  // The multiplication walkthrough (spec: multiplication §4), and the
-  // chooser's link that replays it.
-  introTitle: 'かけ算のやりかた',
+  // How 両落とし works: the × lessons' first page (spec (howto tutorial) §2).
   introMethod:
     'かけ算は、答えだけをそろばんに入れていきます（両落とし（りょうおとし））。かけられる数の上の位から順に、その一つ一つに、かける数の上の位から順にかけて、九九の答えをたしていきます。',
-  introPlacement:
-    '九九の答えの一の位は、一の位どうしなら一の位、十の位と一の位なら十の位、十の位どうしなら百の位に入れます。十の位は、その一つ上の位です。',
-  introResult: (a: number, b: number, product: number) => `${a}×${b} = ${product}`,
   // The owner's request (2026-09-24): a way back through the walkthrough,
   // not just forward.
   introBack: 'もどる',
   // The walkthroughs' ✕, read by VoiceOver.
   introExit: '説明をやめる',
-  // The division walkthrough's title (spec: division walkthrough §4).
-  divideIntroTitle: 'わり算のやりかた',
   // The division walkthrough, guess by guess (spec: division walkthrough §3).
   divideWalk,
   // What VoiceOver reads as a walkthrough step opens: its words, then its
