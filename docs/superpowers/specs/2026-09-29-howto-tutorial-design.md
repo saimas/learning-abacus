@@ -18,7 +18,7 @@ Out of scope for this spec: 見取算 lessons.
 
 ## 2. The lessons
 
-Twenty lessons. The move classes are the app's own (`AtomClass`, named as in 手順を見る), and each example below was run through `problemSteps` to confirm the classes named.
+Eighteen lessons (＋ 6, − 6, × 3, ÷ 3). The move classes are the app's own (`AtomClass`, named as in 手順を見る), and each example below was run through `problemSteps` to confirm the classes named.
 
 | | 1けた | 2けた | 3けた |
 |---|---|---|---|
