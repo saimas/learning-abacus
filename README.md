@@ -66,20 +66,22 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   under a heading with what the soroban reads before and after it (「4×36　0 → 1440」), its bead
   moves coloured together. An answer given after opening it counts "with help": it is tallied but
   does not move the fade ladder.
-- **After an answer**, a right one is stamped with a 〇 where it stands; then the next problem is
-  laid in its place underneath and the answered card is swiped off to the left over it, so the new
-  problem never moves (with Reduce Motion on, the answered card fades away in place). A miss's
-  つぎへ moves on the same way, and the last card goes over the summary.
+- **After an answer**, on the beads, the number they read shows under the soroban (and, once a
+  miss's steps take the soroban over, beside the answer: 「こたえは 81　あなたの答え 80」). A right
+  one is stamped with a 〇 where it stands; then the next problem is laid in its place underneath
+  and the answered card is swiped off to the left over it, so the new problem never moves (with
+  Reduce Motion on, the answered card fades away in place). A miss's つぎへ moves on the same way,
+  and the last card goes over the summary.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
-  わり算のやりかた; both can be replayed from links on Home, and ✕ leaves either at any point
+  わり算のやりかた; both can be replayed from the やりかた buttons on Home, and ✕ leaves either at any point
   (it counts as seen). The ÷ walkthrough works 1692 ÷ 36
   one bead at a time, including a guess that is too big and how it is fixed.
 
 ## Screens
 
 - **Tutorial** — on first launch, reading the soroban: what number is on each rod.
-- **Home** (今日の五分) — the days-practised seal, the けたの練習 grid, and the walkthrough links.
+- **Home** (今日の五分) — the days-practised seal, the けたの練習 grid, and the やりかた buttons.
 - **Round** — full-screen practice. ✕ asks before leaving and keeps what was answered.
 - **Progress** — days practised and the けたの練習 table, each cell coloured by its stage.
 - **Settings** — days practised, the language toggle (Japanese by default, or English), and a
