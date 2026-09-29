@@ -1057,6 +1057,16 @@ describe('QuestionView after an answer outside a round', () => {
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
 
+  // The owner's round blocks it under the roll; outside a round nothing
+  // does, and a right answer has nothing left to open the steps for.
+  it('offers no 手順を見る once a right answer is in', () => {
+    renderView({ afterAnswer: afterAnswer() })
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('steps-open')).toBeNull()
+  })
+
   it('takes the keypad’s place in keypad mode', () => {
     renderView({ fade: 3, coaching: 'silent', afterAnswer: afterAnswer() })
     for (const digit of '857') fireEvent.press(screen.getByTestId(`key-${digit}`))

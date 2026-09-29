@@ -3,7 +3,7 @@ import { lessonById, tryProblem, type Lesson } from '@/domain/lessons'
 import { answerOf } from '@/domain/problem'
 import { emptyProgress } from '@/domain/progress'
 import * as store from '@/storage/progressStore'
-import { ProgressProvider } from '@/ui/ProgressProvider'
+import { ProgressProvider, useProgress } from '@/ui/ProgressProvider'
 import { setBeads } from '@/ui/session/testing'
 import { LessonTry } from './LessonTry'
 
@@ -75,13 +75,30 @@ describe('LessonTry', () => {
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
 
-  // Spec §2: nothing here reaches progress.
+  // Spec §2, §6: nothing here reaches progress — no attempt, no fade
+  // move, no day practised — right or wrong.
   it('records nothing', async () => {
-    await renderTry('add:five')
+    let seen: ReturnType<typeof useProgress>['progress'] | null = null
+    function Probe() {
+      seen = useProgress().progress
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Probe />
+        <LessonTry lesson={lesson('add:five')} onLeave={jest.fn()} random={first} />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('prompt')).toBeTruthy())
     const problem = tryProblem(lesson('add:five'), first)
     setBeads(screen.getByTestId, answerOf(problem), 2)
     fireEvent.press(screen.getByTestId('submit'))
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('after-again'))
+    setBeads(screen.getByTestId, 9, 2)
+    fireEvent.press(screen.getByTestId('submit'))
     await act(async () => {})
+    expect(seen).toMatchObject({ practices: {}, daysPracticed: 0, lastSessionDay: null })
     expect(mockSave).not.toHaveBeenCalled()
   })
 

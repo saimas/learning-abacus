@@ -120,7 +120,7 @@ export function DivideWalkthrough({
             stuck step's dot is a ring whether reached or not, so the two
             places a guess turns out too big stay in sight among the reached
             dots. */}
-        <View style={styles.dots}>
+        <View testID="walk-dots" style={styles.dots}>
           {walk.map((each, i) => (
             <View
               key={i}
@@ -355,7 +355,10 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
   },
   title: { flexShrink: 1, fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.ink },
-  dots: { flexDirection: 'row', gap: 5 },
+  // The title keeps at least half the header; the dots wrap into the rest,
+  // so a lesson with many pages (÷ 3けた has 25 steps) squeezes neither the
+  // title to a sliver nor its dots off the screen (final review).
+  dots: { flexDirection: 'row', flexShrink: 1, flexWrap: 'wrap', maxWidth: '50%', justifyContent: 'flex-end', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.track },
   dotReached: { backgroundColor: colors.accent },
   // After dotReached, so a reached stuck step stays a ring.

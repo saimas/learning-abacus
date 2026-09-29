@@ -22,7 +22,7 @@ Eighteen lessons (＋ 6, − 6, × 3, ÷ 3). The move classes are the app's own 
 
 | | 1けた | 2けた | 3けた |
 |---|---|---|---|
-| **＋ たし算** | そのまま 3＋1 · 五の合成 4＋3 · 十の繰上 8＋5 · 十の繰上と五の分解 6＋7 | 47＋38 (五の合成, then 十の繰上) | 595＋427 = 1022 (a 十の繰上と五の分解 whose carry ripples through a 9 into the thousands) |
+| **＋ たし算** | そのまま 3＋1 · 五の合成 4＋3 · 十の繰上 8＋5 · 十の繰上と五の分解 6＋7 | 47＋38 (五の合成, then 十の繰上) | 575＋427 = 1002 (a 十の繰上と五の分解 whose carry ripples through two 9s into the thousands; *changed 2026-09-29 from 595＋427, whose ripple step was a −5 −3, not a complement*) |
 | **− ひき算** | そのまま 4−3 · 五の分解 6−3 · 十の繰下 13−5 · 十の繰下と五の合成 12−6 | 82−37 (そのまま, then 十の繰下と五の合成) | 613−258 (五の分解, 十の繰下, 十の繰下と五の合成) |
 | **× かけ算** | 7×8 (where a 九九's two digits go) | 47×36 (today's walkthrough) | 473×256 (nine 九九, one carry that ripples) |
 | **÷ わり算** | 56÷7 | 1692÷36 (today's, with a guess fixed down) | 121088÷256 = 473 (with a guess fixed down too) |

@@ -79,8 +79,20 @@ describe('the lesson catalogue', () => {
   // Spec §2: 3けた shows what 2けた cannot, a carry rippling through a 9.
   it('carries the ＋ 3けた example through a 9', () => {
     const example = lessonById('add:3')?.example
-    expect(example).toEqual({ op: 'add', digits: 3, a: 595, b: 427 })
+    expect(example).toEqual({ op: 'add', digits: 3, a: 575, b: 427 })
     expect(example !== undefined && problemSteps(example).some((group) => group.cascades)).toBe(true)
+  })
+
+  // Final review: a column named for a complement must be one, as in
+  // tryProblem — or its line would contradict the move's own lesson.
+  it('shows only real complements in its examples', () => {
+    for (const lesson of LESSONS) {
+      for (const group of problemSteps(lesson.example)) {
+        if (group.kind !== 'column' || group.atom === null) continue
+        const directions = decompose(group.atom).filter((step) => step.rod === 'working').map((step) => Math.sign(step.delta))
+        expect(directions.every((direction, i) => i === 0 || direction !== directions[i - 1])).toBe(true)
+      }
+    }
   })
 
   it('finds a lesson by its id, and nothing for anything else', () => {

@@ -41,7 +41,7 @@ export const LESSONS: readonly Lesson[] = [
   techniqueLesson('add', 'ten', 8, 5),
   techniqueLesson('add', 'both', 6, 7),
   workedLesson('add', 2, 47, 38),
-  workedLesson('add', 3, 595, 427),
+  workedLesson('add', 3, 575, 427),
   techniqueLesson('sub', 'direct', 4, 3),
   techniqueLesson('sub', 'five', 6, 3),
   techniqueLesson('sub', 'ten', 13, 5),

@@ -122,7 +122,7 @@ export function MethodIntro({
         <Text accessibilityRole="header" style={styles.title}>
           {intro.title}
         </Text>
-        <View style={styles.dots}>
+        <View testID="intro-dots" style={styles.dots}>
           {pages.map((_, i) => (
             <View key={i} style={[styles.dot, i <= page && styles.dotReached]} />
           ))}
@@ -181,8 +181,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: space.sm,
   },
-  title: { fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.ink },
-  dots: { flexDirection: 'row', gap: 5 },
+  title: { flexShrink: 1, fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.ink },
+  // The title keeps at least half the header; the dots wrap into the rest,
+  // so a lesson with many pages (÷ 3けた has 25 steps) squeezes neither the
+  // title to a sliver nor its dots off the screen (final review).
+  dots: { flexDirection: 'row', flexShrink: 1, flexWrap: 'wrap', maxWidth: '50%', justifyContent: 'flex-end', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.track },
   dotReached: { backgroundColor: colors.accent },
   problem: {

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import { LESSONS, lessonById, type Lesson } from '@/domain/lessons'
 import { ja } from '@/i18n/ja'
 import { textOf } from '@/ui/session/testing'
@@ -79,6 +80,19 @@ describe('LessonWalkthrough', () => {
     renderLesson('div:1')
     expect(screen.getByText('1けたのわり算')).toBeTruthy()
     expect(textOf(screen.getByTestId('walk-problem'))).toContain('56')
+  })
+
+  // Final review: ÷ 3けた has 25 steps and × 3けた 12 pages. The title keeps
+  // at least half the header and the dots wrap into the rest, so neither
+  // squeezes the title to a sliver nor pushes the dots off the screen.
+  it.each([['mul:3', 'intro-dots'], ['div:3', 'walk-dots']])('keeps %s’s title and its many dots within the header', (id, dots) => {
+    renderLesson(id)
+    expect(StyleSheet.flatten(screen.getByTestId(dots).props.style)).toMatchObject({
+      flexShrink: 1,
+      flexWrap: 'wrap',
+      maxWidth: '50%',
+      justifyContent: 'flex-end',
+    })
   })
 
   // Review focus: every example renders and reaches its last button,

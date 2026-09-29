@@ -264,7 +264,7 @@ export function QuestionView({
   // bottom of the screen, and should be where they are, to keep it
   // consistent.
   const stepsOpenButton =
-    review === null && !stepsOpen ? (
+    review === null && !stepsOpen && !answeredRight ? (
       <Pressable
         testID="steps-open"
         accessibilityRole="button"
