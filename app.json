@@ -17,7 +17,7 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "CFBundleDisplayName": "まいにち5分！そろばん暗算"
+        "CFBundleDisplayName": "まいにち5分！そろばん練習"
       }
     },
     "plugins": [

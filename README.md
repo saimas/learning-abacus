@@ -1,6 +1,6 @@
 # learning-abacus
 
-まいにち5分！そろばん暗算 — a backend-free iOS app that teaches soroban arithmetic and mental
+まいにち5分！そろばん練習 — a backend-free iOS app that teaches soroban arithmetic and mental
 soroban (暗算, anzan) from zero prior soroban knowledge. All learning material is generated from a
 fixed rule set and ships inside the app bundle, so the app is fully functional offline and makes no
 network calls at runtime. Progress is stored on-device only.
@@ -70,7 +70,8 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   and the next rolls in (a fade with Reduce Motion on). A miss's つぎへ rolls the same way.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
-  わり算のやりかた; both can be replayed from links on Home. The ÷ walkthrough works 1692 ÷ 36
+  わり算のやりかた; both can be replayed from links on Home, and ✕ leaves either at any point
+  (it counts as seen). The ÷ walkthrough works 1692 ÷ 36
   one bead at a time, including a guess that is too big and how it is fixed.
 
 ## Screens
