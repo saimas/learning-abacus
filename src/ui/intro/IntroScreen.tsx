@@ -1,15 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useRef, type ComponentType } from 'react'
-import { Text } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { isPracticeId, parsePracticeId, type Operation } from '@/domain/problem'
 import { useStrings } from '@/i18n'
+import { Icon } from '@/ui/kit/Icon'
 import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
 
 // A walkthrough as a route (spec (multiplication) §4, (division walkthrough)
 // §4): shown before the first round of its operation, with that round's
 // kind, and from Home's やりかた link, without one. Either way finishing it
-// marks it seen through `complete`, then starts the round or goes back. The
+// (or leaving it by ✕) marks it seen through `complete`, then starts the
+// round or goes back. The
 // walkthrough itself is handed in as a component, since × (MethodIntro) and
 // ÷ (DivideWalkthrough) no longer share one.
 export function IntroScreen({
@@ -27,13 +29,18 @@ export function IntroScreen({
   // route is reachable by deep link with any kind.
   const param = useLocalSearchParams().kind
   const id = isPracticeId(param) && parsePracticeId(param)?.op === op ? param : null
-  // A second tap while progress is saving must not finish the screen twice.
+  // A second tap while progress is saving must not leave the screen twice,
+  // whether by finishing or by ✕.
   const finished = useRef(false)
-  const finish = () => {
+  // Either way out marks the walkthrough seen. Finishing starts the round it
+  // was shown before, if any; ✕ (the owner, 2026-09-29: "quit anytime they
+  // want") always goes back, and the next tap on the grid starts the round
+  // without it. It can still be replayed from Home's やりかた link.
+  const leave = (startRound: boolean) => {
     if (finished.current) return
     finished.current = true
     void complete().then(() => {
-      if (id !== null) router.replace({ pathname: '/round', params: { kind: id } })
+      if (startRound && id !== null) router.replace({ pathname: '/round', params: { kind: id } })
       else if (router.canGoBack()) router.back()
       else router.replace('/')
     })
@@ -52,7 +59,23 @@ export function IntroScreen({
 
   return (
     <Screen>
-      <Walkthrough finishLabel={id !== null ? strings.start : strings.done} onFinish={finish} />
+      {/* The same ✕, at the same place, as a round's (RoundTrack). */}
+      <View style={styles.bar}>
+        <Pressable
+          testID="intro-exit"
+          accessibilityRole="button"
+          accessibilityLabel={strings.introExit}
+          onPress={() => leave(false)}
+          hitSlop={12}
+        >
+          <Icon name="close" size={18} />
+        </Pressable>
+      </View>
+      <Walkthrough finishLabel={id !== null ? strings.start : strings.done} onFinish={() => leave(true)} />
     </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  bar: { flexDirection: 'row', alignItems: 'center', height: 28 },
+})
