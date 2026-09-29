@@ -20,6 +20,27 @@ describe('ProblemCorrectionCard', () => {
     expect(textOf(screen.getByTestId('correction-column-0'))).toContain('一の位')
   })
 
+  // The owner (2026-09-29): a miss on the beads names what the learner's
+  // beads read beside the answer, once the steps have taken them over.
+  it('names the learner’s own reading beside the answer', () => {
+    render(<ProblemCorrectionCard problem={{ op: 'add', digits: 3, a: 345, b: 102 }} expected={447} given={440} />)
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 447　あなたの答え 440')
+  })
+
+  it('names it after what the beads had to read, for a ÷', () => {
+    render(
+      <ProblemCorrectionCard
+        problem={{ op: 'div', digits: 2, a: 1692, b: 36 }}
+        expected={47}
+        expectedBeads={47000}
+        given={47}
+      />,
+    )
+    expect(screen.getByTestId('correction-answer').props.children).toBe(
+      'こたえは 47（そろばんは 47000）　あなたの答え 47',
+    )
+  })
+
   // Spec (core rounds) §3: before an answer the same lines explain the
   // problem without giving the answer away.
   it('leaves the answer out when asked to', () => {

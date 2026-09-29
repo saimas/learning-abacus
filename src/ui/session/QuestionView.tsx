@@ -69,7 +69,9 @@ export function QuestionView({
   // been answered. In bead mode the lines scroll on their own, and the
   // card's highlighted line reports where it sits so it can be scrolled into
   // view (see useActiveLineLayout).
-  renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean }) => ReactNode
+  // `given` is what the learner's beads read, for a miss on the beads whose
+  // steps have taken those beads over (see `given` below).
+  renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean; given?: number }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
   // leaves off the soroban, or a ÷ problem's, which shows the divisor,
   // following the same `activeStep` as the step lines. Bead mode draws it
@@ -279,7 +281,13 @@ export function QuestionView({
   // off a short phone, and in keypad mode the lines scroll with the prompt
   // (bead mode puts them below the controls; see beadStepLines). Before an
   // answer nothing has been got wrong, so the lines carry no correction edge.
-  const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing }) : null
+  // The owner (2026-09-29): once answered on the beads, the number they read
+  // is shown, so a 〇 says which number was right and a ✕ which was not.
+  // Under the soroban while the learner's own beads are on show; once the
+  // steps take the soroban over, beside the answer in the card instead.
+  const answered = review !== null || answeredRight
+  const given = mode === 'beads' && reviewing ? readValue(shownBeads) : undefined
+  const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing, given }) : null
   const stepLines = panelOpen ? <StepLines accent={reviewing}>{steps}</StepLines> : null
   const stepControls = panelOpen ? (
     <StepControls
@@ -404,12 +412,20 @@ export function QuestionView({
             or ✕ lands on the soroban alone. */}
         {renderBeneath?.(activeStep)}
         {/* With the panel open the hint gives way to the step controls,
-            and under a silent level's ✕ both wait for こたえを見る. All
+            and once answered to what the beads read (see `given`). All
             three share one slot of the controls' height, so the swap moves
             nothing below it either: the owner (2026-09-24) found the jump
             from the one-line hint to the taller ◀ ▶ row distracting. */}
         <View testID="step-controls-slot" style={styles.controlsSlot}>
-          {panelOpen ? stepControls : review === null ? <Text style={styles.hint}>{strings.beadHint}</Text> : null}
+          {panelOpen ? (
+            stepControls
+          ) : answered ? (
+            <Text testID="bead-reading" maxFontSizeMultiplier={1.3} style={styles.reading}>
+              {String(readValue(shownBeads))}
+            </Text>
+          ) : (
+            <Text style={styles.hint}>{strings.beadHint}</Text>
+          )}
         </View>
         {/* The flexible space under the soroban, the board and the controls'
             slot. The prompt's scroll above is only as tall as the prompt,
@@ -578,6 +594,9 @@ const styles = StyleSheet.create({
   // Centred in controlsSlot. Its marginTop is the controls' own, so it sits
   // level with ◀ ▶ in the row below the gap they share.
   hint: { textAlign: 'center', marginTop: space.sm, fontSize: fontSizes.caption, color: colors.muted },
+  // What the answered beads read, in the hint's place and the prompt's type,
+  // within the slot's height.
+  reading: { textAlign: 'center', fontFamily: fonts.display, fontSize: fontSizes.prompt, color: colors.ink },
   // As tall as StepControls' row on one line, with its marginTop. A
   // minimum, not a height: at the largest text sizes on a narrow phone the
   // row wraps to a second line, and must grow the slot rather than spill

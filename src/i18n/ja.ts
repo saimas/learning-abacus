@@ -275,6 +275,12 @@ function correctionAnswerOnBeads(expected: number, beads: number): string {
   return `${correctionAnswer(expected)}（そろばんは ${beads}）`
 }
 
+// A miss on the beads, once the steps have taken the learner's beads over:
+// the answer line, then what their beads read (the owner, 2026-09-29).
+function correctionWithGiven(line: string, given: number): string {
+  return `${line}　あなたの答え ${given}`
+}
+
 // No plural branch — Japanese has none. The English catalog needs one.
 function breakdown(value: number): string {
   const earth = value % 5
@@ -315,6 +321,7 @@ export const ja = {
   answer: 'こたえる',
   correctionAnswer,
   correctionAnswerOnBeads,
+  correctionWithGiven,
   correct: '正解',
   wrong: 'ちがいます',
   quitLabel: '練習をやめる',

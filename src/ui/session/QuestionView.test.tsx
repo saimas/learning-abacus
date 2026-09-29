@@ -582,7 +582,7 @@ describe('QuestionView with the step lines below the controls', () => {
     expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
   })
 
-  it('keeps the slot its height in the review of a miss, empty until こたえを見る', () => {
+  it('keeps the slot its height in the review of a miss, holding the beads’ reading until こたえを見る', () => {
     renderView({ fade: 2, coaching: 'silent' })
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
@@ -944,5 +944,65 @@ describe('QuestionView after a right answer', () => {
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
     expect(screen.queryByTestId('maru')).toBeNull()
+  })
+})
+
+// The owner (2026-09-29): once answered on the beads, the number they read
+// is shown, so a right answer's 〇 says which number was right. While the
+// learner works they read the beads themselves.
+describe('QuestionView showing what the beads read once answered', () => {
+  const slot = () => screen.getByTestId('step-controls-slot')
+  const slotStyle = { minHeight: space.sm + STEP_CONTROLS_HEIGHT, justifyContent: 'center' }
+  const hint = '珠をタップして動かします'
+  const givenCard = ({ given }: { given?: number }) => <Text testID="card">{String(given)}</Text>
+
+  it('shows the reading under the soroban with the 〇, in the hint’s place', () => {
+    renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    expect(screen.queryByTestId('bead-reading')).toBeNull()
+    expect(within(slot()).getByText(hint)).toBeTruthy()
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(within(slot()).getByTestId('bead-reading').props.children).toBe('857')
+    expect(within(slot()).queryByText(hint)).toBeNull()
+    // The same slot at the same height, so nothing below it moves.
+    expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
+  })
+
+  it('shows it with the ✕ while the learner’s beads are on show, until the steps take over', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(within(slot()).getByTestId('bead-reading').props.children).toBe('800')
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.queryByTestId('bead-reading')).toBeNull()
+    expect(within(slot()).getByTestId('step-next')).toBeTruthy()
+  })
+
+  it('gives the step card the learner’s reading once the steps take over their beads', () => {
+    renderView({ renderSteps: givenCard })
+    // Before an answer there is nothing to compare.
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.getByTestId('card').props.children).toBe('undefined')
+    fireEvent.press(screen.getByTestId('steps-close'))
+    setBeads(screen.getByTestId, 800, 4)
+    act(() => jest.advanceTimersByTime(1_000))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('card').props.children).toBe('800')
+  })
+
+  it('shows the full reading of a ÷ answered on the beads', () => {
+    renderView({ exercise: exerciseForProblem({ op: 'div', digits: 2, a: 1692, b: 36 }) })
+    setBeads(screen.getByTestId, 47000, 5)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('bead-reading').props.children).toBe('47000')
+  })
+
+  it('adds nothing in keypad mode, where the typed answer stays on show', () => {
+    renderView({ fade: 3, coaching: 'silent', renderSteps: givenCard })
+    for (const digit of '800') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    fireEvent.press(screen.getByTestId('review-show'))
+    expect(screen.queryByTestId('bead-reading')).toBeNull()
+    expect(screen.getByTestId('card').props.children).toBe('undefined')
   })
 })

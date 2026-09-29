@@ -272,6 +272,12 @@ function correctionAnswerOnBeads(expected: number, beads: number): string {
   return `${correctionAnswer(expected)} (the soroban reads ${beads})`
 }
 
+// A miss on the beads, once the steps have taken the learner's beads over:
+// the answer line, then what their beads read.
+function correctionWithGiven(line: string, given: number): string {
+  return `${line} · you answered ${given}`
+}
+
 // Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
 function breakdown(value: number): string {
   const earth = value % 5
@@ -311,6 +317,7 @@ export const en: Strings = {
   answer: 'Answer',
   correctionAnswer,
   correctionAnswerOnBeads,
+  correctionWithGiven,
   correct: 'Correct',
   wrong: 'Not quite',
   quitLabel: 'Stop practice',
