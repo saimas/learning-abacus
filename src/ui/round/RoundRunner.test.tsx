@@ -77,13 +77,16 @@ function rollFrame() {
   }
 }
 
-// A right answer's roll, sampled every 10 ms from the end of its hold to
-// just past its end.
+// A right answer's roll, a frame from the end of its hold to just past its
+// end. The native driver moves the values off the JS thread (RN's jest mock
+// ends each half after 16 ms and never updates them), so the frames show the
+// answered problem as it was and the next as it starts: where each is set,
+// not the motion between.
 function sampleRightAnswerRoll() {
-  act(() => jest.advanceTimersByTime(ROLL_HOLD_MS))
+  passTime(ROLL_HOLD_MS)
   const frames: ReturnType<typeof rollFrame>[] = []
-  for (let t = 0; t < ROLL_OUT_MS + ROLL_IN_MS + 50; t += 10) {
-    act(() => jest.advanceTimersByTime(10))
+  for (let t = 0; t < ROLL_OUT_MS + ROLL_IN_MS + 50; t += 16) {
+    passTime(16)
     frames.push(rollFrame())
   }
   return frames
@@ -619,14 +622,24 @@ describe('RoundRunner rolling from problem to problem', () => {
     clock = 1_000
     for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
+    // The next problem swapped in, but still fading in: its clock has not
+    // started.
+    clock = 5_000
+    passTime(ROLL_HOLD_MS)
+    for (let frame = 0; frame < 50 && screen.getByTestId('prompt').props.children === '23に58をたす。'; frame++) {
+      passTime(16)
+    }
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     clock = 10_000
-    finishRightAnswerRoll()
+    finishRoll()
     clock = 12_000
     for (const digit of '100') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
     // pace is latency over the problem's target, so latency = pace × target.
     // 81 took 1 000 ms from the round's start (clock 0); 100 took 2 000 ms
-    // from its arrival at 10 000 — not the 11 000 since the last answer.
+    // from its arrival at 10 000 — not the 7 000 since it was swapped in, nor
+    // the 11 000 since the last answer.
     const target = (a: number, b: number) => problemTargetMs({ op: 'add', digits: 2, a, b }, 900)
     expect(onAttempt.mock.calls[0][0].pace * target(23, 58)).toBeCloseTo(1_000, 5)
     expect(onAttempt.mock.calls[1][0].pace * target(46, 54)).toBeCloseTo(2_000, 5)
@@ -724,7 +737,8 @@ describe('RoundRunner rolling from problem to problem', () => {
       .map((config) => config.toValue)
     timing.mockRestore()
     // No drift at all, only the fade: the next problem starts unseen in its
-    // own place.
+    // own place. (`every` and not `toEqual`, since the drift out is -0.)
+    expect(targets).toHaveLength(4)
     expect(targets.every((value) => value === 0 || value === 1)).toBe(true)
     expect(frames.find((f) => f.prompt === '46に54をたす。')).toEqual({
       prompt: '46に54をたす。',
