@@ -191,13 +191,14 @@ export function RoundRunner({
         fade={fade}
         coaching={coachingForFade(fade)}
         prompt={strings.problemPrompt(problem)}
-        renderSteps={({ activeStep, showAnswer }) => (
+        renderSteps={({ activeStep, showAnswer, given }) => (
           <ProblemCorrectionCard
             problem={problem}
             expected={exercise.expected}
             expectedBeads={mode === 'beads' ? exercise.expectedBeads : undefined}
             activeGroup={groupIndexOf(activeStep)}
             showAnswer={showAnswer}
+            given={given}
           />
         )}
         // Spec (見取算) §2: a 見取算 problem is a column in the prompt's place,

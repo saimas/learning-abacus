@@ -30,6 +30,7 @@ export function ProblemCorrectionCard({
   expectedBeads,
   activeGroup,
   showAnswer = true,
+  given,
 }: {
   problem: Problem
   expected: number
@@ -41,6 +42,10 @@ export function ProblemCorrectionCard({
   expectedBeads?: number
   activeGroup?: number
   showAnswer?: boolean
+  // What the learner's beads read, set only for a miss on the beads once the
+  // steps have taken those beads over: named beside the answer so the two
+  // can still be compared.
+  given?: number
 }) {
   const strings = useStrings()
   // Where the lines scroll on their own (bead mode), the active group's line
@@ -51,14 +56,20 @@ export function ProblemCorrectionCard({
   const sections = problemSections(problem)
   // The section the learner has stepped into, or -1 when not stepping.
   const activeSection = activeGroup === undefined ? -1 : sections.findIndex((section) => section.groups.includes(activeGroup))
+  const answer =
+    expectedBeads === undefined
+      ? strings.correctionAnswer(expected)
+      : strings.correctionAnswerOnBeads(expected, expectedBeads)
 
   return (
     <View testID="correction">
       {showAnswer ? (
         <Text testID="correction-answer" style={styles.answer}>
-          {expectedBeads === undefined
-            ? strings.correctionAnswer(expected)
-            : strings.correctionAnswerOnBeads(expected, expectedBeads)}
+          {given === undefined
+            ? answer
+            : expectedBeads === undefined
+              ? strings.correctionWithGiven(answer, given)
+              : strings.correctionWithGivenOnBeads(answer, given)}
         </Text>
       ) : null}
       {sections.flatMap((section, sectionIndex) => {

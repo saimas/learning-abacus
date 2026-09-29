@@ -352,8 +352,10 @@ describe('RoundRunner with ÷', () => {
     fireEvent.press(screen.getByTestId('submit'))
     // Bead mode's beads were checked against the final soroban reading
     // (spec (division) §2), so the review names that reading too, not just
-    // the quotient.
-    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
+    // the quotient, and then what the learner's beads read.
+    expect(screen.getByTestId('correction-answer').props.children).toBe(
+      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
+    )
     expect(lit()).toEqual([])
 
     const total = Number(String(screen.getByTestId('step-count').props.children).split(' / ')[1])

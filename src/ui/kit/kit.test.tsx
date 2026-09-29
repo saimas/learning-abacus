@@ -61,6 +61,15 @@ describe('Button', () => {
     expect(onPress).not.toHaveBeenCalled()
     expect(getByTestId('b').props.accessibilityState).toMatchObject({ disabled: true })
   })
+
+  // For a short label that reads oddly aloud, such as 「× かけ算」.
+  it('can say something fuller to VoiceOver than its label', () => {
+    const { getByTestId } = render(
+      <Button testID="b" label="× かけ算" accessibilityLabel="かけ算のやりかた" onPress={jest.fn()} />,
+    )
+    expect(getByTestId('b')).toHaveTextContent('× かけ算')
+    expect(getByTestId('b').props.accessibilityLabel).toBe('かけ算のやりかた')
+  })
 })
 
 describe('Card', () => {

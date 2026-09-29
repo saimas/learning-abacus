@@ -275,6 +275,24 @@ function correctionAnswerOnBeads(expected: number, beads: number): string {
   return `${correctionAnswer(expected)}（そろばんは ${beads}）`
 }
 
+// A miss on the beads, once the steps have taken the learner's beads over:
+// the answer line, then what their beads read (the owner, 2026-09-29).
+function correctionWithGiven(line: string, given: number): string {
+  return `${line}　${beadReadingLabel(given)}`
+}
+
+// The same for a ÷, whose line already names the soroban's reading: what the
+// learner's soroban read goes on a line of its own, so it is not taken for
+// the answer beside it ("あなたの答え 47" after "こたえは 47" reads as right).
+function correctionWithGivenOnBeads(line: string, given: number): string {
+  return `${line}\nあなたのそろばんは ${given}`
+}
+
+// The number shown under answered beads, as VoiceOver reads it.
+function beadReadingLabel(given: number): string {
+  return `あなたの答え ${given}`
+}
+
 // No plural branch — Japanese has none. The English catalog needs one.
 function breakdown(value: number): string {
   const earth = value % 5
@@ -298,6 +316,11 @@ export const ja = {
   seeYouTomorrow: 'またあした。',
   homeHowTo: 'かけ算のやりかた',
   homeHowToDivide: 'わり算のやりかた',
+  // The heading over the two walkthrough buttons, and the buttons' own short
+  // labels; VoiceOver reads the full names above.
+  homeHowToSection: 'やりかた',
+  homeHowToButton: '× かけ算',
+  homeHowToDivideButton: '÷ わり算',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 
@@ -310,6 +333,9 @@ export const ja = {
   answer: 'こたえる',
   correctionAnswer,
   correctionAnswerOnBeads,
+  correctionWithGiven,
+  correctionWithGivenOnBeads,
+  beadReadingLabel,
   correct: '正解',
   wrong: 'ちがいます',
   quitLabel: '練習をやめる',

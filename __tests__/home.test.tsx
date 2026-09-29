@@ -1,8 +1,9 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
-import { AppState, type AppStateStatus } from 'react-native'
+import { AppState, StyleSheet, type AppStateStatus } from 'react-native'
 import { emptyProgress, type Progress } from '@/domain/progress'
 import * as store from '@/storage/progressStore'
 import Home from '../app/index'
+import { BUTTON_HEIGHT } from '@/ui/kit/Button'
 import { ProgressProvider } from '@/ui/ProgressProvider'
 
 jest.mock('@/storage/progressStore')
@@ -135,7 +136,45 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'mitori:2' } })
   })
 
-  it('opens the multiplication walkthrough from the home やりかた link', async () => {
+  // The owner (2026-09-29): the small やりかた links were hard to see and to
+  // tap, so they are full-size buttons under a heading of their own.
+  it('offers the walkthroughs as two full-size buttons under a やりかた heading', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId, getByText } = renderHome()
+    await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
+    expect(getByText('やりかた')).toBeTruthy()
+    expect(getByTestId('home-howto')).toHaveTextContent('× かけ算')
+    expect(getByTestId('home-howto-div')).toHaveTextContent('÷ わり算')
+    // Read aloud by what they open.
+    expect(getByTestId('home-howto').props.accessibilityLabel).toBe('かけ算のやりかた')
+    expect(getByTestId('home-howto-div').props.accessibilityLabel).toBe('わり算のやりかた')
+    for (const id of ['home-howto', 'home-howto-div']) {
+      expect(StyleSheet.flatten(getByTestId(id).props.style).minHeight).toBe(BUTTON_HEIGHT)
+    }
+  })
+
+  // Side by side at the usual text sizes; a larger text size would wrap the
+  // labels in half the width, so there they stack, each the full width.
+  it.each([
+    ['side by side at the usual text size', 1, 'row'],
+    ['stacked at a large text size', 1.35, 'column'],
+  ])('lays the two buttons out %s', async (_size, fontScale, flexDirection) => {
+    // As in RoundRunner.test.tsx: `require` reaches the module object the
+    // screen's own imports read from.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+    const reactNative = require('react-native')
+    const spy = jest.spyOn(reactNative, 'useWindowDimensions').mockReturnValue({ width: 375, height: 667, scale: 2, fontScale })
+    try {
+      mockLoad.mockResolvedValue(learner({}))
+      const { getByTestId } = renderHome()
+      await waitFor(() => expect(getByTestId('home-howtos')).toBeTruthy())
+      expect(StyleSheet.flatten(getByTestId('home-howtos').props.style).flexDirection).toBe(flexDirection)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('opens the multiplication walkthrough from the home かけ算 button', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
@@ -143,13 +182,11 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
   })
 
-  // Spec (division) §3: a わり算のやりかた link beside かけ算のやりかた.
-  it('opens the division walkthrough from the home わり算のやりかた link', async () => {
+  // Spec (division) §3: a わり算 button beside かけ算.
+  it('opens the division walkthrough from the home わり算 button', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
-    expect(getByTestId('home-howto-div')).toHaveTextContent('わり算のやりかた')
-    expect(getByTestId('home-howto')).toHaveTextContent('かけ算のやりかた')
     fireEvent.press(getByTestId('home-howto-div'))
     expect(mockPush).toHaveBeenCalledWith('/divide-intro')
     expect(mockPush).toHaveBeenCalledTimes(1)
@@ -167,7 +204,7 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
-  it('pushes only once when the やりかた link is tapped twice quickly', async () => {
+  it('pushes only once when the かけ算 button is tapped twice quickly', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
@@ -176,7 +213,7 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
-  it('pushes only once when the わり算のやりかた link is tapped twice quickly', async () => {
+  it('pushes only once when the わり算 button is tapped twice quickly', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
@@ -185,9 +222,9 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
-  // The two links sit side by side, so a quick second tap can land on the
+  // The two buttons sit side by side, so a quick second tap can land on the
   // other one; that must not stack a second walkthrough either.
-  it('pushes only once when both やりかた links are tapped quickly', async () => {
+  it('pushes only once when both やりかた buttons are tapped quickly', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())

@@ -16,12 +16,16 @@ export function Button({
   onPress,
   testID,
   disabled = false,
+  accessibilityLabel,
 }: {
   label: string
   variant?: ButtonVariant
   onPress?: () => void
   testID?: string
   disabled?: boolean
+  // What VoiceOver says instead of the label, for a short label that reads
+  // oddly aloud.
+  accessibilityLabel?: string
 }) {
   const primary = variant === 'primary'
   const tone = primary ? styles.onPrimary : styles.onOutline
@@ -29,6 +33,7 @@ export function Button({
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
