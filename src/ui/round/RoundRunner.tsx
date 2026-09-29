@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, Animated, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
 import { answerModeForFade, coachingForFade, type FadeLevel } from '@/domain/fade'
 import type { PracticeAttempt } from '@/domain/practice'
@@ -22,10 +22,31 @@ import { RoundTrack } from './RoundTrack'
 // Spec (roll) §3: a right answer's 〇 is held on the answered problem for
 // ROLL_HOLD_MS; then it rolls out and the next rolls in, so the change of
 // problem is seen (the owner, 2026-09-28: "i didnt notice the problem moved
-// to next … it rolled even before i see red circle").
+// to next … it rolled even before i see red circle"). The roll is gentle, so
+// the eye has nothing to chase (2026-09-29: "it is too visible and makes human
+// eye to chase it"): the problem fades as it drifts ROLL_DRIFT points out to
+// the left, easing away, and the next fades in from ROLL_DRIFT to the right,
+// slowing softly into place.
 export const ROLL_HOLD_MS = 700
-export const ROLL_OUT_MS = 175
-export const ROLL_IN_MS = 175
+export const ROLL_OUT_MS = 200
+export const ROLL_IN_MS = 250
+export const ROLL_DRIFT = 16
+
+// Opacity and translateX together, on the native driver, so the next problem
+// mounting as it fades in cannot make the roll stutter.
+function glide(
+  opacity: Animated.Value,
+  offset: Animated.Value,
+  to: { opacity: number; offset: number },
+  duration: number,
+  easing: (t: number) => number,
+) {
+  const config = { duration, easing, useNativeDriver: true }
+  return Animated.parallel([
+    Animated.timing(opacity, { ...config, toValue: to.opacity }),
+    Animated.timing(offset, { ...config, toValue: to.offset }),
+  ])
+}
 
 // Spec (multi-digit ＋ −) §6: a round is its problems in order, each once. A
 // miss is reviewed and the round moves on; it does not come back, since a
@@ -58,13 +79,12 @@ export function RoundRunner({
   const [shownAt, setShownAt] = useState(() => now())
   const [tally, setTally] = useState({ answered: 0, correct: 0 })
   const finished = useRef(false)
-  const { width } = useWindowDimensions()
   // While a roll is pending or running: a blocker over the question takes
   // its taps, so nothing is answered or stepped mid-roll.
   const [rolling, setRolling] = useState(false)
   const [offset] = useState(() => new Animated.Value(0))
   const [opacity] = useState(() => new Animated.Value(1))
-  // Spec (roll) §3: with Reduce Motion on, the problem fades out and in.
+  // Spec (roll) §3: with Reduce Motion on, the problem only fades out and in.
   const reduceMotion = useRef(false)
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
@@ -79,33 +99,40 @@ export function RoundRunner({
     }
   }, [offset, opacity])
 
+  // Counts each next problem swapped in by a roll; the effect below fades it
+  // in.
+  const [arrivals, setArrivals] = useState(0)
+
   // Rolls to problem `to` (or the summary, past the last): out, swap, in.
-  // The new problem's clock starts once it has arrived (spec (roll) §3).
-  // translateX and opacity run on the native driver, so the next problem
-  // mounting as it slides in cannot make the slide stutter.
   function roll(to: number) {
     setRolling(true)
-    const fade = reduceMotion.current
-    const out = fade
-      ? Animated.timing(opacity, { toValue: 0, duration: ROLL_OUT_MS, useNativeDriver: true })
-      : Animated.timing(offset, { toValue: -width, duration: ROLL_OUT_MS, useNativeDriver: true })
-    out.start(({ finished: gone }) => {
-      if (!gone) return
-      setIndex(to)
-      // The next one starts where it rolls in from: off to the right, or
-      // unseen.
-      if (fade) opacity.setValue(0)
-      else offset.setValue(width)
-      const into = fade
-        ? Animated.timing(opacity, { toValue: 1, duration: ROLL_IN_MS, useNativeDriver: true })
-        : Animated.timing(offset, { toValue: 0, duration: ROLL_IN_MS, useNativeDriver: true })
-      into.start(({ finished: arrived }) => {
-        if (!arrived) return
-        setShownAt(now())
-        setRolling(false)
-      })
-    })
+    const drift = reduceMotion.current ? 0 : ROLL_DRIFT
+    glide(opacity, offset, { opacity: 0, offset: -drift }, ROLL_OUT_MS, Easing.in(Easing.quad)).start(
+      ({ finished: gone }) => {
+        if (!gone) return
+        // The next one starts unseen, a little to the right (in its place,
+        // with Reduce Motion).
+        opacity.setValue(0)
+        offset.setValue(drift)
+        setIndex(to)
+        setArrivals((count) => count + 1)
+      },
+    )
   }
+
+  // The fade-in starts once the next problem is on screen: started with the
+  // swap, it faded the answered problem back in for a frame or two first. The
+  // new problem's clock starts once it has arrived (spec (roll) §3).
+  const arrived = useEffectEvent(() => {
+    setShownAt(now())
+    setRolling(false)
+  })
+  useEffect(() => {
+    if (arrivals === 0) return
+    glide(opacity, offset, { opacity: 1, offset: 0 }, ROLL_IN_MS, Easing.out(Easing.cubic)).start(({ finished }) => {
+      if (finished) arrived()
+    })
+  }, [arrivals, opacity, offset])
 
   const animated = { flex: 1, opacity, transform: [{ translateX: offset }] }
   const blocker = rolling ? <View testID="roll-blocker" style={StyleSheet.absoluteFill} /> : null
@@ -114,7 +141,7 @@ export function RoundRunner({
   if (problem === undefined) {
     return (
       <View style={styles.practice}>
-        <Animated.View style={animated}>
+        <Animated.View testID="roll" style={animated}>
           <SessionSummary
             title={strings.roundComplete}
             answered={tally.answered}
@@ -179,7 +206,7 @@ export function RoundRunner({
     <View style={styles.practice}>
       <RoundTrack index={index} total={problems.length} onQuit={onQuit} />
       <View style={styles.practice}>
-        <Animated.View style={animated}>
+        <Animated.View testID="roll" style={animated}>
           <QuestionView
             key={index}
             exercise={exercise}

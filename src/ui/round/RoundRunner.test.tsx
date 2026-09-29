@@ -5,7 +5,7 @@ import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEY
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
-import { ROLL_HOLD_MS, ROLL_IN_MS, ROLL_OUT_MS, RoundRunner } from './RoundRunner'
+import { ROLL_DRIFT, ROLL_HOLD_MS, ROLL_IN_MS, ROLL_OUT_MS, RoundRunner } from './RoundRunner'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -45,14 +45,51 @@ function answerBeads(value: number) {
   fireEvent.press(screen.getByTestId('submit'))
 }
 
+// Lets `ms` pass a frame at a time, rendering after each as a phone does:
+// the roll's fade-in starts from an effect, once the next problem is on
+// screen.
+function passTime(ms: number) {
+  for (let t = 0; t < ms; t += 16) act(() => jest.advanceTimersByTime(Math.min(16, ms - t)))
+}
+
 // Spec (roll) §3: after a right answer the problem is held under its 〇,
 // then rolls out and the next rolls in.
 function finishRightAnswerRoll() {
-  act(() => jest.advanceTimersByTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50))
+  passTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50)
 }
 // After a miss's つぎへ there is no hold, only the roll.
 function finishRoll() {
-  act(() => jest.advanceTimersByTime(ROLL_OUT_MS + ROLL_IN_MS + 50))
+  passTime(ROLL_OUT_MS + ROLL_IN_MS + 50)
+}
+
+// What the rolling view shows at this moment: its problem, how faded it is,
+// and how far it has drifted from its place.
+function rollFrame() {
+  const style = StyleSheet.flatten(screen.getByTestId('roll').props.style) as {
+    opacity?: number
+    transform?: Record<string, number>[]
+  }
+  const shift = style.transform?.find((t) => 'translateX' in t)
+  return {
+    prompt: screen.queryByTestId('prompt')?.props.children as string | undefined,
+    opacity: style.opacity ?? 1,
+    translateX: shift?.translateX ?? 0,
+  }
+}
+
+// A right answer's roll, a frame from the end of its hold to just past its
+// end. The native driver moves the values off the JS thread (RN's jest mock
+// ends each half after 16 ms and never updates them), so the frames show the
+// answered problem as it was and the next as it starts: where each is set,
+// not the motion between.
+function sampleRightAnswerRoll() {
+  passTime(ROLL_HOLD_MS)
+  const frames: ReturnType<typeof rollFrame>[] = []
+  for (let t = 0; t < ROLL_OUT_MS + ROLL_IN_MS + 50; t += 16) {
+    passTime(16)
+    frames.push(rollFrame())
+  }
+  return frames
 }
 
 describe('RoundRunner', () => {
@@ -585,14 +622,24 @@ describe('RoundRunner rolling from problem to problem', () => {
     clock = 1_000
     for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
+    // The next problem swapped in, but still fading in: its clock has not
+    // started.
+    clock = 5_000
+    passTime(ROLL_HOLD_MS)
+    for (let frame = 0; frame < 50 && screen.getByTestId('prompt').props.children === '23に58をたす。'; frame++) {
+      passTime(16)
+    }
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     clock = 10_000
-    finishRightAnswerRoll()
+    finishRoll()
     clock = 12_000
     for (const digit of '100') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
     // pace is latency over the problem's target, so latency = pace × target.
     // 81 took 1 000 ms from the round's start (clock 0); 100 took 2 000 ms
-    // from its arrival at 10 000 — not the 11 000 since the last answer.
+    // from its arrival at 10 000 — not the 7 000 since it was swapped in, nor
+    // the 11 000 since the last answer.
     const target = (a: number, b: number) => problemTargetMs({ op: 'add', digits: 2, a, b }, 900)
     expect(onAttempt.mock.calls[0][0].pace * target(23, 58)).toBeCloseTo(1_000, 5)
     expect(onAttempt.mock.calls[1][0].pace * target(46, 54)).toBeCloseTo(2_000, 5)
@@ -608,29 +655,96 @@ describe('RoundRunner rolling from problem to problem', () => {
     expect(onAttempt).toHaveBeenCalledTimes(1)
   })
 
-  // The roll runs on the native thread, so mounting the next problem as it
-  // slides in cannot make it stutter.
-  it('slides on the native driver', () => {
+  // Spec (gentle roll, 2026-09-29): the eye is not made to chase the problem
+  // across the screen (the owner: "it is too visible and makes human eye to
+  // chase it so people will get tired"). It fades as it drifts a little. The
+  // native driver moves it off the JS thread, so what a test sees is where
+  // each half is headed and where the next problem starts from.
+  it('fades as it drifts a little, never sweeping across the screen', () => {
+    const timing = jest.spyOn(Animated, 'timing')
+    renderRound()
+    answerBeads(81)
+    const frames = sampleRightAnswerRoll()
+    const targets = (duration: number) =>
+      timing.mock.calls
+        .map(([, config]) => config)
+        .filter((config) => config.duration === duration)
+        .map((config) => config.toValue as number)
+        .sort((a, b) => a - b)
+    const out = targets(ROLL_OUT_MS)
+    const into = targets(ROLL_IN_MS)
+    timing.mockRestore()
+    // Out: it fades to nothing as it drifts ROLL_DRIFT to the left.
+    expect(out).toEqual([-ROLL_DRIFT, 0])
+    // In: the next starts unseen, ROLL_DRIFT to the right, and comes back to
+    // its place in full.
+    expect(frames.find((f) => f.prompt === '46に54をたす。')).toEqual({
+      prompt: '46に54をたす。',
+      opacity: 0,
+      translateX: ROLL_DRIFT,
+    })
+    expect(into).toEqual([0, 1])
+  })
+
+  // Seen on the simulator: fading in before the next problem was committed
+  // brought the answered one back for a frame or two, half faded, drifted
+  // right, before the next replaced it.
+  it('starts fading the next problem in only once it is on screen', () => {
+    const timing = Animated.timing
+    const onScreenAsItFadesIn: (string | undefined)[] = []
+    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      if (config.duration === ROLL_IN_MS) onScreenAsItFadesIn.push(rollFrame().prompt)
+      return timing(value, config)
+    })
+    renderRound()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    spy.mockRestore()
+    expect(onScreenAsItFadesIn).toEqual(['46に54をたす。', '46に54をたす。'])
+  })
+
+  // On the native thread, so mounting the next problem as it arrives cannot
+  // make it stutter. It eases away, then slows softly into place.
+  it('rolls on the native driver, easing away and settling in', () => {
     const timing = jest.spyOn(Animated, 'timing')
     renderRound()
     answerBeads(81)
     finishRightAnswerRoll()
-    const slides = timing.mock.calls.filter(
-      ([, config]) => config.duration === ROLL_OUT_MS || config.duration === ROLL_IN_MS,
-    )
-    expect(slides).toHaveLength(2)
-    for (const [, config] of slides) expect(config.useNativeDriver).toBe(true)
+    const configs = timing.mock.calls.map(([, config]) => config)
     timing.mockRestore()
+    const out = configs.filter((c) => c.duration === ROLL_OUT_MS)
+    const into = configs.filter((c) => c.duration === ROLL_IN_MS)
+    // The fade and the drift run together, in each half.
+    expect(out).toHaveLength(2)
+    expect(into).toHaveLength(2)
+    for (const c of [...out, ...into]) expect(c.useNativeDriver).toBe(true)
+    for (const c of out) expect(c.easing?.(0.5)).toBeLessThan(0.5)
+    for (const c of into) expect(c.easing?.(0.5)).toBeGreaterThan(0.5)
   })
 
-  it('fades instead of sliding with Reduce Motion on, and gets to the same place', async () => {
+  it('fades in place with Reduce Motion on, and gets to the same place', async () => {
     // Once only: restoring RN's own jest mock of it would leave it returning
     // undefined for the tests after this one.
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true)
+    const timing = jest.spyOn(Animated, 'timing')
     renderRound()
     await act(async () => {})
     answerBeads(81)
-    finishRightAnswerRoll()
+    const frames = sampleRightAnswerRoll()
+    const targets = timing.mock.calls
+      .map(([, config]) => config)
+      .filter((config) => config.duration === ROLL_OUT_MS || config.duration === ROLL_IN_MS)
+      .map((config) => config.toValue)
+    timing.mockRestore()
+    // No drift at all, only the fade: the next problem starts unseen in its
+    // own place. (`every` and not `toEqual`, since the drift out is -0.)
+    expect(targets).toHaveLength(4)
+    expect(targets.every((value) => value === 0 || value === 1)).toBe(true)
+    expect(frames.find((f) => f.prompt === '46に54をたす。')).toEqual({
+      prompt: '46に54をたす。',
+      opacity: 0,
+      translateX: 0,
+    })
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 })

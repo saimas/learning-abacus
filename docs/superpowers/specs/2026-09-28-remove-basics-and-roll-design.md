@@ -41,6 +41,7 @@ In every けたの練習 round:
 
 1. **The 〇 on the answer.** After a correct answer the problem stays as answered — the learner's beads, or the typed answer — and the 〇 stamps over the soroban. Input is locked from that moment.
 2. **The roll.** `ROLL_HOLD_MS` (700 ms) after the answer, the problem slides out to the left (`ROLL_OUT_MS`, 175 ms) and the next slides in from the right (`ROLL_IN_MS`, 175 ms). The count (1 / 10 → 2 / 10) changes as the new problem arrives. The 〇 goes out with its problem.
+   *Changed 2026-09-29:* the full-width slide made the eye chase the problem ("it is too visible and makes human eye to chase it so people will get tired"). The problem now fades out as it drifts `ROLL_DRIFT` (16 pt) to the left, easing in (`ROLL_OUT_MS`, 200 ms), and the next fades in from 16 pt to the right, easing out (`ROLL_IN_MS`, 250 ms).
 3. **After a miss**, つぎへ rolls to the next problem the same way, with no hold.
 4. **After the last problem** the summary rolls in the same way.
 5. **Timing stays fair.** The attempt is recorded when こたえる is pressed, so leaving mid-roll keeps it. The next problem's clock (`shownAt`) starts when it has finished arriving, so the hold and the roll never count against its pace.
