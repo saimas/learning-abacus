@@ -28,6 +28,6 @@ function Walkthrough({ finishLabel, onFinish }: { finishLabel: string; onFinish:
 // How 両落とし works, shown before the first × round and from Home's
 // かけ算のやりかた link.
 export default function MultiplyIntroScreen() {
-  const { completeMultiplyIntro } = useProgress()
-  return <IntroScreen op="mul" complete={completeMultiplyIntro} walkthrough={Walkthrough} />
+  const { completeLesson } = useProgress()
+  return <IntroScreen op="mul" complete={() => completeLesson('mul:2')} walkthrough={Walkthrough} />
 }

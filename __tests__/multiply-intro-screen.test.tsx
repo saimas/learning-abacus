@@ -87,7 +87,7 @@ describe('Multiply intro screen', () => {
     fireEvent.press(screen.getByTestId('intro-finish'))
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'mul:2' } }))
     expect(mockSave).toHaveBeenCalledTimes(1)
-    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ multiplyIntroDone: true, daysPracticed: 4 })
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ lessonsSeen: ['mul:2'], daysPracticed: 4 })
     expect(mockBack).not.toHaveBeenCalled()
   })
 
@@ -96,7 +96,7 @@ describe('Multiply intro screen', () => {
     expect(screen.getByText('おわる')).toBeTruthy()
     fireEvent.press(screen.getByTestId('intro-finish'))
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
-    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ multiplyIntroDone: true })
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ lessonsSeen: ['mul:2'] })
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
@@ -135,7 +135,7 @@ describe('Multiply intro screen', () => {
     fireEvent.press(screen.getByTestId('intro-exit'))
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
     expect(mockSave).toHaveBeenCalledTimes(1)
-    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ multiplyIntroDone: true, daysPracticed: 4 })
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ lessonsSeen: ['mul:2'], daysPracticed: 4 })
     expect(mockReplace).not.toHaveBeenCalled()
   })
 

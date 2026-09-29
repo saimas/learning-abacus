@@ -1,5 +1,6 @@
 import { applyPracticeAttempt, newPracticeRecord, type PracticeRecord } from './practice'
 import type { PracticeId } from './problem'
+import type { LessonId } from './lessons'
 
 export const SCHEMA_VERSION = 1
 export const DEFAULT_CALIBRATION_MS = 900
@@ -15,13 +16,11 @@ export type Progress = {
   // Multi-digit practice, one record per kind (spec: multi-digit ＋ − §5).
   // Added without a schema bump.
   practices: Partial<Record<PracticeId, PracticeRecord>>
-  // Whether the learner has seen how 両落とし multiplication works (spec:
-  // multiplication §4). Added without a schema bump.
-  multiplyIntroDone: boolean
-  // Whether the learner has seen how 商除法 division works (spec: division
-  // §3), apart from the × walkthrough since each is shown before its own
-  // operation's first round. Added without a schema bump.
-  divideIntroDone: boolean
+  // The やりかた lessons done (spec (howto tutorial) §4), for their ✓ and for
+  // whether a × or ÷ round opens its lesson first. Added without a schema
+  // bump; it takes over the two walkthrough flags that came before it (see
+  // progressStore).
+  lessonsSeen: LessonId[]
 }
 
 export function emptyProgress(): Progress {
@@ -32,8 +31,7 @@ export function emptyProgress(): Progress {
     calibrationMs: DEFAULT_CALIBRATION_MS,
     tutorialDone: false,
     practices: {},
-    multiplyIntroDone: false,
-    divideIntroDone: false,
+    lessonsSeen: [],
   }
 }
 
@@ -64,4 +62,11 @@ export function recordPracticeAttempt(
     ...progress,
     practices: { ...progress.practices, [id]: applyPracticeAttempt(existing, correct, pace, now) },
   }
+}
+
+// Spec (howto tutorial) §4: a lesson is done once, however often it is
+// finished or left.
+export function markLessonSeen(progress: Progress, id: LessonId): Progress {
+  if (progress.lessonsSeen.includes(id)) return progress
+  return { ...progress, lessonsSeen: [...progress.lessonsSeen, id] }
 }

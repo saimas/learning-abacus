@@ -147,7 +147,8 @@ describe('ProgressProvider', () => {
     expect(call?.[0]?.tutorialDone).toBe(true)
   })
 
-  it('completeMultiplyIntro sets multiplyIntroDone, persists immediately, and changes nothing else', async () => {
+  // Spec (howto tutorial) §4.
+  it('completeLesson marks the lesson done, persists immediately, and changes nothing else', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {
       // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
@@ -161,14 +162,14 @@ describe('ProgressProvider', () => {
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
     await act(async () => {
-      await api?.completeMultiplyIntro()
+      await api?.completeLesson('add:five')
     })
-    await waitFor(() => expect(api?.progress?.multiplyIntroDone).toBe(true))
+    await waitFor(() => expect(api?.progress?.lessonsSeen).toEqual(['add:five']))
     expect(mockSave).toHaveBeenCalledTimes(1)
-    expect(mockSave.mock.calls[0]?.[0]).toEqual({ ...emptyProgress(), daysPracticed: 3, multiplyIntroDone: true })
+    expect(mockSave.mock.calls[0]?.[0]).toEqual({ ...emptyProgress(), daysPracticed: 3, lessonsSeen: ['add:five'] })
   })
 
-  it('completeDivideIntro sets divideIntroDone, persists immediately, and changes nothing else', async () => {
+  it('completeLesson keeps a lesson done once', async () => {
     let api: ReturnType<typeof useProgress> | null = null
     function Capture() {
       // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
@@ -182,13 +183,10 @@ describe('ProgressProvider', () => {
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
     await act(async () => {
-      await api?.completeDivideIntro()
+      await api?.completeLesson('mul:2')
+      await api?.completeLesson('mul:2')
     })
-    await waitFor(() => expect(api?.progress?.divideIntroDone).toBe(true))
-    expect(mockSave).toHaveBeenCalledTimes(1)
-    // In particular, seeing the ÷ walkthrough does not count as seeing the ×
-    // one.
-    expect(mockSave.mock.calls[0]?.[0]).toEqual({ ...emptyProgress(), daysPracticed: 3, divideIntroDone: true })
+    await waitFor(() => expect(api?.progress?.lessonsSeen).toEqual(['mul:2']))
   })
 
   it('flushes when the app is backgrounded mid-block', async () => {

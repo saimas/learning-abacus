@@ -95,7 +95,7 @@ describe('Round screen', () => {
 
   it('plays a × round once the walkthrough has been seen', async () => {
     mockParams.current = { kind: 'mul:2' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['mul:2'] })
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
     expect(getByTestId('prompt').props.children).toMatch(/^\d{2}に\d{2}をかける。$/)
@@ -106,7 +106,7 @@ describe('Round screen', () => {
   it('shows how division works before the first ÷ round', async () => {
     mockParams.current = { kind: 'div:2' }
     // Seeing the × walkthrough does not count for ÷.
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, multiplyIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['mul:2'] })
     const { queryByTestId } = renderRound()
     await waitFor(() =>
       expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/divide-intro', params: { kind: 'div:2' } }),
@@ -116,7 +116,7 @@ describe('Round screen', () => {
 
   it('plays a ÷ round once the walkthrough has been seen', async () => {
     mockParams.current = { kind: 'div:2' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['div:2'] })
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
     // A 2けた ÷ problem draws a 2-digit quotient and a 2-digit divisor and
@@ -130,7 +130,7 @@ describe('Round screen', () => {
   // one still sees how to multiply first.
   it('still shows how multiplication works when only the ÷ walkthrough has been seen', async () => {
     mockParams.current = { kind: 'mul:1' }
-    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, divideIntroDone: true })
+    mockLoad.mockResolvedValue({ ...emptyProgress(), tutorialDone: true, lessonsSeen: ['div:2'] })
     renderRound()
     await waitFor(() =>
       expect(mockRedirect).toHaveBeenCalledWith({ pathname: '/multiply-intro', params: { kind: 'mul:1' } }),

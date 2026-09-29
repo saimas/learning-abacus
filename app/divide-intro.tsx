@@ -17,6 +17,6 @@ function Walkthrough({ finishLabel, onFinish }: { finishLabel: string; onFinish:
 // walkthrough §2, §4), shown before the first ÷ round and from Home's
 // わり算のやりかた link.
 export default function DivideIntroScreen() {
-  const { completeDivideIntro } = useProgress()
-  return <IntroScreen op="div" complete={completeDivideIntro} walkthrough={Walkthrough} />
+  const { completeLesson } = useProgress()
+  return <IntroScreen op="div" complete={() => completeLesson('div:2')} walkthrough={Walkthrough} />
 }

@@ -112,8 +112,7 @@ describe('Divide intro screen', () => {
     expect(mockSave).toHaveBeenCalledTimes(1)
     // Seeing how to divide says nothing about multiplication.
     expect(mockSave.mock.calls[0]?.[0]).toMatchObject({
-      divideIntroDone: true,
-      multiplyIntroDone: false,
+      lessonsSeen: ['div:2'],
       daysPracticed: 4,
     })
     expect(mockBack).not.toHaveBeenCalled()
@@ -124,7 +123,7 @@ describe('Divide intro screen', () => {
     expect(screen.getByText('おわる')).toBeTruthy()
     fireEvent.press(screen.getByTestId('intro-finish'))
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
-    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ divideIntroDone: true })
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ lessonsSeen: ['div:2'] })
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
@@ -169,7 +168,7 @@ describe('Divide intro screen', () => {
     for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('walk-next'))
     fireEvent.press(screen.getByTestId('intro-exit'))
     await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
-    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ divideIntroDone: true, daysPracticed: 4 })
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ lessonsSeen: ['div:2'], daysPracticed: 4 })
     expect(mockReplace).not.toHaveBeenCalled()
   })
 

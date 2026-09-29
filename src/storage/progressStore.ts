@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { isPracticeRecord } from '@/domain/practice'
 import { isPracticeId } from '@/domain/problem'
+import { isLessonId, type LessonId } from '@/domain/lessons'
 import { emptyProgress, SCHEMA_VERSION, type Progress } from '@/domain/progress'
 
 export const STORAGE_KEY = 'learning-abacus/progress/v1'
@@ -14,6 +15,18 @@ function asPractices(value: unknown): Progress['practices'] {
     if (isPracticeId(id) && isPracticeRecord(record)) practices[id] = record
   }
   return practices
+}
+
+// Spec (howto tutorial) §4: the lessons done, keeping the ids it knows. A
+// document from before lessons existed has a flag per walkthrough seen
+// instead, and those walkthroughs are now the × and ÷ 2けた lessons.
+function asLessonsSeen(stored: Record<string, unknown>): LessonId[] {
+  const kept = Array.isArray(stored.lessonsSeen) ? stored.lessonsSeen.filter(isLessonId) : []
+  const carried: LessonId[] = [
+    ...(stored.multiplyIntroDone === true ? (['mul:2'] as const) : []),
+    ...(stored.divideIntroDone === true ? (['div:2'] as const) : []),
+  ]
+  return [...new Set([...kept, ...carried])]
 }
 
 export async function loadProgress(): Promise<Progress> {
@@ -48,13 +61,7 @@ export async function loadProgress(): Promise<Progress> {
       // Added without a schema bump: a document written before it existed
       // simply has none.
       practices: asPractices(candidate.practices),
-      // Added without a schema bump: a document written before it existed
-      // has not seen the walkthrough.
-      multiplyIntroDone:
-        typeof candidate.multiplyIntroDone === 'boolean' ? candidate.multiplyIntroDone : base.multiplyIntroDone,
-      // Added without a schema bump, like multiplyIntroDone.
-      divideIntroDone:
-        typeof candidate.divideIntroDone === 'boolean' ? candidate.divideIntroDone : base.divideIntroDone,
+      lessonsSeen: asLessonsSeen(parsed as Record<string, unknown>),
     }
   } catch {
     return emptyProgress()

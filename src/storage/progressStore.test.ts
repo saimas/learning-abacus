@@ -110,51 +110,53 @@ describe('practices', () => {
   })
 })
 
-describe('multiplyIntroDone', () => {
-  it('loads a document written before the flag existed as not yet seen', async () => {
-    // Added without a SCHEMA_VERSION bump: a document
-    // already on a learner's phone arrives without it and must load intact.
-    const { multiplyIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5 }
-    mockGetItem.mockResolvedValue(JSON.stringify(old))
+// Spec (howto tutorial) §4: the lessons done, added without a schema bump.
+// A document from before lessons existed has a flag per walkthrough seen,
+// and those walkthroughs are now the × and ÷ 2けた lessons.
+describe('lessonsSeen', () => {
+  // A document as a phone had it before lessons existed.
+  function before(flags: Record<string, unknown>) {
+    const { lessonsSeen: _, ...rest } = { ...emptyProgress(), daysPracticed: 5 }
+    return JSON.stringify({ ...rest, ...flags })
+  }
+
+  it('loads a document written before lessons existed with none done', async () => {
+    mockGetItem.mockResolvedValue(before({}))
     const result = await loadProgress()
-    expect(result.multiplyIntroDone).toBe(false)
+    expect(result.lessonsSeen).toEqual([])
     expect(result.daysPracticed).toBe(5)
   })
 
-  it('keeps a stored true', async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone: true }))
-    expect((await loadProgress()).multiplyIntroDone).toBe(true)
+  it('keeps the lessons it knows and drops the rest', async () => {
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({ ...emptyProgress(), lessonsSeen: ['add:five', 'add:9', 7, 'div:3'] }),
+    )
+    expect((await loadProgress()).lessonsSeen).toEqual(['add:five', 'div:3'])
   })
 
-  it.each([['yes'], [1], [null]])('discards a multiplyIntroDone of %p in favour of false', async (multiplyIntroDone) => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), multiplyIntroDone }))
-    expect((await loadProgress()).multiplyIntroDone).toBe(false)
+  it('discards a lessonsSeen that is not a list', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), lessonsSeen: 'mul:2' }))
+    expect((await loadProgress()).lessonsSeen).toEqual([])
   })
-})
 
-// Spec (division) §3: the ÷ walkthrough's flag, added exactly like
-// multiplyIntroDone.
-describe('divideIntroDone', () => {
-  it('loads a document written before the flag existed as not yet seen', async () => {
-    const { divideIntroDone: _, ...old } = { ...emptyProgress(), daysPracticed: 5, multiplyIntroDone: true }
-    mockGetItem.mockResolvedValue(JSON.stringify(old))
+  it.each([
+    [{ multiplyIntroDone: true }, ['mul:2']],
+    [{ divideIntroDone: true }, ['div:2']],
+    [{ multiplyIntroDone: true, divideIntroDone: true }, ['mul:2', 'div:2']],
+    [{ multiplyIntroDone: 'yes', divideIntroDone: 1 }, []],
+  ])('carries the walkthrough flags %p over as the lessons %p', async (flags, lessons) => {
+    mockGetItem.mockResolvedValue(before(flags))
     const result = await loadProgress()
-    expect(result.divideIntroDone).toBe(false)
-    expect(result.multiplyIntroDone).toBe(true)
-    expect(result.daysPracticed).toBe(5)
+    expect(result.lessonsSeen).toEqual(lessons)
+    expect(result).not.toHaveProperty('multiplyIntroDone')
+    expect(result).not.toHaveProperty('divideIntroDone')
   })
 
-  it('keeps a stored true', async () => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone: true }))
-    const result = await loadProgress()
-    expect(result.divideIntroDone).toBe(true)
-    // The two walkthroughs are seen separately.
-    expect(result.multiplyIntroDone).toBe(false)
-  })
-
-  it.each([['yes'], [1], [null]])('discards a divideIntroDone of %p in favour of false', async (divideIntroDone) => {
-    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), divideIntroDone }))
-    expect((await loadProgress()).divideIntroDone).toBe(false)
+  it('counts a lesson once when both its flag and its id are stored', async () => {
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({ ...emptyProgress(), lessonsSeen: ['mul:2'], multiplyIntroDone: true }),
+    )
+    expect((await loadProgress()).lessonsSeen).toEqual(['mul:2'])
   })
 })
 

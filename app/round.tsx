@@ -52,10 +52,10 @@ export default function Round() {
 
   // Spec (multiplication) §4, (division) §3: the first × or ÷ round starts
   // with that operation's walkthrough, each seen on its own.
-  if (kind.op === 'mul' && !progress.multiplyIntroDone) {
+  if (kind.op === 'mul' && !progress.lessonsSeen.includes('mul:2')) {
     return <Redirect href={{ pathname: '/multiply-intro', params: { kind: id } }} />
   }
-  if (kind.op === 'div' && !progress.divideIntroDone) {
+  if (kind.op === 'div' && !progress.lessonsSeen.includes('div:2')) {
     return <Redirect href={{ pathname: '/divide-intro', params: { kind: id } }} />
   }
 
