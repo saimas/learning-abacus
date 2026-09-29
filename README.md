@@ -66,9 +66,10 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   under a heading with what the soroban reads before and after it (「4×36　0 → 1440」), its bead
   moves coloured together. An answer given after opening it counts "with help": it is tallied but
   does not move the fade ladder.
-- **After an answer**, a right one is stamped with a 〇 where it stands; then the problem fades out
-  as it drifts a little to the left, and the next fades in, settling from a little to the right
-  (only the fade with Reduce Motion on). A miss's つぎへ moves on the same way.
+- **After an answer**, a right one is stamped with a 〇 where it stands; then the next problem is
+  laid in its place underneath and the answered card is swiped off to the left over it, so the new
+  problem never moves (with Reduce Motion on, the answered card fades away in place). A miss's
+  つぎへ moves on the same way, and the last card goes over the summary.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
   わり算のやりかた; both can be replayed from links on Home, and ✕ leaves either at any point
