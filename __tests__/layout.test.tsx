@@ -40,6 +40,7 @@ describe('RootLayout', () => {
   it.each([
     ['multiply-intro', 'mul:2'],
     ['divide-intro', 'div:2'],
+    ['lesson/[id]', 'mul:2'],
   ])('lets a swipe leave %s only when it has no round to lead into', async (name, kind) => {
     render(<RootLayout />)
     // The locale and progress load before anything under them renders.
