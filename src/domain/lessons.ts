@@ -1,4 +1,4 @@
-import { ATOMS, classify, startValue, type AtomClass } from './atoms'
+import { ATOMS, classify, decompose, startValue, type Atom, type AtomClass } from './atoms'
 import {
   generateProblems,
   type Digits,
@@ -83,6 +83,18 @@ export function techniqueOf(lesson: Lesson): { op: TechniqueOperation; technique
   return { op: lesson.op, technique: lesson.technique }
 }
 
+// Whether a move's bead moves on the ones rod, if more than one, go opposite
+// ways: a real complement (4 + 3 = +5 −2). The move list also classes a
+// heaven and earth bead moved together as five or both (3 + 6 = +5 +1, or
+// 9 + 3's −5 −2 after its carry), though nothing is taken back, and a
+// technique lesson's words would not fit it.
+function complements(atom: Atom): boolean {
+  const directions = decompose(atom)
+    .filter((step) => step.rod === 'working')
+    .map((step) => Math.sign(step.delta))
+  return directions.every((direction, i) => i === 0 || direction !== directions[i - 1])
+}
+
 // Spec §2: やってみよう's problem. A technique lesson draws a 1けた move of
 // its own class from the single moves, set up as a 基礎 move was: a borrow
 // starts from 1 on the tens rod (startValue). A move from 0 is left out, as a
@@ -95,7 +107,8 @@ export function tryProblem(lesson: Lesson, random: () => number, previous?: Pair
   const move = techniqueOf(lesson)
   if (move !== null) {
     const moves = ATOMS.filter(
-      (atom) => atom.direction === move.op && classify(atom) === move.technique && startValue(atom) > 0,
+      (atom) =>
+        atom.direction === move.op && classify(atom) === move.technique && startValue(atom) > 0 && complements(atom),
     ).map((atom): PairProblem => ({ op: move.op, digits: 1, a: startValue(atom), b: atom.operand }))
     const fresh = moves.filter((problem) => !same(problem))
     const pool = fresh.length > 0 ? fresh : moves

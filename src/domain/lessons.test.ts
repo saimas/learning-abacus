@@ -1,4 +1,4 @@
-import { classify } from './atoms'
+import { classify, decompose } from './atoms'
 import {
   isLessonId,
   LESSONS,
@@ -119,6 +119,24 @@ describe('tryProblem', () => {
         expect(problem.digits).toBe(1)
         expect(problem.a).toBeGreaterThan(0)
         expect(oneMoveClass(problem)).toBe(lesson.technique)
+      }
+    }
+  })
+
+  // The lessons' words describe a complement. The move list also classes a
+  // heaven and earth bead moved together (3 + 6 = +5 +1, or 9 + 3's −5 −2
+  // after its carry) as five or both, though nothing is taken back.
+  it('draws only moves where the complement really happens', () => {
+    const random = seeded(13)
+    for (const id of ['add:five', 'add:both', 'sub:five', 'sub:both']) {
+      const lesson = lessonById(id)
+      if (lesson === null) throw new Error(`no lesson ${id}`)
+      for (let i = 0; i < 300; i++) {
+        const [group] = problemSteps(tryProblem(lesson, random))
+        const atom = group?.kind === 'column' ? group.atom : null
+        const directions = atom === null ? [] : decompose(atom).filter((step) => step.rod === 'working').map((step) => Math.sign(step.delta))
+        expect(directions).toHaveLength(2)
+        expect(directions[1]).toBe(-(directions[0] ?? 0))
       }
     }
   })
