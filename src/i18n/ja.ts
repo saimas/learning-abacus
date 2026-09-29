@@ -298,6 +298,11 @@ export const ja = {
   seeYouTomorrow: 'またあした。',
   homeHowTo: 'かけ算のやりかた',
   homeHowToDivide: 'わり算のやりかた',
+  // The heading over the two walkthrough buttons, and the buttons' own short
+  // labels; VoiceOver reads the full names above.
+  homeHowToSection: 'やりかた',
+  homeHowToButton: '× かけ算',
+  homeHowToDivideButton: '÷ わり算',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 

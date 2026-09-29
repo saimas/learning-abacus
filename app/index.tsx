@@ -1,9 +1,10 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { practiceId, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
+import { Button } from '@/ui/kit/Button'
 import { IconButton } from '@/ui/kit/IconButton'
 import { Screen } from '@/ui/kit/Screen'
 import { Seal, type SealState } from '@/ui/kit/Seal'
@@ -13,7 +14,7 @@ import { colors, fonts, fontSizes, space } from '@/ui/theme'
 
 // Spec (core rounds) §6: Home is built around けたの練習 — the grid below is
 // the practice table itself, tap a cell to start that round — with the
-// walkthrough links under it and the days-practised seal above. Spec (roll)
+// walkthrough buttons under it and the days-practised seal above. Spec (roll)
 // §2: the single-move session (基礎の練習) and its card are gone.
 export default function Home() {
   const { progress, hydrated } = useProgress()
@@ -115,34 +116,34 @@ export default function Home() {
 
         <PracticeTable progress={progress} onChoose={startRound} />
         {/* Spec (division) §3: each walkthrough can be replayed from here,
-            in the grid's order, × then ÷. */}
+            in the grid's order, × then ÷. The owner (2026-09-29) found the
+            small links hard to see and to tap, so they are full-size
+            buttons under a heading of their own. */}
+        <Text style={styles.sectionTitle}>{strings.homeHowToSection}</Text>
         <View style={styles.howTos}>
-          <Pressable
-            testID="home-howto"
-            accessibilityRole="link"
-            onPress={() => openHowTo('/multiply-intro')}
-            hitSlop={HOW_TO_SLOP}
-            style={styles.howTo}
-          >
-            <Text style={styles.howToText}>{strings.homeHowTo}</Text>
-          </Pressable>
-          <Pressable
-            testID="home-howto-div"
-            accessibilityRole="link"
-            onPress={() => openHowTo('/divide-intro')}
-            hitSlop={HOW_TO_SLOP}
-            style={styles.howTo}
-          >
-            <Text style={styles.howToText}>{strings.homeHowToDivide}</Text>
-          </Pressable>
+          <View style={styles.howTo}>
+            <Button
+              testID="home-howto"
+              variant="outline"
+              label={strings.homeHowToButton}
+              accessibilityLabel={strings.homeHowTo}
+              onPress={() => openHowTo('/multiply-intro')}
+            />
+          </View>
+          <View style={styles.howTo}>
+            <Button
+              testID="home-howto-div"
+              variant="outline"
+              label={strings.homeHowToDivideButton}
+              accessibilityLabel={strings.homeHowToDivide}
+              onPress={() => openHowTo('/divide-intro')}
+            />
+          </View>
         </View>
       </ScrollView>
     </Screen>
   )
 }
-
-// How far past its text each やりかた link still takes a tap.
-const HOW_TO_SLOP = 12
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
@@ -158,25 +159,19 @@ const styles = StyleSheet.create({
   days: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   muted: { fontSize: fontSizes.small, color: colors.muted },
   // flex: 1 on the ScrollView itself (not just its content) is what lets a
-  // small phone scroll down to the walkthrough links instead of the grid
+  // small phone scroll down to the walkthrough buttons instead of the grid
   // pushing them off the bottom of the screen.
   scroll: { flex: 1 },
   content: { paddingBottom: space.xl },
-  // The caption text stays small, but padding plus hitSlop give each link a
-  // tap target close to the platforms' ~44pt minimum. marginTop has to be at
-  // least the top hitSlop, or that hitSlop reaches up past the grid's own
-  // bottom edge and steals taps meant for its last row. The gap between the
-  // links is twice the hitSlop, so the two slops meet rather than overlap
-  // and a tap between them goes to the nearer link. At the largest text
-  // sizes the two may not fit one line, so the second wraps under the first
-  // rather than running off the screen.
-  howTos: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 2 * HOW_TO_SLOP,
-    marginTop: space.md,
+  // The same heading as the grid's (PracticeTable).
+  sectionTitle: {
+    marginTop: space.xl,
+    marginBottom: space.sm,
+    fontFamily: fonts.display,
+    fontSize: fontSizes.title,
+    color: colors.ink,
   },
-  howTo: { paddingVertical: space.sm },
-  howToText: { fontSize: fontSizes.caption, color: colors.accent, textDecorationLine: 'underline' },
+  // Side by side, each half the width.
+  howTos: { flexDirection: 'row', gap: space.md },
+  howTo: { flex: 1 },
 })

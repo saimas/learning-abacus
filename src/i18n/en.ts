@@ -296,6 +296,9 @@ export const en: Strings = {
   seeYouTomorrow: 'See you tomorrow.',
   homeHowTo: 'How multiplication works',
   homeHowToDivide: 'How division works',
+  homeHowToSection: 'How it works',
+  homeHowToButton: '× Multiplication',
+  homeHowToDivideButton: '÷ Division',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
 
