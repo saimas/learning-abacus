@@ -1007,3 +1007,61 @@ describe('QuestionView showing what the beads read once answered', () => {
     expect(screen.getByTestId('card').props.children).toBe('undefined')
   })
 })
+
+// Spec (howto tutorial) §2: outside a round, an answered question offers
+// leaving or another problem in place of its bottom row.
+describe('QuestionView after an answer outside a round', () => {
+  const afterAnswer = (onLeave = jest.fn()) => ({ leaveLabel: 'おわる', onLeave, againLabel: 'もう一問' })
+
+  it('offers leaving or another problem once a right answer is in', () => {
+    const onLeave = jest.fn()
+    const { onMoveOn } = renderView({ afterAnswer: afterAnswer(onLeave) })
+    expect(screen.queryByTestId('after-again')).toBeNull()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('maru')).toBeTruthy()
+    expect(screen.queryByTestId('submit')).toBeNull()
+    expect(screen.getByTestId('after-again')).toHaveTextContent('もう一問')
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('after-again'))
+    expect(onMoveOn).toHaveBeenCalledTimes(1)
+    fireEvent.press(screen.getByTestId('after-leave'))
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers them in place of つぎへ under a miss', () => {
+    const { onMoveOn } = renderView({ afterAnswer: afterAnswer() })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('review-next')).toBeNull()
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('after-again'))
+    expect(onMoveOn).toHaveBeenCalledTimes(1)
+  })
+
+  // A double tap on こたえる must not skip the 〇 or the review.
+  it('ignores both in the moment after an answer', () => {
+    let clock = 0
+    const onLeave = jest.fn()
+    const { onMoveOn } = renderView({ now: () => clock, afterAnswer: afterAnswer(onLeave) })
+    setBeads(screen.getByTestId, 857, 4)
+    clock = 1_000
+    fireEvent.press(screen.getByTestId('submit'))
+    clock = 1_200
+    fireEvent.press(screen.getByTestId('after-again'))
+    fireEvent.press(screen.getByTestId('after-leave'))
+    expect(onMoveOn).not.toHaveBeenCalled()
+    expect(onLeave).not.toHaveBeenCalled()
+    clock = 1_500
+    fireEvent.press(screen.getByTestId('after-leave'))
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes the keypad’s place in keypad mode', () => {
+    renderView({ fade: 3, coaching: 'silent', afterAnswer: afterAnswer() })
+    for (const digit of '857') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('key-1')).toBeNull()
+    expect(screen.getByTestId('after-again')).toBeTruthy()
+  })
+})
