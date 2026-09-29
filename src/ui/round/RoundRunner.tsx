@@ -74,6 +74,8 @@ export function RoundRunner({
   // place instead.
   const reduceMotion = useRef(false)
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // The last problem rolled on from: each rolls on once.
+  const rolledFrom = useRef(-1)
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
       reduceMotion.current = on
@@ -88,8 +90,12 @@ export function RoundRunner({
 
   // Rolls on from problem `from`: the next card (or the summary, past the
   // last) is laid underneath, and the answered one, back in its place, stays
-  // on top. Pressed twice, it lays the same cards again.
+  // on top. Only once: a second つぎへ can land before the blocker is drawn
+  // and reach here after the swipe has started, and resetting the card then
+  // would stop the swipe with nothing to start it again.
   function roll(from: number) {
+    if (from <= rolledFrom.current) return
+    rolledFrom.current = from
     setRolling(true)
     offset.setValue(0)
     opacity.setValue(1)
@@ -234,7 +240,7 @@ export function RoundRunner({
   // answer and its 〇 as it goes on top, and the next keeps its place once
   // uncovered. Only the card on top moves.
   const cards = leaving === null ? [index] : [index, leaving]
-  const quit = index < problems.length || onQuit === undefined ? onQuit : finish
+  const quit = index < problems.length ? onQuit : onQuit && finish
   return (
     <View style={styles.practice}>
       <RoundTrack index={index} total={problems.length} onQuit={quit} />

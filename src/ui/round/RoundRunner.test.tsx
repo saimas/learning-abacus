@@ -594,9 +594,8 @@ describe('RoundRunner swiping from problem to problem', () => {
     // Nothing moves or fades the next problem.
     expect(styleOf('card').transform).toBeUndefined()
     expect(styleOf('card').opacity).toBeUndefined()
-    // One motion only: the answered card, from where it was to past the
-    // screen's left edge, on the native thread.
-    expect(movedBy('card-leaving')).toBe(0)
+    // One motion only: the answered card, to past the screen's left edge, on
+    // the native thread.
     expect(swipes).toHaveLength(1)
     expect(swipes[0]?.toValue).toBeLessThanOrEqual(-Dimensions.get('window').width)
     expect(swipes[0]?.useNativeDriver).toBe(true)
@@ -652,6 +651,23 @@ describe('RoundRunner swiping from problem to problem', () => {
     fireEvent.press(screen.getByTestId('review-next'))
     expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     finishRoll()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+  })
+
+  // Review: on a phone a second tap can land on つぎへ before the blocker is
+  // drawn, and reach it after the swipe has started. It must not stop the
+  // swipe and leave the answered card over the next for good.
+  it('moves on once when つぎへ is pressed again as the swipe starts', () => {
+    renderRound()
+    answerBeads(80)
+    act(() => jest.advanceTimersByTime(500))
+    const next = screen.getByTestId('review-next')
+    fireEvent.press(next)
+    expect(screen.getByTestId('card-leaving')).toBeTruthy()
+    fireEvent.press(next)
+    passTime(2_000)
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    expect(screen.queryByTestId('roll-blocker')).toBeNull()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 
@@ -748,20 +764,42 @@ describe('RoundRunner swiping from problem to problem', () => {
     // Once only: restoring RN's own jest mock of it would leave it returning
     // undefined for the tests after this one.
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true)
-    const timing = jest.spyOn(Animated, 'timing')
+    // As on a phone, each value ends where it was sent.
+    const timing = Animated.timing
+    const swipes: { value: unknown; toValue: unknown }[] = []
+    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      if (config.duration === ROLL_SWIPE_MS) swipes.push({ value, toValue: config.toValue })
+      const animation = timing(value, config)
+      return {
+        ...animation,
+        start: (callback) =>
+          animation.start((result) => {
+            if (result.finished && typeof config.toValue === 'number') (value as Animated.Value).setValue(config.toValue)
+            callback?.(result)
+          }),
+      }
+    })
+    // The animated opacity the leaving card is drawn with (its host view gets
+    // only the number).
+    const leavingOpacity = () => StyleSheet.flatten(screen.UNSAFE_getAllByProps({ testID: 'card-leaving' })[0]?.props.style).opacity
     renderRound()
     await act(async () => {})
     answerBeads(81)
     passTime(ROLL_HOLD_MS)
     passUntilSwiping()
-    const swipes = timing.mock.calls.map(([, config]) => config).filter((config) => config.duration === ROLL_SWIPE_MS)
-    timing.mockRestore()
-    // One motion: the answered card's fade, and no move.
-    expect(swipes).toHaveLength(1)
-    expect(swipes[0]?.toValue).toBe(0)
-    expect(movedBy('card-leaving')).toBe(0)
+    // The next problem underneath, still; the answered card fading to nothing
+    // and not moving.
     expect(styleOf('card').opacity).toBeUndefined()
+    expect(swipes).toEqual([{ value: leavingOpacity(), toValue: 0 }])
     finishRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    // The next answered card starts fully there, not where the last fade left
+    // the value.
+    answerBeads(100)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    spy.mockRestore()
+    expect(styleOf('card-leaving').opacity).toBe(1)
+    expect(swipes).toHaveLength(2)
   })
 })
