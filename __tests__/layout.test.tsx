@@ -37,11 +37,7 @@ describe('RootLayout', () => {
   // walkthrough leads into that round, so it is left only through its last
   // button; opened from Home's link, it leads nowhere, so a swipe back is
   // fine.
-  it.each([
-    ['multiply-intro', 'mul:2'],
-    ['divide-intro', 'div:2'],
-    ['lesson/[id]', 'mul:2'],
-  ])('lets a swipe leave %s only when it has no round to lead into', async (name, kind) => {
+  it.each([['lesson/[id]', 'mul:2']])('lets a swipe leave a lesson only when it has no round to lead into', async (name, kind) => {
     render(<RootLayout />)
     // The locale and progress load before anything under them renders.
     await act(async () => {})
@@ -56,5 +52,8 @@ describe('RootLayout', () => {
     expect(swipeBack('round', { kind: 'div:2' })).toBe(false)
     // Spec (roll) §2: 基礎の練習's session screen is gone.
     expect(Object.keys(mockScreenOptions)).not.toContain('session')
+    // Spec (howto tutorial) §3: the lesson screen took over the walkthroughs.
+    expect(Object.keys(mockScreenOptions)).not.toContain('multiply-intro')
+    expect(Object.keys(mockScreenOptions)).not.toContain('divide-intro')
   })
 })

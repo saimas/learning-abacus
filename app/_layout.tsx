@@ -22,8 +22,6 @@ export default function RootLayout() {
           {/* A round is left only through ✕ (which confirms and saves) or
               おわる. A stray edge swipe must not skip either. */}
           <Stack.Screen name="round" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="multiply-intro" options={walkthroughOptions} />
-          <Stack.Screen name="divide-intro" options={walkthroughOptions} />
           <Stack.Screen name="lesson/[id]" options={walkthroughOptions} />
         </Stack>
       </ProgressProvider>

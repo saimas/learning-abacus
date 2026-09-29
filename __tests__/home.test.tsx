@@ -136,29 +136,33 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'mitori:2' } })
   })
 
-  // The owner (2026-09-29): the small やりかた links were hard to see and to
-  // tap, so they are full-size buttons under a heading of their own.
-  it('offers the walkthroughs as two full-size buttons under a やりかた heading', async () => {
+  // Spec (howto tutorial) §3: four buttons under やりかた, each opening its
+  // operation's page.
+  it('offers the four operations’ lessons as full-size buttons under a やりかた heading', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId, getByText } = renderHome()
-    await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
+    await waitFor(() => expect(getByTestId('home-howto-add')).toBeTruthy())
     expect(getByText('やりかた')).toBeTruthy()
-    expect(getByTestId('home-howto')).toHaveTextContent('× かけ算')
-    expect(getByTestId('home-howto-div')).toHaveTextContent('÷ わり算')
-    // Read aloud by what they open.
-    expect(getByTestId('home-howto').props.accessibilityLabel).toBe('かけ算のやりかた')
-    expect(getByTestId('home-howto-div').props.accessibilityLabel).toBe('わり算のやりかた')
-    for (const id of ['home-howto', 'home-howto-div']) {
-      expect(StyleSheet.flatten(getByTestId(id).props.style).minHeight).toBe(BUTTON_HEIGHT)
+    const buttons = { add: ['＋ たし算', 'たし算のやりかた'], sub: ['− ひき算', 'ひき算のやりかた'], mul: ['× かけ算', 'かけ算のやりかた'], div: ['÷ わり算', 'わり算のやりかた'] }
+    for (const [op, [label, spoken]] of Object.entries(buttons)) {
+      expect(getByTestId(`home-howto-${op}`)).toHaveTextContent(label ?? '')
+      expect(getByTestId(`home-howto-${op}`).props.accessibilityLabel).toBe(spoken)
+      expect(StyleSheet.flatten(getByTestId(`home-howto-${op}`).props.style).minHeight).toBe(BUTTON_HEIGHT)
     }
   })
 
-  // Side by side at the usual text sizes; a larger text size would wrap the
-  // labels in half the width, so there they stack, each the full width.
+  it.each(['add', 'sub', 'mul', 'div'])('opens the %s page from its button', async (op) => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId(`home-howto-${op}`)).toBeTruthy())
+    fireEvent.press(getByTestId(`home-howto-${op}`))
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/howto/[op]', params: { op } })
+  })
+
   it.each([
-    ['side by side at the usual text size', 1, 'row'],
-    ['stacked at a large text size', 1.35, 'column'],
-  ])('lays the two buttons out %s', async (_size, fontScale, flexDirection) => {
+    ['in two rows of two at the usual text size', 1, 2],
+    ['one per row at a large text size', 1.35, 4],
+  ])('lays the four buttons out %s', async (_size, fontScale, rows) => {
     // As in RoundRunner.test.tsx: `require` reaches the module object the
     // screen's own imports read from.
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
@@ -166,30 +170,12 @@ describe('Home', () => {
     const spy = jest.spyOn(reactNative, 'useWindowDimensions').mockReturnValue({ width: 375, height: 667, scale: 2, fontScale })
     try {
       mockLoad.mockResolvedValue(learner({}))
-      const { getByTestId } = renderHome()
-      await waitFor(() => expect(getByTestId('home-howtos')).toBeTruthy())
-      expect(StyleSheet.flatten(getByTestId('home-howtos').props.style).flexDirection).toBe(flexDirection)
+      const { getByTestId, getAllByTestId } = renderHome()
+      await waitFor(() => expect(getByTestId('home-howto-add')).toBeTruthy())
+      expect(getAllByTestId('home-howto-row')).toHaveLength(rows)
     } finally {
       spy.mockRestore()
     }
-  })
-
-  it('opens the multiplication walkthrough from the home かけ算 button', async () => {
-    mockLoad.mockResolvedValue(learner({}))
-    const { getByTestId } = renderHome()
-    await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
-    fireEvent.press(getByTestId('home-howto'))
-    expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
-  })
-
-  // Spec (division) §3: a わり算 button beside かけ算.
-  it('opens the division walkthrough from the home わり算 button', async () => {
-    mockLoad.mockResolvedValue(learner({}))
-    const { getByTestId } = renderHome()
-    await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
-    fireEvent.press(getByTestId('home-howto-div'))
-    expect(mockPush).toHaveBeenCalledWith('/divide-intro')
-    expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
   // /round has no swipe-back (app/_layout.tsx), so a double tap that pushed
@@ -207,9 +193,9 @@ describe('Home', () => {
   it('pushes only once when the かけ算 button is tapped twice quickly', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
-    await waitFor(() => expect(getByTestId('home-howto')).toBeTruthy())
-    fireEvent.press(getByTestId('home-howto'))
-    fireEvent.press(getByTestId('home-howto'))
+    await waitFor(() => expect(getByTestId('home-howto-mul')).toBeTruthy())
+    fireEvent.press(getByTestId('home-howto-mul'))
+    fireEvent.press(getByTestId('home-howto-mul'))
     expect(mockPush).toHaveBeenCalledTimes(1)
   })
 
@@ -228,10 +214,10 @@ describe('Home', () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()
     await waitFor(() => expect(getByTestId('home-howto-div')).toBeTruthy())
-    fireEvent.press(getByTestId('home-howto'))
+    fireEvent.press(getByTestId('home-howto-mul'))
     fireEvent.press(getByTestId('home-howto-div'))
     expect(mockPush).toHaveBeenCalledTimes(1)
-    expect(mockPush).toHaveBeenCalledWith('/multiply-intro')
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/howto/[op]', params: { op: 'mul' } })
   })
 
   it('offers today’s session to a learner who has not practised today', async () => {

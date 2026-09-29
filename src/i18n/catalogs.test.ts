@@ -401,23 +401,9 @@ describe('division strings', () => {
     expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
   })
 
-  // The walkthrough's own explanations and result now come from divideWalk,
-  // one step at a time (spec: division walkthrough §3); see divisionWalk's
-  // and DivideWalkthrough's own tests.
-  it('names Home’s link to the walkthrough beside the × one', () => {
-    expect(ja.homeHowToDivide).toBe('わり算のやりかた')
-    expect(en.homeHowToDivide).toBe('How division works')
-    expect(ja.homeHowTo).toBe('かけ算のやりかた')
-  })
-
-  // Short, so each fits half the width of a 375 pt phone.
-  it('labels Home’s two walkthrough buttons, under their heading', () => {
+  it('heads Home’s lesson buttons', () => {
     expect(ja.homeHowToSection).toBe('やりかた')
     expect(en.homeHowToSection).toBe('How it works')
-    expect(ja.homeHowToButton).toBe('× かけ算')
-    expect(en.homeHowToButton).toBe('× Multiply')
-    expect(ja.homeHowToDivideButton).toBe('÷ わり算')
-    expect(en.homeHowToDivideButton).toBe('÷ Divide')
   })
 })
 

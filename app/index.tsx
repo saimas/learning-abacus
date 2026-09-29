@@ -1,7 +1,7 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { practiceId, type PracticeKind } from '@/domain/problem'
+import { practiceId, type PairOperation, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
 import { Button } from '@/ui/kit/Button'
@@ -80,11 +80,15 @@ export default function Home() {
     leaving.current = true
     router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
   }
-  const openHowTo = (pathname: '/multiply-intro' | '/divide-intro') => {
+  const openHowTo = (op: PairOperation) => {
     if (leaving.current) return
     leaving.current = true
-    router.push(pathname)
+    router.push({ pathname: '/howto/[op]', params: { op } })
   }
+
+  const howToRows: PairOperation[][] = stackHowTos
+    ? HOW_TO_OPS.map((op) => [op])
+    : [HOW_TO_OPS.slice(0, 2), HOW_TO_OPS.slice(2)]
 
   return (
     <Screen>
@@ -118,39 +122,39 @@ export default function Home() {
         </View>
 
         <PracticeTable progress={progress} onChoose={startRound} />
-        {/* Spec (division) §3: each walkthrough can be replayed from here,
-            in the grid's order, × then ÷. The owner (2026-09-29) found the
-            small links hard to see and to tap, so they are full-size
-            buttons under a heading of their own. */}
+        {/* Spec (howto tutorial) §3: each operation's lessons, from its own
+            button. The owner (2026-09-29) found the small links hard to see
+            and to tap, so they are full-size buttons under a heading of
+            their own: two rows of two, or one per row at a large text size,
+            where half the width no longer fits their labels. */}
         <Text style={styles.sectionTitle}>{strings.homeHowToSection}</Text>
-        <View testID="home-howtos" style={[styles.howTos, stackHowTos && styles.howTosStacked]}>
-          <View style={!stackHowTos && styles.howTo}>
-            <Button
-              testID="home-howto"
-              variant="outline"
-              label={strings.homeHowToButton}
-              accessibilityLabel={strings.homeHowTo}
-              onPress={() => openHowTo('/multiply-intro')}
-            />
-          </View>
-          <View style={!stackHowTos && styles.howTo}>
-            <Button
-              testID="home-howto-div"
-              variant="outline"
-              label={strings.homeHowToDivideButton}
-              accessibilityLabel={strings.homeHowToDivide}
-              onPress={() => openHowTo('/divide-intro')}
-            />
-          </View>
+        <View style={styles.howTos}>
+          {howToRows.map((row) => (
+            <View key={row.join()} testID="home-howto-row" style={styles.howToRow}>
+              {row.map((op) => (
+                <View key={op} style={styles.howTo}>
+                  <Button
+                    testID={`home-howto-${op}`}
+                    variant="outline"
+                    label={strings.howToButton(op)}
+                    accessibilityLabel={strings.howToTitle(op)}
+                    onPress={() => openHowTo(op)}
+                  />
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
       </ScrollView>
     </Screen>
   )
 }
 
-// The text size from which the walkthrough buttons stack: "× Multiply" fills
+// The text size from which Home's lesson buttons stack: "− Subtract" fills
 // half a 375 pt phone's width at about 1.25×.
 const HOW_TO_STACK_SCALE = 1.2
+
+const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
@@ -178,8 +182,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.title,
     color: colors.ink,
   },
-  // Side by side, each half the width; stacked, each the full width.
-  howTos: { flexDirection: 'row', gap: space.md },
-  howTosStacked: { flexDirection: 'column' },
+  // Rows of buttons, each button an equal share of its row.
+  howTos: { gap: space.md },
+  howToRow: { flexDirection: 'row', gap: space.md },
   howTo: { flex: 1 },
 })

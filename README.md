@@ -73,15 +73,17 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   Reduce Motion on, the answered card fades away in place). A miss's つぎへ moves on the same way,
   and the last card goes over the summary.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
-- **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
-  わり算のやりかた; both can be replayed from the やりかた buttons on Home, and ✕ leaves
-  either at any point (it counts as seen). The ÷ walkthrough works 1692 ÷ 36 one bead at a
-  time, including a guess that is too big and how it is fixed.
+- **やりかた**: a tutorial of its own, from Home's four buttons (＋ − × ÷), each opening that
+  operation's lessons by 桁数. 1けた ＋ − are taught move by move (そのまま, 五の合成, 十の繰上,
+  十の繰上と五の分解, and the − ones); every other size has one worked example. A lesson walks its
+  example on the soroban step by step, then やってみよう asks one like it (recorded nowhere).
+  The first round of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
+  ✕ leaves any lesson at any point, and every lesson done gets a ✓.
 
 ## Screens
 
 - **Tutorial** — on first launch, reading the soroban: what number is on each rod.
-- **Home** (今日の五分) — the days-practised seal, the けたの練習 grid, and the やりかた buttons.
+- **Home** (今日の五分) — the days-practised seal, the けたの練習 grid, and the four やりかた buttons.
 - **Round** — full-screen practice. ✕ asks before leaving and keeps what was answered.
 - **Progress** — days practised and the けたの練習 table, each cell coloured by its stage.
 - **Settings** — days practised, the language toggle (Japanese by default, or English), and a

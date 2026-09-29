@@ -359,8 +359,6 @@ export const en: Strings = {
   notYetToday: 'Not practised yet today',
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
-  homeHowTo: 'How multiplication works',
-  homeHowToDivide: 'How division works',
   homeHowToSection: 'How it works',
   howToButton: (op) => HOW_TO_BUTTON[op],
   howToTitle: (op) => `How ${OP_NAME[op].toLowerCase()} works`,
@@ -379,8 +377,6 @@ export const en: Strings = {
   lessonTry: 'Try one',
   lessonAgain: 'Another',
   lessonStartRound: 'Start practising',
-  homeHowToButton: '× Multiply',
-  homeHowToDivideButton: '÷ Divide',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
 

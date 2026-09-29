@@ -8,7 +8,7 @@ import { textOf, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { DivideWalkthrough } from './DivideWalkthrough'
 
-// The owner's example (2026-09-24), as /divide-intro sets it up, in the
+// The owner's example (2026-09-24), as the ÷ 2けた lesson sets it up, in the
 // default locale: 14 steps, 23 frames.
 const PROBLEM: PairProblem = { op: 'div', digits: 2, a: 1692, b: 36 }
 const WALK = divisionWalk(PROBLEM)

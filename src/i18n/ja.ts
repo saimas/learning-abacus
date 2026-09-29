@@ -363,10 +363,7 @@ export const ja = {
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
-  homeHowTo: 'かけ算のやりかた',
-  homeHowToDivide: 'わり算のやりかた',
-  // The heading over the two walkthrough buttons, and the buttons' own short
-  // labels; VoiceOver reads the full names above.
+  // The heading over Home's lesson buttons (spec (howto tutorial) §3).
   homeHowToSection: 'やりかた',
   // Spec (howto tutorial) §3: Home's four buttons, and each operation's page
   // title, which VoiceOver reads for its button too.
@@ -387,8 +384,6 @@ export const ja = {
   lessonTry: 'やってみよう',
   lessonAgain: 'もう一問',
   lessonStartRound: '練習をはじめる',
-  homeHowToButton: '× かけ算',
-  homeHowToDivideButton: '÷ わり算',
   sealDays: (days: number) => `${days}\n日`,
   back: '今日',
 

@@ -1,7 +1,8 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Text } from 'react-native'
-import { generateProblems, isPracticeId, parsePracticeId, ROUND_LENGTH } from '@/domain/problem'
+import { lessonForKind } from '@/domain/lessons'
+import { generateProblems, isPracticeId, parsePracticeId, practiceId, ROUND_LENGTH } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
@@ -50,13 +51,11 @@ export default function Round() {
     )
   }
 
-  // Spec (multiplication) §4, (division) §3: the first × or ÷ round starts
-  // with that operation's walkthrough, each seen on its own.
-  if (kind.op === 'mul' && !progress.lessonsSeen.includes('mul:2')) {
-    return <Redirect href={{ pathname: '/multiply-intro', params: { kind: id } }} />
-  }
-  if (kind.op === 'div' && !progress.lessonsSeen.includes('div:2')) {
-    return <Redirect href={{ pathname: '/divide-intro', params: { kind: id } }} />
+  // Spec (howto tutorial) §4: a × or ÷ kind never played opens its own
+  // 桁数's lesson first, unless that lesson is done. ＋ and − open none.
+  const lesson = lessonForKind(kind)
+  if (lesson !== null && progress.practices[practiceId(kind)] === undefined && !progress.lessonsSeen.includes(lesson.id)) {
+    return <Redirect href={{ pathname: '/lesson/[id]', params: { id: lesson.id, kind: practiceId(kind) } }} />
   }
 
   // Answers are already applied to progress one by one; this only makes
