@@ -95,6 +95,15 @@ describe('LessonWalkthrough', () => {
     })
   })
 
+  // Seen on a 375 pt phone: 121088 ÷ 256 and three answer boxes do not fit
+  // one row, and the third box was cut off at the edge. The boxes wrap under
+  // the problem instead, still at the right.
+  it('lets ÷ 3けた’s answer boxes wrap under its problem', () => {
+    renderLesson('div:3')
+    expect(StyleSheet.flatten(screen.getByTestId('walk-problem-row').props.style)).toMatchObject({ flexWrap: 'wrap' })
+    expect(StyleSheet.flatten(screen.getByTestId('walk-answers').props.style)).toMatchObject({ marginLeft: 'auto' })
+  })
+
   // Review focus: every example renders and reaches its last button,
   // 13 − 5 on two rods and the long 3けた × and ÷ among them.
   it.each(LESSONS.map((each) => [each.id]))('pages through %s to its last button', (id) => {

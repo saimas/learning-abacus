@@ -134,7 +134,7 @@ export function DivideWalkthrough({
           everything above them scrolls, so a short phone still reaches the
           note. */}
       <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.problemRow}>
+        <View testID="walk-problem-row" style={styles.problemRow}>
           {/* The divisor's digits the step uses are underlined: a guess is
               made with the first alone, and each 九九 with one of them. The
               size is capped as the answer boxes' is, so both boxes stay on
@@ -365,15 +365,20 @@ const styles = StyleSheet.create({
   dotStuck: { borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.accentSoft },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: space.sm },
+  // Where the problem and the answer boxes do not fit one row (121088 ÷ 256
+  // and three boxes on a 375 pt phone), the boxes wrap under the problem,
+  // kept at the right (answers' marginLeft), rather than run off the edge.
   problemRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    rowGap: space.sm,
     marginTop: space.lg,
   },
   problem: { fontFamily: fonts.display, fontSize: fontSizes.prompt, color: colors.ink },
   divisorInUse: { color: colors.accent, textDecorationLine: 'underline' },
-  answers: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  answers: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
   answerLabel: { fontSize: fontSizes.small, color: colors.muted },
   // Wide enough for "5?", and it grows rather than clip at a larger text
   // size.
