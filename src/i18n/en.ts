@@ -65,7 +65,7 @@ function roundName(kind: PracticeKind): string {
 // Spec (howto tutorial) §2–3: the lessons' names and words. English names
 // the moves plainly; Japanese keeps the curriculum's own terms.
 const HOW_TO_SYMBOL: Record<PairOperation, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
-const HOW_TO_BUTTON: Record<PairOperation, string> = { add: '+ Add', sub: '− Subtract', mul: '× Multiply', div: '÷ Divide' }
+const HOW_TO_NAME: Record<PairOperation, string> = { add: 'Add', sub: 'Subtract', mul: 'Multiply', div: 'Divide' }
 const TECHNIQUE_NAME: Record<TechniqueOperation, Record<AtomClass, string>> = {
   add: { direct: 'Straight', five: 'Five complement', ten: 'Carry ten', both: 'Carry ten, five complement' },
   sub: { direct: 'Straight', five: 'Five complement', ten: 'Borrow ten', both: 'Borrow ten, five complement' },
@@ -354,13 +354,13 @@ export const en: Strings = {
   navProgress: 'Progress',
   navSettings: 'Settings',
 
-  homeTitle: "Today's five minutes",
   start: 'Start',
   notYetToday: 'Not practised yet today',
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
   homeHowToSection: 'How it works',
-  howToButton: (op) => HOW_TO_BUTTON[op],
+  howToSymbol: (op) => HOW_TO_SYMBOL[op],
+  howToName: (op) => HOW_TO_NAME[op],
   howToTitle: (op) => `How ${OP_NAME[op].toLowerCase()} works`,
   lessonTitle: (lesson) => {
     const move = techniqueOf(lesson)

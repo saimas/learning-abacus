@@ -358,16 +358,17 @@ export const ja = {
   navProgress: '進捗',
   navSettings: '設定',
 
-  homeTitle: '今日の五分',
   start: 'はじめる',
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
   // The heading over Home's lesson buttons (spec (howto tutorial) §3).
   homeHowToSection: 'やりかた',
-  // Spec (howto tutorial) §3: Home's four buttons, and each operation's page
-  // title, which VoiceOver reads for its button too.
-  howToButton: (op: PairOperation) => `${HOW_TO_SYMBOL[op]} ${OP_NAME[op]}`,
+  // Spec (howto tutorial) §3: Home's four tiles, each a symbol over its
+  // name, and each operation's page title, which VoiceOver reads for its
+  // tile too.
+  howToSymbol: (op: PairOperation) => HOW_TO_SYMBOL[op],
+  howToName: (op: PairOperation) => OP_NAME[op],
   howToTitle: (op: PairOperation) => `${OP_NAME[op]}のやりかた`,
   // A lesson: its title, its row on the operation page (and what VoiceOver
   // reads for the row, done or not), its words and its result.

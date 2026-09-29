@@ -415,9 +415,12 @@ describe('lesson strings', () => {
     return found
   }
 
-  it('names Home’s four buttons and each operation’s page', () => {
-    expect((['add', 'sub', 'mul', 'div'] as const).map(ja.howToButton)).toEqual(['＋ たし算', '− ひき算', '× かけ算', '÷ わり算'])
-    expect((['add', 'sub', 'mul', 'div'] as const).map(en.howToButton)).toEqual(['+ Add', '− Subtract', '× Multiply', '÷ Divide'])
+  it('names Home’s four tiles and each operation’s page', () => {
+    const ops = ['add', 'sub', 'mul', 'div'] as const
+    expect(ops.map(ja.howToSymbol)).toEqual(['＋', '−', '×', '÷'])
+    expect(ops.map(ja.howToName)).toEqual(['たし算', 'ひき算', 'かけ算', 'わり算'])
+    expect(ops.map(en.howToSymbol)).toEqual(['+', '−', '×', '÷'])
+    expect(ops.map(en.howToName)).toEqual(['Add', 'Subtract', 'Multiply', 'Divide'])
     expect(ja.howToTitle('add')).toBe('たし算のやりかた')
     expect(en.howToTitle('div')).toBe('How division works')
   })
