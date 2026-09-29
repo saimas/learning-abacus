@@ -1,11 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { AccessibilityInfo, Animated, ScrollView, StyleSheet } from 'react-native'
+import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
 import { problemSteps, problemTargetMs, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
-import { ROLL_DRIFT, ROLL_HOLD_MS, ROLL_IN_MS, ROLL_OUT_MS, RoundRunner } from './RoundRunner'
+import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RoundRunner } from './RoundRunner'
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -46,50 +46,36 @@ function answerBeads(value: number) {
 }
 
 // Lets `ms` pass a frame at a time, rendering after each as a phone does:
-// the roll's fade-in starts from an effect, once the next problem is on
-// screen.
+// the swipe starts from an effect, once the next problem is underneath.
 function passTime(ms: number) {
   for (let t = 0; t < ms; t += 16) act(() => jest.advanceTimersByTime(Math.min(16, ms - t)))
 }
 
 // Spec (roll) §3: after a right answer the problem is held under its 〇,
-// then rolls out and the next rolls in.
+// then its card is swiped off over the next.
 function finishRightAnswerRoll() {
-  passTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50)
+  passTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 50)
 }
-// After a miss's つぎへ there is no hold, only the roll.
+// After a miss's つぎへ there is no hold, only the swipe.
 function finishRoll() {
-  passTime(ROLL_OUT_MS + ROLL_IN_MS + 50)
+  passTime(ROLL_SWIPE_MS + 50)
 }
 
-// What the rolling view shows at this moment: its problem, how faded it is,
-// and how far it has drifted from its place.
-function rollFrame() {
-  const style = StyleSheet.flatten(screen.getByTestId('roll').props.style) as {
+// Frames until the answered card is on its way off, over the next (at most
+// a second of them).
+function passUntilSwiping() {
+  for (let frame = 0; frame < 60 && screen.queryByTestId('card-leaving') === null; frame++) passTime(16)
+}
+
+// A card's own style: how faded it is, and how far it has moved.
+function styleOf(testID: string) {
+  return StyleSheet.flatten(screen.getByTestId(testID).props.style) as {
     opacity?: number
     transform?: Record<string, number>[]
   }
-  const shift = style.transform?.find((t) => 'translateX' in t)
-  return {
-    prompt: screen.queryByTestId('prompt')?.props.children as string | undefined,
-    opacity: style.opacity ?? 1,
-    translateX: shift?.translateX ?? 0,
-  }
 }
-
-// A right answer's roll, a frame from the end of its hold to just past its
-// end. The native driver moves the values off the JS thread (RN's jest mock
-// ends each half after 16 ms and never updates them), so the frames show the
-// answered problem as it was and the next as it starts: where each is set,
-// not the motion between.
-function sampleRightAnswerRoll() {
-  passTime(ROLL_HOLD_MS)
-  const frames: ReturnType<typeof rollFrame>[] = []
-  for (let t = 0; t < ROLL_OUT_MS + ROLL_IN_MS + 50; t += 16) {
-    passTime(16)
-    frames.push(rollFrame())
-  }
-  return frames
+function movedBy(testID: string) {
+  return styleOf(testID).transform?.find((t) => 'translateX' in t)?.translateX ?? 0
 }
 
 describe('RoundRunner', () => {
@@ -563,8 +549,12 @@ describe('RoundRunner with 見取算', () => {
   })
 })
 
-describe('RoundRunner rolling from problem to problem', () => {
-  it('holds a right answer under its 〇, then rolls to the next problem', () => {
+// Spec (card swipe, 2026-09-29): the next problem is already in its place
+// underneath, still, and the answered card is swiped off over it, so there
+// is nothing for the eye to chase and no blank between them (the owner:
+// sliding "makes human eye to chase it"; fading "is still distracting").
+describe('RoundRunner swiping from problem to problem', () => {
+  it('holds a right answer under its 〇, then swipes it off over the next problem', () => {
     const { onAttempt } = renderRound()
     answerBeads(81)
     // Recorded at once; the answered problem stays, stamped, and cannot be
@@ -574,17 +564,88 @@ describe('RoundRunner rolling from problem to problem', () => {
     expect(screen.getByTestId('maru')).toBeTruthy()
     expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     expect(screen.getByTestId('round-count').props.children).toBe('1 / 3')
-    // Still there just before the hold ends.
-    act(() => jest.advanceTimersByTime(ROLL_HOLD_MS - 50))
-    expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
-    finishRightAnswerRoll()
-    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    // Nothing underneath yet while the 〇 is held.
+    passTime(ROLL_HOLD_MS - 50)
+    expect(screen.getAllByTestId('prompt')).toHaveLength(1)
+    passUntilSwiping()
+    // The next problem underneath; the answered card, 〇 and all, on top of it.
+    expect(screen.getAllByTestId(/^card/).map((card) => card.props.testID)).toEqual(['card', 'card-leaving'])
+    expect(within(screen.getByTestId('card')).getByTestId('prompt').props.children).toBe('46に54をたす。')
+    const leaving = within(screen.getByTestId('card-leaving'))
+    expect(leaving.getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(leaving.getByTestId('maru')).toBeTruthy()
     expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
+    finishRoll()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
     expect(screen.queryByTestId('maru')).toBeNull()
     expect(screen.queryByTestId('roll-blocker')).toBeNull()
   })
 
-  it('rolls to the next problem after a miss’s つぎへ', () => {
+  it('leaves the next problem still as the answered card swipes fully off to the left', () => {
+    const timing = jest.spyOn(Animated, 'timing')
+    renderRound()
+    answerBeads(81)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    const swipes = timing.mock.calls.map(([, config]) => config).filter((config) => config.duration === ROLL_SWIPE_MS)
+    timing.mockRestore()
+    // Nothing moves or fades the next problem.
+    expect(styleOf('card').transform).toBeUndefined()
+    expect(styleOf('card').opacity).toBeUndefined()
+    // One motion only: the answered card, from where it was to past the
+    // screen's left edge, on the native thread.
+    expect(movedBy('card-leaving')).toBe(0)
+    expect(swipes).toHaveLength(1)
+    expect(swipes[0]?.toValue).toBeLessThanOrEqual(-Dimensions.get('window').width)
+    expect(swipes[0]?.useNativeDriver).toBe(true)
+  })
+
+  // The swipe must not start before the next problem is there to uncover.
+  it('starts the swipe only once the next problem is underneath', () => {
+    const timing = Animated.timing
+    const underneathAsItStarts: unknown[] = []
+    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      if (config.duration === ROLL_SWIPE_MS) {
+        underneathAsItStarts.push(within(screen.getByTestId('card')).queryByTestId('prompt')?.props.children)
+      }
+      return timing(value, config)
+    })
+    renderRound()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    spy.mockRestore()
+    expect(underneathAsItStarts).toEqual(['46に54をたす。'])
+  })
+
+  // On a phone the native driver leaves the value where the swipe sent it,
+  // off the screen; the next answered card must start back in its place.
+  it('starts every swipe with the answered card in its place', () => {
+    const timing = Animated.timing
+    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      const animation = timing(value, config)
+      return {
+        ...animation,
+        start: (callback) =>
+          animation.start((result) => {
+            if (result.finished && typeof config.toValue === 'number') (value as Animated.Value).setValue(config.toValue)
+            callback?.(result)
+          }),
+      }
+    })
+    renderRound()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(100)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    spy.mockRestore()
+    expect(within(screen.getByTestId('card-leaving')).getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(movedBy('card-leaving')).toBe(0)
+  })
+
+  it('swipes to the next problem after a miss’s つぎへ', () => {
     renderRound()
     answerBeads(80)
     act(() => jest.advanceTimersByTime(500))
@@ -594,17 +655,36 @@ describe('RoundRunner rolling from problem to problem', () => {
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 
-  it('rolls the summary in after the last problem', () => {
+  it('swipes the last card off over the summary, the count staying put', () => {
     const { onFinish } = renderRound({ problems: [{ op: 'add', digits: 2, a: 23, b: 58 }] })
     answerBeads(81)
     expect(screen.queryByTestId('summary-text')).toBeNull()
-    finishRightAnswerRoll()
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    expect(within(screen.getByTestId('card')).getByTestId('summary-result').props.children).toBe('1問中 1問正解')
+    expect(within(screen.getByTestId('card-leaving')).getByTestId('prompt').props.children).toBe('23に58をたす。')
+    finishRoll()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
     expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
+    expect(screen.getByTestId('round-count').props.children).toBe('1 / 1')
     fireEvent.press(screen.getByTestId('finish-button'))
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
 
-  // Review focus: the next problem's clock starts when it has arrived.
+  // The count bar stays on the summary so nothing jumps as the last card
+  // goes; there, with nothing left to lose, its ✕ just finishes.
+  it('lets the summary’s ✕ finish the round without asking', () => {
+    const onQuit = jest.fn()
+    const { onFinish } = renderRound({ problems: [{ op: 'add', digits: 2, a: 23, b: 58 }], onQuit })
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    fireEvent.press(screen.getByTestId('finish-button'))
+    expect(onFinish).toHaveBeenCalledTimes(1)
+    expect(onQuit).not.toHaveBeenCalled()
+  })
+
+  // Review focus: the next problem's clock starts when it is uncovered.
   it('times the next problem from its arrival, not from the last answer', () => {
     let clock = 0
     const onAttempt = jest.fn()
@@ -622,14 +702,12 @@ describe('RoundRunner rolling from problem to problem', () => {
     clock = 1_000
     for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
     fireEvent.press(screen.getByTestId('submit'))
-    // The next problem swapped in, but still fading in: its clock has not
-    // started.
+    // The next problem underneath, the answered card still going: its clock
+    // has not started.
     clock = 5_000
     passTime(ROLL_HOLD_MS)
-    for (let frame = 0; frame < 50 && screen.getByTestId('prompt').props.children === '23に58をたす。'; frame++) {
-      passTime(16)
-    }
-    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    passUntilSwiping()
+    expect(within(screen.getByTestId('card')).getByTestId('prompt').props.children).toBe('46に54をたす。')
     expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     clock = 10_000
     finishRoll()
@@ -638,91 +716,35 @@ describe('RoundRunner rolling from problem to problem', () => {
     fireEvent.press(screen.getByTestId('submit'))
     // pace is latency over the problem's target, so latency = pace × target.
     // 81 took 1 000 ms from the round's start (clock 0); 100 took 2 000 ms
-    // from its arrival at 10 000 — not the 7 000 since it was swapped in, nor
-    // the 11 000 since the last answer.
+    // from its arrival at 10 000 — not the 7 000 since it was laid
+    // underneath, nor the 11 000 since the last answer.
     const target = (a: number, b: number) => problemTargetMs({ op: 'add', digits: 2, a, b }, 900)
     expect(onAttempt.mock.calls[0][0].pace * target(23, 58)).toBeCloseTo(1_000, 5)
     expect(onAttempt.mock.calls[1][0].pace * target(46, 54)).toBeCloseTo(2_000, 5)
   })
 
   // Review focus: leaving mid-roll keeps the answer and fires nothing later.
-  it('keeps the answer and fires nothing once unmounted mid-roll', () => {
+  it('keeps the answer and fires nothing once unmounted during the hold', () => {
     const { onAttempt } = renderRound()
     answerBeads(81)
     expect(onAttempt).toHaveBeenCalledTimes(1)
     screen.unmount()
-    expect(() => act(() => jest.advanceTimersByTime(ROLL_HOLD_MS + ROLL_OUT_MS + ROLL_IN_MS + 50))).not.toThrow()
+    expect(() => act(() => jest.advanceTimersByTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 50))).not.toThrow()
     expect(onAttempt).toHaveBeenCalledTimes(1)
   })
 
-  // Spec (gentle roll, 2026-09-29): the eye is not made to chase the problem
-  // across the screen (the owner: "it is too visible and makes human eye to
-  // chase it so people will get tired"). It fades as it drifts a little. The
-  // native driver moves it off the JS thread, so what a test sees is where
-  // each half is headed and where the next problem starts from.
-  it('fades as it drifts a little, never sweeping across the screen', () => {
-    const timing = jest.spyOn(Animated, 'timing')
-    renderRound()
+  it('fires nothing once unmounted mid-swipe', () => {
+    const { onAttempt } = renderRound()
     answerBeads(81)
-    const frames = sampleRightAnswerRoll()
-    const targets = (duration: number) =>
-      timing.mock.calls
-        .map(([, config]) => config)
-        .filter((config) => config.duration === duration)
-        .map((config) => config.toValue as number)
-        .sort((a, b) => a - b)
-    const out = targets(ROLL_OUT_MS)
-    const into = targets(ROLL_IN_MS)
-    timing.mockRestore()
-    // Out: it fades to nothing as it drifts ROLL_DRIFT to the left.
-    expect(out).toEqual([-ROLL_DRIFT, 0])
-    // In: the next starts unseen, ROLL_DRIFT to the right, and comes back to
-    // its place in full.
-    expect(frames.find((f) => f.prompt === '46に54をたす。')).toEqual({
-      prompt: '46に54をたす。',
-      opacity: 0,
-      translateX: ROLL_DRIFT,
-    })
-    expect(into).toEqual([0, 1])
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    expect(screen.getByTestId('card-leaving')).toBeTruthy()
+    screen.unmount()
+    expect(() => act(() => jest.advanceTimersByTime(ROLL_SWIPE_MS + 50))).not.toThrow()
+    expect(onAttempt).toHaveBeenCalledTimes(1)
   })
 
-  // Seen on the simulator: fading in before the next problem was committed
-  // brought the answered one back for a frame or two, half faded, drifted
-  // right, before the next replaced it.
-  it('starts fading the next problem in only once it is on screen', () => {
-    const timing = Animated.timing
-    const onScreenAsItFadesIn: (string | undefined)[] = []
-    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
-      if (config.duration === ROLL_IN_MS) onScreenAsItFadesIn.push(rollFrame().prompt)
-      return timing(value, config)
-    })
-    renderRound()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    spy.mockRestore()
-    expect(onScreenAsItFadesIn).toEqual(['46に54をたす。', '46に54をたす。'])
-  })
-
-  // On the native thread, so mounting the next problem as it arrives cannot
-  // make it stutter. It eases away, then slows softly into place.
-  it('rolls on the native driver, easing away and settling in', () => {
-    const timing = jest.spyOn(Animated, 'timing')
-    renderRound()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    const configs = timing.mock.calls.map(([, config]) => config)
-    timing.mockRestore()
-    const out = configs.filter((c) => c.duration === ROLL_OUT_MS)
-    const into = configs.filter((c) => c.duration === ROLL_IN_MS)
-    // The fade and the drift run together, in each half.
-    expect(out).toHaveLength(2)
-    expect(into).toHaveLength(2)
-    for (const c of [...out, ...into]) expect(c.useNativeDriver).toBe(true)
-    for (const c of out) expect(c.easing?.(0.5)).toBeLessThan(0.5)
-    for (const c of into) expect(c.easing?.(0.5)).toBeGreaterThan(0.5)
-  })
-
-  it('fades in place with Reduce Motion on, and gets to the same place', async () => {
+  it('fades the answered card away in place with Reduce Motion on', async () => {
     // Once only: restoring RN's own jest mock of it would leave it returning
     // undefined for the tests after this one.
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValueOnce(true)
@@ -730,21 +752,16 @@ describe('RoundRunner rolling from problem to problem', () => {
     renderRound()
     await act(async () => {})
     answerBeads(81)
-    const frames = sampleRightAnswerRoll()
-    const targets = timing.mock.calls
-      .map(([, config]) => config)
-      .filter((config) => config.duration === ROLL_OUT_MS || config.duration === ROLL_IN_MS)
-      .map((config) => config.toValue)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    const swipes = timing.mock.calls.map(([, config]) => config).filter((config) => config.duration === ROLL_SWIPE_MS)
     timing.mockRestore()
-    // No drift at all, only the fade: the next problem starts unseen in its
-    // own place. (`every` and not `toEqual`, since the drift out is -0.)
-    expect(targets).toHaveLength(4)
-    expect(targets.every((value) => value === 0 || value === 1)).toBe(true)
-    expect(frames.find((f) => f.prompt === '46に54をたす。')).toEqual({
-      prompt: '46に54をたす。',
-      opacity: 0,
-      translateX: 0,
-    })
+    // One motion: the answered card's fade, and no move.
+    expect(swipes).toHaveLength(1)
+    expect(swipes[0]?.toValue).toBe(0)
+    expect(movedBy('card-leaving')).toBe(0)
+    expect(styleOf('card').opacity).toBeUndefined()
+    finishRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 })
