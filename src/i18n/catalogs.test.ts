@@ -1,5 +1,6 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+import { lessonById, type Lesson } from '@/domain/lessons'
 import type { MitoriProblem, StepSection } from '@/domain/problem'
 import { en } from './en'
 import { ja } from './ja'
@@ -426,5 +427,66 @@ describe('division strings', () => {
     expect(en.homeHowToButton).toBe('× Multiply')
     expect(ja.homeHowToDivideButton).toBe('÷ わり算')
     expect(en.homeHowToDivideButton).toBe('÷ Divide')
+  })
+})
+
+// Spec (howto tutorial) §2–3: the やりかた lessons' words.
+describe('lesson strings', () => {
+  const lesson = (id: string): Lesson => {
+    const found = lessonById(id)
+    if (found === null) throw new Error(`no lesson ${id}`)
+    return found
+  }
+
+  it('names Home’s four buttons and each operation’s page', () => {
+    expect((['add', 'sub', 'mul', 'div'] as const).map(ja.howToButton)).toEqual(['＋ たし算', '− ひき算', '× かけ算', '÷ わり算'])
+    expect((['add', 'sub', 'mul', 'div'] as const).map(en.howToButton)).toEqual(['+ Add', '− Subtract', '× Multiply', '÷ Divide'])
+    expect(ja.howToTitle('add')).toBe('たし算のやりかた')
+    expect(en.howToTitle('div')).toBe('How division works')
+  })
+
+  it('titles a lesson by its move, or by its size and operation', () => {
+    expect(ja.lessonTitle(lesson('add:direct'))).toBe('そのまま')
+    expect(ja.lessonTitle(lesson('add:both'))).toBe('十の繰上と五の分解')
+    expect(ja.lessonTitle(lesson('sub:both'))).toBe('十の繰下と五の合成')
+    expect(ja.lessonTitle(lesson('mul:3'))).toBe('3けたのかけ算')
+    expect(en.lessonTitle(lesson('sub:ten'))).toBe('Borrow ten')
+    expect(en.lessonTitle(lesson('add:2'))).toBe('2-digit addition')
+  })
+
+  it('lists a lesson as its move and example, or its example alone', () => {
+    expect(ja.lessonRow(lesson('add:five'))).toBe('五の合成　4＋3')
+    expect(ja.lessonRow(lesson('sub:ten'))).toBe('十の繰下　13−5')
+    expect(ja.lessonRow(lesson('mul:2'))).toBe('47×36')
+    expect(ja.lessonRow(lesson('div:1'))).toBe('56÷7')
+    expect(en.lessonRow(lesson('add:five'))).toBe('Five complement  4 + 3')
+    expect(ja.lessonRowLabel(lesson('add:five'), true)).toBe('五の合成　4＋3、できた')
+    expect(ja.lessonRowLabel(lesson('add:five'), false)).toBe('五の合成　4＋3')
+    expect(en.lessonRowLabel(lesson('div:2'), true)).toBe('1692 ÷ 36, done')
+  })
+
+  it('explains each move with its own example, and ＋ − worked by place', () => {
+    expect(ja.techniqueIntro('add', 'five')).toContain('4に3をたす')
+    expect(ja.techniqueIntro('add', 'both')).toContain('−3 は −5 +2')
+    expect(ja.techniqueIntro('sub', 'ten')).toContain('13から5をひく')
+    expect(ja.techniqueIntro('sub', 'both')).toContain('+4 は +5 −1')
+    expect(en.techniqueIntro('add', 'ten')).toContain('8 + 5 is +10 −5')
+    expect(ja.lessonMethod('add')).toContain('繰り上がり')
+    expect(ja.lessonMethod('sub')).toContain('繰り下がり')
+  })
+
+  it('tells × where a 九九’s digits go, for each size', () => {
+    expect(ja.multiplyPlacement(1)).toContain('一の位')
+    expect(ja.multiplyPlacement(2)).toContain('十の位どうしなら百の位')
+    expect(ja.multiplyPlacement(3)).toContain('百の位どうしなら万の位')
+    expect(en.multiplyPlacement(3)).toContain('hundreds × hundreds on the ten-thousands rod')
+  })
+
+  it('gives the result, やってみよう and its buttons', () => {
+    expect(ja.lessonResult({ op: 'mul', digits: 2, a: 47, b: 36 }, 1692)).toBe('47×36 = 1692')
+    expect(en.lessonResult({ op: 'mul', digits: 2, a: 47, b: 36 }, 1692)).toBe('47 × 36 = 1692')
+    expect(ja.lessonResult({ op: 'sub', digits: 1, a: 13, b: 5 }, 8)).toBe('13−5 = 8')
+    expect([ja.lessonTry, ja.lessonAgain, ja.lessonStartRound]).toEqual(['やってみよう', 'もう一問', '練習をはじめる'])
+    expect([en.lessonTry, en.lessonAgain, en.lessonStartRound]).toEqual(['Try one', 'Another', 'Start practising'])
   })
 })

@@ -1,16 +1,19 @@
-import type { Atom } from '@/domain/atoms'
+import type { Atom, AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 import {
   answerOf,
   digitAt,
   divisorFirstDigit,
+  type Digits,
   type Operation,
+  type PairOperation,
   type PairProblem,
   type PracticeKind,
   type StepSection,
 } from '@/domain/problem'
 import type { PracticeStage } from '@/domain/practice'
 import type { WalkStep } from '@/domain/divisionWalk'
+import { techniqueOf, type Lesson, type TechniqueOperation } from '@/domain/lessons'
 import type { Strings, WalkCaption } from './ja'
 
 // A rod's name by its place, 0 being the ones rod, in a sentence and as a
@@ -57,6 +60,51 @@ const PRACTICE_STAGE: Record<PracticeStage, string> = {
 
 function roundName(kind: PracticeKind): string {
   return `${kind.digits}-digit ${OP_NAME[kind.op].toLowerCase()}`
+}
+
+// Spec (howto tutorial) §2–3: the lessons' names and words. English names
+// the moves plainly; Japanese keeps the curriculum's own terms.
+const HOW_TO_SYMBOL: Record<PairOperation, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
+const HOW_TO_BUTTON: Record<PairOperation, string> = { add: '+ Add', sub: '− Subtract', mul: '× Multiply', div: '÷ Divide' }
+const TECHNIQUE_NAME: Record<TechniqueOperation, Record<AtomClass, string>> = {
+  add: { direct: 'Straight', five: 'Five complement', ten: 'Carry ten', both: 'Carry ten, five complement' },
+  sub: { direct: 'Straight', five: 'Five complement', ten: 'Borrow ten', both: 'Borrow ten, five complement' },
+}
+
+function lessonExample(problem: PairProblem): string {
+  return `${problem.a} ${HOW_TO_SYMBOL[problem.op]} ${problem.b}`
+}
+
+function lessonRow(lesson: Lesson): string {
+  const move = techniqueOf(lesson)
+  const example = lessonExample(lesson.example)
+  return move === null ? example : `${TECHNIQUE_NAME[move.op][move.technique]}  ${example}`
+}
+
+const TECHNIQUE_INTRO: Record<TechniqueOperation, Record<AtomClass, string>> = {
+  add: {
+    direct: 'When the beads for the number you add fit on the rod as they are, just move them in. 3 + 1: push one earth bead up.',
+    five: 'When there are not enough earth beads, bring the heaven bead down and take off the earth beads you added too many (five complement). 4 + 3 is +5 −2.',
+    ten: 'When the rod would go past 9, add 1 on the rod to the left (+10) and take off what you added too many (carry ten). 8 + 5 is +10 −5.',
+    both: 'When, after the +10, the earth beads alone cannot take off what you added too many, take off the heaven bead and put earth beads back. 6 + 7 is +10 −3, and −3 is −5 +2.',
+  },
+  sub: {
+    direct: 'When the beads for the number you subtract can come off the rod as they are, just take them off. 4 − 3: push three earth beads down.',
+    five: 'When there are not enough earth beads, take the heaven bead off and put back the earth beads you took too many (five complement). 6 − 3 is −5 +2.',
+    ten: 'When the rod cannot give that much, take 1 off the rod to the left (−10) and put back what you took too many (borrow ten). 13 − 5 is −10 +5.',
+    both: 'When, after the −10, the earth beads alone cannot put back what you took too many, bring the heaven bead down and take earth beads off. 12 − 6 is −10 +4, and +4 is +5 −1.',
+  },
+}
+
+const LESSON_METHOD: Record<TechniqueOperation, string> = {
+  add: 'Add from the highest place down, one rod at a time. When a rod would go past 9, add 1 on the rod to its left (a carry). If that rod is a 9, the 1 carries on further left.',
+  sub: 'Subtract from the highest place down, one rod at a time. When a rod cannot give that much, borrow 1 from the rod to its left.',
+}
+
+const MULTIPLY_PLACEMENT: Record<Digits, string> = {
+  1: 'The answer’s tens digit goes on the left rod and its ones digit on the ones rod.',
+  2: 'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens on the hundreds rod. Its tens digit goes one rod to the left.',
+  3: 'Each answer’s ones digit goes on the rod for the two places together: ones × ones on the ones rod, tens × ones on the tens rod, tens × tens or hundreds × ones on the hundreds rod, hundreds × tens on the thousands rod, hundreds × hundreds on the ten-thousands rod. Its tens digit goes one rod to the left.',
 }
 
 // English names no technique: this is the wording `explainMove` has today,
@@ -314,6 +362,23 @@ export const en: Strings = {
   homeHowTo: 'How multiplication works',
   homeHowToDivide: 'How division works',
   homeHowToSection: 'How it works',
+  howToButton: (op) => HOW_TO_BUTTON[op],
+  howToTitle: (op) => `How ${OP_NAME[op].toLowerCase()} works`,
+  lessonTitle: (lesson) => {
+    const move = techniqueOf(lesson)
+    return move === null
+      ? roundName({ op: lesson.op, digits: lesson.digits })
+      : TECHNIQUE_NAME[move.op][move.technique]
+  },
+  lessonRow,
+  lessonRowLabel: (lesson, done) => `${lessonRow(lesson)}${done ? ', done' : ''}`,
+  techniqueIntro: (op, technique) => TECHNIQUE_INTRO[op][technique],
+  lessonMethod: (op) => LESSON_METHOD[op],
+  multiplyPlacement: (digits) => MULTIPLY_PLACEMENT[digits],
+  lessonResult: (problem, answer) => `${lessonExample(problem)} = ${answer}`,
+  lessonTry: 'Try one',
+  lessonAgain: 'Another',
+  lessonStartRound: 'Start practising',
   homeHowToButton: '× Multiply',
   homeHowToDivideButton: '÷ Divide',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
