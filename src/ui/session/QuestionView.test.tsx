@@ -557,8 +557,8 @@ describe('QuestionView with the step lines below the controls', () => {
 
   // The owner, the same day: the one-line hint under the soroban (and the
   // board) gave way to the taller ◀ ▶ row as the panel opened, and moved
-  // everything below it. So the hint, the controls, and the empty place
-  // under a silent level's ✕ share one slot of the controls' height. It is
+  // everything below it. So the hint, the controls, and what the beads read
+  // once answered share one slot of the controls' height. It is
   // a minimum, so controls that wrap at the largest text sizes still grow
   // it rather than spill over the lines. The hint is centred in it.
   const slot = () => screen.getByTestId('step-controls-slot')
@@ -586,6 +586,7 @@ describe('QuestionView with the step lines below the controls', () => {
     renderView({ fade: 2, coaching: 'silent' })
     setBeads(screen.getByTestId, 800, 4)
     fireEvent.press(screen.getByTestId('submit'))
+    expect(within(slot()).getByTestId('bead-reading')).toBeTruthy()
     expect(within(slot()).queryByText(hint)).toBeNull()
     expect(within(slot()).queryByTestId('step-next')).toBeNull()
     expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
@@ -963,6 +964,7 @@ describe('QuestionView showing what the beads read once answered', () => {
     expect(within(slot()).getByText(hint)).toBeTruthy()
     fireEvent.press(screen.getByTestId('submit'))
     expect(within(slot()).getByTestId('bead-reading').props.children).toBe('857')
+    expect(screen.getByTestId('bead-reading').props.accessibilityLabel).toBe('あなたの答え 857')
     expect(within(slot()).queryByText(hint)).toBeNull()
     // The same slot at the same height, so nothing below it moves.
     expect(StyleSheet.flatten(slot().props.style)).toEqual(slotStyle)
@@ -985,7 +987,6 @@ describe('QuestionView showing what the beads read once answered', () => {
     expect(screen.getByTestId('card').props.children).toBe('undefined')
     fireEvent.press(screen.getByTestId('steps-close'))
     setBeads(screen.getByTestId, 800, 4)
-    act(() => jest.advanceTimersByTime(1_000))
     fireEvent.press(screen.getByTestId('submit'))
     expect(screen.getByTestId('card').props.children).toBe('800')
   })

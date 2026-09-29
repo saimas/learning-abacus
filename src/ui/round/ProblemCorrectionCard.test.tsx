@@ -37,7 +37,7 @@ describe('ProblemCorrectionCard', () => {
       />,
     )
     expect(screen.getByTestId('correction-answer').props.children).toBe(
-      'こたえは 47（そろばんは 47000）　あなたの答え 47',
+      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
     )
   })
 

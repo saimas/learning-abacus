@@ -74,9 +74,9 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   and the last card goes over the summary.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **Walkthroughs**: the first × round opens with かけ算のやりかた and the first ÷ round with
-  わり算のやりかた; both can be replayed from the やりかた buttons on Home, and ✕ leaves either at any point
-  (it counts as seen). The ÷ walkthrough works 1692 ÷ 36
-  one bead at a time, including a guess that is too big and how it is fixed.
+  わり算のやりかた; both can be replayed from the やりかた buttons on Home, and ✕ leaves
+  either at any point (it counts as seen). The ÷ walkthrough works 1692 ÷ 36 one bead at a
+  time, including a guess that is too big and how it is fixed.
 
 ## Screens
 

@@ -65,7 +65,11 @@ export function ProblemCorrectionCard({
     <View testID="correction">
       {showAnswer ? (
         <Text testID="correction-answer" style={styles.answer}>
-          {given === undefined ? answer : strings.correctionWithGiven(answer, given)}
+          {given === undefined
+            ? answer
+            : expectedBeads === undefined
+              ? strings.correctionWithGiven(answer, given)
+              : strings.correctionWithGivenOnBeads(answer, given)}
         </Text>
       ) : null}
       {sections.flatMap((section, sectionIndex) => {

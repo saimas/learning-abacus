@@ -153,6 +153,27 @@ describe('Home', () => {
     }
   })
 
+  // Side by side at the usual text sizes; a larger text size would wrap the
+  // labels in half the width, so there they stack, each the full width.
+  it.each([
+    ['side by side at the usual text size', 1, 'row'],
+    ['stacked at a large text size', 1.35, 'column'],
+  ])('lays the two buttons out %s', async (_size, fontScale, flexDirection) => {
+    // As in RoundRunner.test.tsx: `require` reaches the module object the
+    // screen's own imports read from.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
+    const reactNative = require('react-native')
+    const spy = jest.spyOn(reactNative, 'useWindowDimensions').mockReturnValue({ width: 375, height: 667, scale: 2, fontScale })
+    try {
+      mockLoad.mockResolvedValue(learner({}))
+      const { getByTestId } = renderHome()
+      await waitFor(() => expect(getByTestId('home-howtos')).toBeTruthy())
+      expect(StyleSheet.flatten(getByTestId('home-howtos').props.style).flexDirection).toBe(flexDirection)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('opens the multiplication walkthrough from the home かけ算 button', async () => {
     mockLoad.mockResolvedValue(learner({}))
     const { getByTestId } = renderHome()

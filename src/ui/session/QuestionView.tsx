@@ -276,17 +276,17 @@ export function QuestionView({
   const reviewing = review !== null && review.cardShown
   const beforeAnswer = review === null && stepsOpen
   const panelOpen = reviewing || beforeAnswer
-  // The step panel in its two places: the controls sit in the fixed area
-  // just above the bottom buttons, where the thumb is, so ◀ ▶ cannot scroll
-  // off a short phone, and in keypad mode the lines scroll with the prompt
-  // (bead mode puts them below the controls; see beadStepLines). Before an
-  // answer nothing has been got wrong, so the lines carry no correction edge.
   // The owner (2026-09-29): once answered on the beads, the number they read
   // is shown, so a 〇 says which number was right and a ✕ which was not.
   // Under the soroban while the learner's own beads are on show; once the
   // steps take the soroban over, beside the answer in the card instead.
   const answered = review !== null || answeredRight
   const given = mode === 'beads' && reviewing ? readValue(shownBeads) : undefined
+  // The step panel in its two places: the controls sit in the fixed area
+  // just above the bottom buttons, where the thumb is, so ◀ ▶ cannot scroll
+  // off a short phone, and in keypad mode the lines scroll with the prompt
+  // (bead mode puts them below the controls; see beadStepLines). Before an
+  // answer nothing has been got wrong, so the lines carry no correction edge.
   const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing, given }) : null
   const stepLines = panelOpen ? <StepLines accent={reviewing}>{steps}</StepLines> : null
   const stepControls = panelOpen ? (
@@ -314,7 +314,7 @@ export function QuestionView({
   // The ✕ over a missed question under review, or the 〇 over a right one
   // until the round rolls on. Either is decoration and never takes a tap.
   const stamp = (size: number) => {
-    if (review === null && !answeredRight) return null
+    if (!answered) return null
     return (
       <View style={styles.stampOverlay} pointerEvents="none">
         {review !== null ? <Batsu size={size} /> : <Maru size={size} lasting />}
@@ -420,7 +420,12 @@ export function QuestionView({
           {panelOpen ? (
             stepControls
           ) : answered ? (
-            <Text testID="bead-reading" maxFontSizeMultiplier={1.3} style={styles.reading}>
+            <Text
+              testID="bead-reading"
+              accessibilityLabel={strings.beadReadingLabel(readValue(shownBeads))}
+              maxFontSizeMultiplier={1.3}
+              style={styles.reading}
+            >
               {String(readValue(shownBeads))}
             </Text>
           ) : (

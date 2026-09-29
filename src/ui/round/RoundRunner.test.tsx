@@ -354,7 +354,7 @@ describe('RoundRunner with ÷', () => {
     // (spec (division) §2), so the review names that reading too, not just
     // the quotient, and then what the learner's beads read.
     expect(screen.getByTestId('correction-answer').props.children).toBe(
-      'こたえは 47（そろばんは 47000）　あなたの答え 47',
+      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
     )
     expect(lit()).toEqual([])
 

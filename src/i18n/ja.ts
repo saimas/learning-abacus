@@ -278,7 +278,19 @@ function correctionAnswerOnBeads(expected: number, beads: number): string {
 // A miss on the beads, once the steps have taken the learner's beads over:
 // the answer line, then what their beads read (the owner, 2026-09-29).
 function correctionWithGiven(line: string, given: number): string {
-  return `${line}　あなたの答え ${given}`
+  return `${line}　${beadReadingLabel(given)}`
+}
+
+// The same for a ÷, whose line already names the soroban's reading: what the
+// learner's soroban read goes on a line of its own, so it is not taken for
+// the answer beside it ("あなたの答え 47" after "こたえは 47" reads as right).
+function correctionWithGivenOnBeads(line: string, given: number): string {
+  return `${line}\nあなたのそろばんは ${given}`
+}
+
+// The number shown under answered beads, as VoiceOver reads it.
+function beadReadingLabel(given: number): string {
+  return `あなたの答え ${given}`
 }
 
 // No plural branch — Japanese has none. The English catalog needs one.
@@ -322,6 +334,8 @@ export const ja = {
   correctionAnswer,
   correctionAnswerOnBeads,
   correctionWithGiven,
+  correctionWithGivenOnBeads,
+  beadReadingLabel,
   correct: '正解',
   wrong: 'ちがいます',
   quitLabel: '練習をやめる',

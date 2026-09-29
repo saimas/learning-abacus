@@ -1,6 +1,6 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { AppState, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { practiceId, type PracticeKind } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
@@ -18,6 +18,9 @@ import { colors, fonts, fontSizes, space } from '@/ui/theme'
 // §2: the single-move session (基礎の練習) and its card are gone.
 export default function Home() {
   const { progress, hydrated } = useProgress()
+  // From a large text size up, the walkthrough buttons' labels no longer fit
+  // half the width, so the buttons stack instead of wrapping them.
+  const stackHowTos = useWindowDimensions().fontScale >= HOW_TO_STACK_SCALE
   const strings = useStrings()
   // Never read fresh from Date.now() during render: react-hooks/purity
   // forbids calling an impure function while rendering. Home stays mounted
@@ -27,7 +30,7 @@ export default function Home() {
   // focus, and whenever the app comes back to the foreground.
   const [today, setToday] = useState(() => dayKey(Date.now()))
 
-  // A grid cell or a やりかた link pushes straight to router.push. /round and a
+  // A grid cell or a やりかた button pushes straight to router.push. /round and a
   // walkthrough opened for a round disable the swipe-back gesture
   // (app/_layout.tsx), so a double tap that slips through lands the child in
   // a second round or walkthrough on top of the first, only reachable by
@@ -120,8 +123,8 @@ export default function Home() {
             small links hard to see and to tap, so they are full-size
             buttons under a heading of their own. */}
         <Text style={styles.sectionTitle}>{strings.homeHowToSection}</Text>
-        <View style={styles.howTos}>
-          <View style={styles.howTo}>
+        <View testID="home-howtos" style={[styles.howTos, stackHowTos && styles.howTosStacked]}>
+          <View style={!stackHowTos && styles.howTo}>
             <Button
               testID="home-howto"
               variant="outline"
@@ -130,7 +133,7 @@ export default function Home() {
               onPress={() => openHowTo('/multiply-intro')}
             />
           </View>
-          <View style={styles.howTo}>
+          <View style={!stackHowTos && styles.howTo}>
             <Button
               testID="home-howto-div"
               variant="outline"
@@ -144,6 +147,10 @@ export default function Home() {
     </Screen>
   )
 }
+
+// The text size from which the walkthrough buttons stack: "× Multiply" fills
+// half a 375 pt phone's width at about 1.25×.
+const HOW_TO_STACK_SCALE = 1.2
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
@@ -171,7 +178,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.title,
     color: colors.ink,
   },
-  // Side by side, each half the width.
+  // Side by side, each half the width; stacked, each the full width.
   howTos: { flexDirection: 'row', gap: space.md },
+  howTosStacked: { flexDirection: 'column' },
   howTo: { flex: 1 },
 })

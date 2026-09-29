@@ -278,6 +278,17 @@ function correctionWithGiven(line: string, given: number): string {
   return `${line} · you answered ${given}`
 }
 
+// The same for a ÷, whose line already names the soroban's reading: what the
+// learner's soroban read goes on a line of its own.
+function correctionWithGivenOnBeads(line: string, given: number): string {
+  return `${line}\nyour soroban reads ${given}`
+}
+
+// The number shown under answered beads, as VoiceOver reads it.
+function beadReadingLabel(given: number): string {
+  return `You answered ${given}`
+}
+
 // Says what the beads on this rod actually add up to, so a miss teaches the reading rather than just resetting the field.
 function breakdown(value: number): string {
   const earth = value % 5
@@ -303,8 +314,8 @@ export const en: Strings = {
   homeHowTo: 'How multiplication works',
   homeHowToDivide: 'How division works',
   homeHowToSection: 'How it works',
-  homeHowToButton: '× Multiplication',
-  homeHowToDivideButton: '÷ Division',
+  homeHowToButton: '× Multiply',
+  homeHowToDivideButton: '÷ Divide',
   sealDays: (days) => `${days}\n${days === 1 ? 'day' : 'days'}`,
   back: 'Today',
 
@@ -318,6 +329,8 @@ export const en: Strings = {
   correctionAnswer,
   correctionAnswerOnBeads,
   correctionWithGiven,
+  correctionWithGivenOnBeads,
+  beadReadingLabel,
   correct: 'Correct',
   wrong: 'Not quite',
   quitLabel: 'Stop practice',

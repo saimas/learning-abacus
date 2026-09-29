@@ -123,6 +123,31 @@ describe('correctionAnswer', () => {
 // Spec (division) §2: 商除法 leaves the final soroban reading (the quotient
 // followed by zeros), which is what a bead answer is actually checked
 // against, so a bead-mode miss must say that too, not just the quotient.
+// The owner (2026-09-29): a miss on the beads names what the learner's
+// beads read beside the answer, once the steps have taken them over. For a ÷
+// that is the soroban's reading, on a line of its own: "your answer 47"
+// beside "the answer is 47" would read as right.
+describe('correctionWithGiven', () => {
+  it('names the learner’s answer beside the answer', () => {
+    expect(ja.correctionWithGiven('こたえは 81', 80)).toBe('こたえは 81　あなたの答え 80')
+    expect(en.correctionWithGiven('The answer is 81', 80)).toBe('The answer is 81 · you answered 80')
+  })
+
+  it('names what the learner’s soroban reads, on its own line, for a ÷', () => {
+    expect(ja.correctionWithGivenOnBeads('こたえは 47（そろばんは 47000）', 47)).toBe(
+      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
+    )
+    expect(en.correctionWithGivenOnBeads('The answer is 47 (the soroban reads 47000)', 47)).toBe(
+      'The answer is 47 (the soroban reads 47000)\nyour soroban reads 47',
+    )
+  })
+
+  it('reads the number shown under answered beads aloud as the learner’s answer', () => {
+    expect(ja.beadReadingLabel(800)).toBe('あなたの答え 800')
+    expect(en.beadReadingLabel(800)).toBe('You answered 800')
+  })
+})
+
 describe('correctionAnswerOnBeads', () => {
   it('states the answer and what the beads themselves needed to read', () => {
     expect(ja.correctionAnswerOnBeads(47, 47000)).toBe('こたえは 47（そろばんは 47000）')
@@ -391,5 +416,15 @@ describe('division strings', () => {
     expect(ja.homeHowToDivide).toBe('わり算のやりかた')
     expect(en.homeHowToDivide).toBe('How division works')
     expect(ja.homeHowTo).toBe('かけ算のやりかた')
+  })
+
+  // Short, so each fits half the width of a 375 pt phone.
+  it('labels Home’s two walkthrough buttons, under their heading', () => {
+    expect(ja.homeHowToSection).toBe('やりかた')
+    expect(en.homeHowToSection).toBe('How it works')
+    expect(ja.homeHowToButton).toBe('× かけ算')
+    expect(en.homeHowToButton).toBe('× Multiply')
+    expect(ja.homeHowToDivideButton).toBe('÷ わり算')
+    expect(en.homeHowToDivideButton).toBe('÷ Divide')
   })
 })
