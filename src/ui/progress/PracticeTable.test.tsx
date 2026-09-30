@@ -38,6 +38,19 @@ describe('PracticeTable', () => {
     expect(screen.queryByTestId('practice-level-sub:3')).toBeNull()
   })
 
+  // Review (2026-09-30): muted 10 pt text read at 1.3:1 on the うすい珠
+  // cell. The level is drawn like the cell's word, in its colour and size.
+  it.each([
+    [3, colors.ink],
+    [6, colors.paper],
+  ] as const)('draws the level at %p as readably as the cell’s word', (fade, color) => {
+    const progress = { ...emptyProgress(), practices: { 'add:2': { ...newPracticeRecord(0), fade } } }
+    render(<PracticeTable progress={progress} />)
+    const style = StyleSheet.flatten(screen.getByTestId('practice-level-add:2').props.style)
+    expect(style.color).toBe(color)
+    expect(style.fontSize).toBeGreaterThanOrEqual(11)
+  })
+
   it('has a row for ×, alongside ＋ and −', () => {
     render(<PracticeTable progress={emptyProgress()} />)
     expect(screen.getByTestId('practice-cell-mul:3').props.accessibilityLabel).toBe('3けたのかけ算、まだ')

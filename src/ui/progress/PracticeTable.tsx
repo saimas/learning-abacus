@@ -48,12 +48,12 @@ export function PracticeTable({
             const testID = `practice-cell-${practiceId(kind)}`
             const label = strings.practiceCellLabel(kind, stage, record?.fade)
             // The owner (2026-09-30): a practised kind shows its level under
-            // its word.
+            // its word, drawn like the word, so it reads on every colour.
             const text = (
               <>
                 <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
                 {record === undefined ? null : (
-                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellLevel, onDark && styles.cellTextDark]}>
+                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellText, onDark && styles.cellTextDark]}>
                     {strings.levelName(record.fade)}
                   </Text>
                 )}
@@ -104,12 +104,13 @@ const styles = StyleSheet.create({
   head: { width: 24 },
   axis: { fontSize: fontSizes.caption, color: colors.muted, textAlign: 'center' },
   cellBox: { flex: 1 },
-  cell: { height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  // At least 36 pt, and taller when a level's second line needs it at a
+  // large text size.
+  cell: { minHeight: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   // Home's grid cells are buttons, so they need a real touch target; the
   // read-only progress-screen cells never get this style.
   button: { minHeight: 48 },
   pressed: { opacity: 0.85 },
   cellText: { fontSize: fontSizes.caption, color: colors.ink },
-  cellLevel: { fontSize: 10, color: colors.muted },
   cellTextDark: { color: colors.paper },
 })
