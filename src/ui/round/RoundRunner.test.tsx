@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
-import { problemSteps, problemTargetMs, type MitoriProblem, type Problem } from '@/domain/problem'
-import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
+import type { Problem } from '@/domain/problem'
+import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
-import { setBeads, tintedBeads } from '@/ui/session/testing'
+import { setBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RoundRunner } from './RoundRunner'
 
