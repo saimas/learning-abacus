@@ -239,6 +239,9 @@ describe('multi-digit strings', () => {
     expect(en.practiceCellLabel({ op: 'sub', digits: 3 }, 'unseen')).toBe('3-digit subtraction, not yet')
     expect(ja.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2けたのわり算、まだ')
     expect(en.practiceCellLabel({ op: 'div', digits: 2 }, 'unseen')).toBe('2-digit division, not yet')
+    // The owner (2026-09-30): a practised kind reads its level too.
+    expect(ja.practiceCellLabel({ op: 'add', digits: 2 }, 'fading', 3)).toBe('2けたのたし算、うすい珠、レベル 3')
+    expect(en.practiceCellLabel({ op: 'add', digits: 2 }, 'fading', 3)).toBe('2-digit addition, fading, level 3')
   })
 })
 
@@ -408,6 +411,17 @@ describe('division strings', () => {
 })
 
 // Spec (howto tutorial) §2–3: the やりかた lessons' words.
+// The owner (2026-09-30): the level a kind is at, in the grid and during a
+// round, on the fade ladder's own 0–6 scale.
+describe('level strings', () => {
+  it('names a level, and a round’s level out of the top one', () => {
+    expect(ja.levelName(3)).toBe('レベル 3')
+    expect(en.levelName(3)).toBe('Level 3')
+    expect(ja.roundLevel(0)).toBe('レベル 0/6')
+    expect(en.roundLevel(6)).toBe('Level 6/6')
+  })
+})
+
 describe('lesson strings', () => {
   const lesson = (id: string): Lesson => {
     const found = lessonById(id)

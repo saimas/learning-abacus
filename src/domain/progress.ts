@@ -1,3 +1,4 @@
+import type { FadeLevel } from './fade'
 import { applyPracticeAttempt, newPracticeRecord, type PracticeRecord } from './practice'
 import type { PracticeId } from './problem'
 import type { LessonId } from './lessons'
@@ -55,12 +56,13 @@ export function recordPracticeAttempt(
   id: PracticeId,
   correct: boolean,
   pace: number | null,
+  playedAt: FadeLevel,
   now: number,
 ): Progress {
   const existing = progress.practices[id] ?? newPracticeRecord(now)
   return {
     ...progress,
-    practices: { ...progress.practices, [id]: applyPracticeAttempt(existing, correct, pace, now) },
+    practices: { ...progress.practices, [id]: applyPracticeAttempt(existing, correct, pace, playedAt, now) },
   }
 }
 

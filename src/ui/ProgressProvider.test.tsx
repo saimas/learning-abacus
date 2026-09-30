@@ -60,7 +60,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false, fade: 0 }))
     expect(mockSave).not.toHaveBeenCalled()
   })
 
@@ -78,7 +78,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: false }))
+    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: false, fade: 0 }))
     await waitFor(() => {
       expect(api?.progress?.practices['sub:3']).toBeDefined()
       expect(api?.progress?.daysPracticed).toBe(1)
@@ -99,7 +99,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: true }))
+    act(() => api?.practise({ id: 'sub:3', correct: true, pace: null, assisted: true, fade: 0 }))
     await waitFor(() => {
       expect(api?.progress?.daysPracticed).toBe(1)
       expect(api?.progress?.practices).toEqual({})
@@ -204,7 +204,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false, fade: 0 }))
     expect(mockSave).not.toHaveBeenCalled()
 
     await act(async () => {
@@ -265,7 +265,7 @@ describe('ProgressProvider', () => {
       </ProgressProvider>,
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
-    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false }))
+    act(() => api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false, fade: 0 }))
 
     await act(async () => {
       unmount()
@@ -305,7 +305,7 @@ describe('ProgressProvider', () => {
     )
     await waitFor(() => expect(api?.hydrated).toBe(true))
     await act(async () => {
-      api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false })
+      api?.practise({ id: 'add:1', correct: true, pace: null, assisted: false, fade: 0 })
       await api?.flush()
     })
     const call = mockSave.mock.calls[0]

@@ -41,13 +41,23 @@ export function PracticeTable({
           <Text style={[styles.head, styles.axis]}>{OPERATION_SYMBOL[op]}</Text>
           {DIGITS.map((digits) => {
             const kind: PracticeKind = { op, digits }
-            const stage = practiceStage(progress.practices[practiceId(kind)])
+            const record = progress.practices[practiceId(kind)]
+            const stage = practiceStage(record)
             // Only the mental stage's dark background needs light text for contrast.
             const onDark = stage === 'mental'
             const testID = `practice-cell-${practiceId(kind)}`
-            const label = strings.practiceCellLabel(kind, stage)
+            const label = strings.practiceCellLabel(kind, stage, record?.fade)
+            // The owner (2026-09-30): a practised kind shows its level under
+            // its word, drawn like the word, so it reads on every colour.
             const text = (
-              <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+              <>
+                <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+                {record === undefined ? null : (
+                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellText, onDark && styles.cellTextDark]}>
+                    {strings.levelName(record.fade)}
+                  </Text>
+                )}
+              </>
             )
             if (onChoose) {
               return (
@@ -94,7 +104,9 @@ const styles = StyleSheet.create({
   head: { width: 24 },
   axis: { fontSize: fontSizes.caption, color: colors.muted, textAlign: 'center' },
   cellBox: { flex: 1 },
-  cell: { height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  // At least 36 pt, and taller when a level's second line needs it at a
+  // large text size.
+  cell: { minHeight: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   // Home's grid cells are buttons, so they need a real touch target; the
   // read-only progress-screen cells never get this style.
   button: { minHeight: 48 },

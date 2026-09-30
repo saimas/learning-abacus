@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
-import { problemSteps, problemTargetMs, type MitoriProblem, type Problem } from '@/domain/problem'
-import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_KEYPAD_SCALE } from '@/ui/abacus/geometry'
+import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
+import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
@@ -79,6 +79,12 @@ function movedBy(testID: string) {
 }
 
 describe('RoundRunner', () => {
+  // The owner (2026-09-30): the round shows the level it is played at.
+  it.each([[0, 'レベル 0/6'], [3, 'レベル 3/6']] as const)('shows level %p in its bar', (fade, label) => {
+    renderRound({ fade })
+    expect(screen.getByTestId('round-level').props.children).toBe(label)
+  })
+
   it('plays the problems in order, counting them', () => {
     renderRound()
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
@@ -89,10 +95,12 @@ describe('RoundRunner', () => {
     expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
   })
 
-  it('records each answer against the kind, untimed on the beads', () => {
-    const { onAttempt } = renderRound()
+  // The level goes with each answer: the round holds it, and the record
+  // counts only answers made at its own level (practice.ts).
+  it.each([0, 4] as const)('records each answer against the kind, untimed on the beads, at level %p', (fade) => {
+    const { onAttempt } = renderRound({ fade })
     answerBeads(81)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade })
   })
 
   // Spec (core rounds) §4–§5: 手順を見る opens the problem's steps without
@@ -104,21 +112,12 @@ describe('RoundRunner', () => {
     expect(screen.queryByTestId('correction-answer')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     answerBeads(81)
-    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true })
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true, fade: 0 })
 
     // The next problem starts afresh.
     finishRightAnswerRoll()
     answerBeads(100)
-    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
-  })
-
-  it('records a keypad answer’s pace against the problem’s target', () => {
-    const { onAttempt } = renderRound({ fade: 3 })
-    for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    const pace = onAttempt.mock.calls[0][0].pace
-    expect(pace).toBeGreaterThan(0)
-    expect(pace).toBeLessThan(1)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade: 0 })
   })
 
   it('reviews a miss, then moves on without repeating it', () => {
@@ -323,26 +322,9 @@ describe('RoundRunner with ÷', () => {
     const { onAttempt } = renderRound(divide)
     setBeads(onSoroban, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false, fade: 0 })
     finishRightAnswerRoll()
     expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
-  })
-
-  it('takes the quotient on the keypad', () => {
-    const { onAttempt } = renderRound({ ...divide, fade: 3 })
-    for (const digit of '47') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'div:2', correct: true }))
-  })
-
-  // A keypad answer is checked against the quotient alone, so its review
-  // must read exactly as it always has, with no beads reading appended.
-  it('leaves the keypad review’s answer line to the quotient alone', () => {
-    renderRound({ ...divide, fade: 3 })
-    for (const digit of '48') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    fireEvent.press(screen.getByTestId('review-show'))
-    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
   })
 
   it('moves the highlight to the divisor digit of each 九九 as a miss is stepped through', () => {
@@ -435,7 +417,7 @@ describe('RoundRunner with 見取算', () => {
   it('takes the total on the beads', () => {
     const { onAttempt } = renderRound(mitoriRound)
     answerBeads(96)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'mitori:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'mitori:2', correct: true, pace: null, assisted: false, fade: 0 })
   })
 
   it('highlights the number, and its line, of each move stepped through', () => {
@@ -472,34 +454,26 @@ describe('RoundRunner with 見取算', () => {
     ])
   })
 
-  it('shows the column above the keypad too', () => {
+  // The owner (2026-09-30): every level is answered on the beads, so the
+  // column stays above the soroban however faded its beads are.
+  it('shows the column above the soroban at a faded level too', () => {
     renderRound({ ...mitoriRound, fade: 3 })
     expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
     expect(screen.getByTestId('term-4')).toBeTruthy()
-    // Spec (見取算) §4: the column is what a keypad answer is read from, so
-    // with a renderPrompt it is drawn above the soroban, as in bead mode.
     const drawn = screen.root
       .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
       .map((node) => node.props.testID as string)
     expect(drawn.indexOf('prompt')).toBeLessThan(drawn.indexOf('abacus-frame'))
   })
 
-  it('keeps the soroban before the text prompt in keypad mode for other problems', () => {
-    renderRound({ fade: 3 })
-    const drawn = screen.root
-      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
-      .map((node) => node.props.testID as string)
-    expect(drawn.indexOf('abacus-frame')).toBeLessThan(drawn.indexOf('prompt'))
-  })
-
-  // Review focus: 3けた can total four digits, and the keypad must take them.
-  it('takes a four-digit 3けた total on the keypad', () => {
+  // Review focus: 3けた can total four digits, and the beads must take them.
+  it('takes a four-digit 3けた total on the beads', () => {
     const { onAttempt } = renderRound({
       kind: { op: 'mitori', digits: 3 },
       problems: [{ op: 'mitori', digits: 3, terms: [999, 999, 999, -999, 999] }],
       fade: 3,
     })
-    for (const digit of '2997') fireEvent.press(screen.getByTestId(`key-${digit}`))
+    setBeads(screen.getByTestId, 2997, 4)
     fireEvent.press(screen.getByTestId('submit'))
     expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'mitori:3', correct: true }))
   })
@@ -532,22 +506,6 @@ describe('RoundRunner with 見取算', () => {
       expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
     })
 
-    it.each([
-      ['a short window', 375, 667, SHORT_WINDOW_KEYPAD_SCALE],
-      ['a tall window', 402, 874, 1],
-    ])('caps the keypad soroban for %s too, so the column fits above it', (_window, width, height, scale) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
-      const reactNative = require('react-native')
-      const spy = jest
-        .spyOn(reactNative, 'useWindowDimensions')
-        .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
-      restoreWindow = () => spy.mockRestore()
-      renderRound({ ...mitoriRound, fade: 3 })
-      // Keypad mode's soroban is not inside soroban-wrap, and there is only
-      // one soroban on screen for a 見取算 problem.
-      const frame = screen.getByTestId('abacus-frame')
-      expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
-    })
   })
 })
 
@@ -700,45 +658,6 @@ describe('RoundRunner swiping from problem to problem', () => {
     fireEvent.press(screen.getByTestId('finish-button'))
     expect(onFinish).toHaveBeenCalledTimes(1)
     expect(onQuit).not.toHaveBeenCalled()
-  })
-
-  // Review focus: the next problem's clock starts when it is uncovered.
-  it('times the next problem from its arrival, not from the last answer', () => {
-    let clock = 0
-    const onAttempt = jest.fn()
-    render(
-      <RoundRunner
-        kind={{ op: 'add', digits: 2 }}
-        problems={problems}
-        fade={3}
-        calibrationMs={900}
-        onAttempt={onAttempt}
-        onFinish={jest.fn()}
-        now={() => clock}
-      />,
-    )
-    clock = 1_000
-    for (const digit of '81') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    // The next problem underneath, the answered card still going: its clock
-    // has not started.
-    clock = 5_000
-    passTime(ROLL_HOLD_MS)
-    passUntilSwiping()
-    expect(within(screen.getByTestId('card')).getByTestId('prompt').props.children).toBe('46に54をたす。')
-    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
-    clock = 10_000
-    finishRoll()
-    clock = 12_000
-    for (const digit of '100') fireEvent.press(screen.getByTestId(`key-${digit}`))
-    fireEvent.press(screen.getByTestId('submit'))
-    // pace is latency over the problem's target, so latency = pace × target.
-    // 81 took 1 000 ms from the round's start (clock 0); 100 took 2 000 ms
-    // from its arrival at 10 000 — not the 7 000 since it was laid
-    // underneath, nor the 11 000 since the last answer.
-    const target = (a: number, b: number) => problemTargetMs({ op: 'add', digits: 2, a, b }, 900)
-    expect(onAttempt.mock.calls[0][0].pace * target(23, 58)).toBeCloseTo(1_000, 5)
-    expect(onAttempt.mock.calls[1][0].pace * target(46, 54)).toBeCloseTo(2_000, 5)
   })
 
   // Review focus: leaving mid-roll keeps the answer and fires nothing later.

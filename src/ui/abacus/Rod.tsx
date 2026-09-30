@@ -1,4 +1,4 @@
-import { Pressable, View, type GestureResponderEvent } from 'react-native'
+import { Pressable, StyleSheet, View, type GestureResponderEvent } from 'react-native'
 import { readRod, type BeadRef, type Rod as RodState } from '@/domain/soroban'
 import { Bead, type BeadTint } from './Bead'
 import { beadAt, beadTops, geometryFor } from './geometry'
@@ -9,12 +9,15 @@ import { beadAt, beadTops, geometryFor } from './geometry'
 // With handlers, the whole column is one tap target (the tap's height picks
 // the bead), and VoiceOver treats the rod as an adjustable value. `tints`
 // colours this rod's beads while stepping; a bead listed as both 'group' and
-// 'latest' is drawn 'latest'.
+// 'latest' is drawn 'latest'. `beadOpacity` fades the beads alone, in a
+// layer of their own that takes no touches: the rod's tap surface around
+// them stays whole, since iOS will not hit-test a view below alpha 0.01.
 export function Rod({
   rod,
   index,
   scale = 1,
   label,
+  beadOpacity = 1,
   tints = [],
   onTapBead,
   onAdjust,
@@ -23,6 +26,7 @@ export function Rod({
   index: number
   scale?: number
   label?: string
+  beadOpacity?: number
   tints?: readonly { bead: BeadRef; tint: BeadTint }[]
   onTapBead?: (bead: BeadRef) => void
   onAdjust?: (delta: number) => void
@@ -32,12 +36,12 @@ export function Rod({
   const size = { width: g.rodWidth, height: g.columnHeight }
   const value = { text: String(readRod(rod)) }
   const beads = (
-    <>
+    <View testID="fade-layer" pointerEvents="none" style={{ ...StyleSheet.absoluteFill, opacity: beadOpacity }}>
       <Bead kind="heaven" top={tops.heaven} scale={scale} tint={tintOf(tints, { kind: 'heaven' })} />
       {tops.earth.map((top, i) => (
         <Bead key={i} kind="earth" top={top} scale={scale} tint={tintOf(tints, { kind: 'earth', index: i })} />
       ))}
-    </>
+    </View>
   )
 
   if (onTapBead === undefined) {

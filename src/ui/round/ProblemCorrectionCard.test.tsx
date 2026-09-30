@@ -174,7 +174,7 @@ describe('ProblemCorrectionCard', () => {
     expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
   })
 
-  // Undefined (keypad mode, or any non-÷ problem) leaves the answer line
+  // Undefined (any non-÷ problem) leaves the answer line
   // exactly as it always read.
   it('leaves the answer line alone without expectedBeads', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
@@ -369,8 +369,7 @@ describe('ProblemCorrectionCard telling where the line stepped to sits', () => {
     expect(onActiveLayout).toHaveBeenCalledTimes(2)
   })
 
-  // Keypad mode's lines scroll with the prompt, with no scroll of their own
-  // around them to tell.
+  // Lines with no scroll of their own around them have nothing to tell.
   it('lays no line out for it outside such a scroll', () => {
     render(<ProblemCorrectionCard problem={problem} expected={1692} activeGroup={1} />)
     expect(screen.getByTestId('correction-product-1').props.onLayout).toBeUndefined()

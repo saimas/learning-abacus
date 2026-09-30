@@ -45,13 +45,29 @@ describe('Abacus', () => {
 
   it('keeps the rods and beam at F5 while only the beads vanish', () => {
     // F5 is "empty frame": the learner needs rods to imagine beads on.
-    const { getByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={5} />)
+    const { getByTestId, getAllByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={5} />)
     expect(getByTestId('deck-lines')).toBeTruthy()
     expect(getByTestId('frame-rod-1')).toBeTruthy()
-    expect(getByTestId('fade-layer').props.style).toEqual(expect.objectContaining({ opacity: 0 }))
+    for (const layer of getAllByTestId('fade-layer')) expect(layer.props.style.opacity).toBe(0)
   })
 
-  it('keeps its layout at F6 so the prompt and keypad do not jump', () => {
+  // iOS leaves a view below alpha 0.01, and everything in it, out when it
+  // hit-tests: seen on the simulator, beads that could not be seen could not
+  // be moved either. So each rod's tap surface stays out of the faded layer,
+  // and only its beads fade (the owner, 2026-09-30: the fingers keep moving
+  // the beads however faded they are).
+  it.each([5, 6] as const)('keeps every rod’s tap surface out of the faded layer at F%p', (fade) => {
+    render(<Abacus soroban={emptySoroban(2)} fade={fade} onTapBead={jest.fn()} />)
+    for (const rod of screen.getAllByTestId(/^rod-\d+$/)) {
+      for (let node: typeof rod | null = rod; node !== null; node = node.parent) {
+        const style = typeof node.props.style === 'function' ? undefined : StyleSheet.flatten(node.props.style)
+        expect(style?.opacity ?? 1).toBeGreaterThanOrEqual(0.01)
+      }
+      expect(StyleSheet.flatten(within(rod).getByTestId('fade-layer').props.style).opacity).toBe(0)
+    }
+  })
+
+  it('keeps its layout at F6 so the prompt and buttons do not jump', () => {
     const { getAllByTestId, queryByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={6} />)
     expect(queryByTestId('deck-lines')).toBeNull()
     expect(getAllByTestId(/^rod-\d+$/)).toHaveLength(2)

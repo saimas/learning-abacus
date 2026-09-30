@@ -7,7 +7,8 @@ network calls at runtime. Progress is stored on-device only.
 
 The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, and 見取算 (a column of
 five), in rounds of ten, started from the grid on Home. The learner works each problem on the
-soroban first; the beads fade as they get faster, until the work is mental.
+soroban first; the beads fade as the answers keep coming right, until they cannot be seen at all
+and the fingers still move them.
 
 ## The 180 single-rod moves
 
@@ -24,18 +25,21 @@ each is classified into one of four technique classes by `classify()` in `src/do
 | Both | two substitutions in one move | 40 |
 
 Every problem's steps are these moves: 手順を見る explains each one by its class (「十の繰上：8をたす
-= +10 − 2」), and a round's time target is built from the per-move time targets.
+= +10 − 2」).
 
 ## The fade ladder
 
 Each kind of problem (for example 2-digit addition, `add:2`) keeps one record, since its problems
 are generated fresh every time. Seven fade levels (F0-F6) map to five renderings — solid beads,
 dimmed, ghost outline, empty frame, then nothing — with the lowest three differing only in
-coaching. Five fast right answers in a row promote a level; two misses in a row demote one. F6
-means that kind of problem is now done entirely in the head.
+coaching. Five right answers in a row promote a level; two misses in a row demote one. A round
+keeps the level it started at, and moves the record one level at most, so none is skipped. F6
+means the beads are gone entirely: the learner works from the soroban in their head.
 
-While the beads are solid (F0-F2) the learner answers by tapping beads and pressing こたえる,
-untimed; from F3 on they type the answer on a built-in keypad.
+At every level the learner answers by tapping beads and pressing こたえる, untimed. As the beads
+fade they still move where they would be, invisible or not, so the fingers keep working the
+soroban (the owner, 2026-09-30); the number they read shows once the answer is in. Each round's
+bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
 
 ## けたの練習
 

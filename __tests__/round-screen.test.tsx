@@ -1,4 +1,4 @@
-import { waitFor, render } from '@testing-library/react-native'
+import { waitFor, render, within } from '@testing-library/react-native'
 import { emptyProgress } from '@/domain/progress'
 import * as store from '@/storage/progressStore'
 import Round from '../app/round'
@@ -80,8 +80,12 @@ describe('Round screen', () => {
     })
     const { getByTestId, queryByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
-    expect(getByTestId('key-1')).toBeTruthy()
-    expect(queryByTestId('soroban-wrap')).toBeNull()
+    // The owner (2026-09-30): answered on the beads at every level, the
+    // beads drawn as faded as the level says (35% at level 3).
+    expect(queryByTestId('key-1')).toBeNull()
+    for (const layer of within(getByTestId('soroban-wrap')).getAllByTestId('fade-layer')) {
+      expect(layer.props.style.opacity).toBe(0.35)
+    }
   })
 
   // Spec (howto tutorial) §4: a × or ÷ kind never played opens its own

@@ -1,5 +1,6 @@
 import { classify, type Atom, type AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+import { MAX_FADE, type FadeLevel } from '@/domain/fade'
 import {
   answerOf,
   digitAt,
@@ -448,7 +449,13 @@ export const ja = {
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
-  practiceCellLabel: (kind: PracticeKind, stage: PracticeStage) => `${roundName(kind)}、${PRACTICE_STAGE[stage]}`,
+  // A grid cell as VoiceOver reads it, with its level once practised.
+  practiceCellLabel: (kind: PracticeKind, stage: PracticeStage, level?: FadeLevel) =>
+    `${roundName(kind)}、${PRACTICE_STAGE[stage]}${level === undefined ? '' : `、レベル ${level}`}`,
+  // The owner (2026-09-30): the level a kind is at, on the fade ladder's own
+  // 0–6, in the grid and, out of the top one, during a round.
+  levelName: (level: FadeLevel) => `レベル ${level}`,
+  roundLevel: (level: FadeLevel) => `レベル ${level}/${MAX_FADE}`,
 
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,

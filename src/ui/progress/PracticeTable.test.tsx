@@ -25,8 +25,30 @@ describe('PracticeTable', () => {
   it('shows a cell per kind, labelled for VoiceOver', () => {
     const progress = { ...emptyProgress(), practices: { 'add:2': { ...newPracticeRecord(0), fade: 4 as const } } }
     render(<PracticeTable progress={progress} />)
-    expect(screen.getByTestId('practice-cell-add:2').props.accessibilityLabel).toBe('2けたのたし算、うすい珠')
+    expect(screen.getByTestId('practice-cell-add:2').props.accessibilityLabel).toBe('2けたのたし算、うすい珠、レベル 4')
     expect(screen.getByTestId('practice-cell-sub:3').props.accessibilityLabel).toBe('3けたのひき算、まだ')
+  })
+
+  // The owner (2026-09-30): each practised kind shows its level under its
+  // word; a kind not yet practised has none.
+  it('shows each practised kind’s level under its word', () => {
+    const progress = { ...emptyProgress(), practices: { 'add:2': { ...newPracticeRecord(0), fade: 4 as const } } }
+    render(<PracticeTable progress={progress} />)
+    expect(screen.getByTestId('practice-level-add:2').props.children).toBe('レベル 4')
+    expect(screen.queryByTestId('practice-level-sub:3')).toBeNull()
+  })
+
+  // Review (2026-09-30): muted 10 pt text read at 1.3:1 on the うすい珠
+  // cell. The level is drawn like the cell's word, in its colour and size.
+  it.each([
+    [3, colors.ink],
+    [6, colors.paper],
+  ] as const)('draws the level at %p as readably as the cell’s word', (fade, color) => {
+    const progress = { ...emptyProgress(), practices: { 'add:2': { ...newPracticeRecord(0), fade } } }
+    render(<PracticeTable progress={progress} />)
+    const style = StyleSheet.flatten(screen.getByTestId('practice-level-add:2').props.style)
+    expect(style.color).toBe(color)
+    expect(style.fontSize).toBeGreaterThanOrEqual(11)
   })
 
   it('has a row for ×, alongside ＋ and −', () => {
