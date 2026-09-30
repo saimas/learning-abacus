@@ -1,11 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useStrings } from '@/i18n'
 import { Icon } from '@/ui/kit/Icon'
+import type { FadeLevel } from '@/domain/fade'
 import { colors, fontSizes, space } from '@/ui/theme'
 
 // A round is a count of problems, not a stretch of time: a segment per
-// problem, filled once answered, and "3 / 10" for the one on screen.
-export function RoundTrack({ index, total, onQuit }: { index: number; total: number; onQuit?: () => void }) {
+// problem, filled once answered, and "3 / 10" for the one on screen. Beside
+// it, the level the round is played at (the owner, 2026-09-30).
+export function RoundTrack({
+  index,
+  total,
+  level,
+  onQuit,
+}: {
+  index: number
+  total: number
+  level: FadeLevel
+  onQuit?: () => void
+}) {
   const strings = useStrings()
   return (
     <View style={styles.bar}>
@@ -25,6 +37,9 @@ export function RoundTrack({ index, total, onQuit }: { index: number; total: num
           <View key={i} style={[styles.segment, i < index && styles.done]} />
         ))}
       </View>
+      <Text testID="round-level" style={styles.label}>
+        {strings.roundLevel(level)}
+      </Text>
       <Text testID="round-count" style={styles.label}>
         {strings.roundCount(Math.min(index + 1, total), total)}
       </Text>

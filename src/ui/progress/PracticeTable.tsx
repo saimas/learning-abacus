@@ -41,13 +41,23 @@ export function PracticeTable({
           <Text style={[styles.head, styles.axis]}>{OPERATION_SYMBOL[op]}</Text>
           {DIGITS.map((digits) => {
             const kind: PracticeKind = { op, digits }
-            const stage = practiceStage(progress.practices[practiceId(kind)])
+            const record = progress.practices[practiceId(kind)]
+            const stage = practiceStage(record)
             // Only the mental stage's dark background needs light text for contrast.
             const onDark = stage === 'mental'
             const testID = `practice-cell-${practiceId(kind)}`
-            const label = strings.practiceCellLabel(kind, stage)
+            const label = strings.practiceCellLabel(kind, stage, record?.fade)
+            // The owner (2026-09-30): a practised kind shows its level under
+            // its word.
             const text = (
-              <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+              <>
+                <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+                {record === undefined ? null : (
+                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellLevel, onDark && styles.cellTextDark]}>
+                    {strings.levelName(record.fade)}
+                  </Text>
+                )}
+              </>
             )
             if (onChoose) {
               return (
@@ -100,5 +110,6 @@ const styles = StyleSheet.create({
   button: { minHeight: 48 },
   pressed: { opacity: 0.85 },
   cellText: { fontSize: fontSizes.caption, color: colors.ink },
+  cellLevel: { fontSize: 10, color: colors.muted },
   cellTextDark: { color: colors.paper },
 })

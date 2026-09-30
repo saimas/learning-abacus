@@ -79,6 +79,12 @@ function movedBy(testID: string) {
 }
 
 describe('RoundRunner', () => {
+  // The owner (2026-09-30): the round shows the level it is played at.
+  it.each([[0, 'レベル 0/6'], [3, 'レベル 3/6']] as const)('shows level %p in its bar', (fade, label) => {
+    renderRound({ fade })
+    expect(screen.getByTestId('round-level').props.children).toBe(label)
+  })
+
   it('plays the problems in order, counting them', () => {
     renderRound()
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')

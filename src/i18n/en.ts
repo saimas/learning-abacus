@@ -1,5 +1,6 @@
 import type { Atom, AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
+import { MAX_FADE } from '@/domain/fade'
 import {
   answerOf,
   digitAt,
@@ -436,7 +437,10 @@ export const en: Strings = {
   roundSection: 'Bigger numbers',
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
-  practiceCellLabel: (kind, stage) => `${roundName(kind)}, ${PRACTICE_STAGE[stage]}`,
+  practiceCellLabel: (kind, stage, level) =>
+    `${roundName(kind)}, ${PRACTICE_STAGE[stage]}${level === undefined ? '' : `, level ${level}`}`,
+  levelName: (level) => `Level ${level}`,
+  roundLevel: (level) => `Level ${level}/${MAX_FADE}`,
 
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,

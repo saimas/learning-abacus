@@ -180,7 +180,7 @@ export function RoundRunner({
   const quit = index < problems.length ? onQuit : onQuit && finish
   return (
     <View style={styles.practice}>
-      <RoundTrack index={index} total={problems.length} onQuit={quit} />
+      <RoundTrack index={index} total={problems.length} level={fade} onQuit={quit} />
       <View style={styles.practice}>
         {cards.map((at) => (
           <Animated.View
