@@ -80,7 +80,7 @@ describe('dayKey', () => {
 describe('recordPracticeAttempt', () => {
   it('starts a record for the kind and leaves the calibration alone', () => {
     const before = emptyProgress()
-    const after = recordPracticeAttempt(before, 'add:2', false, 0.9, 1_000)
+    const after = recordPracticeAttempt(before, 'add:2', false, 0.9, 0, 1_000)
     expect(after.practices['add:2']).toEqual({ fade: 0, consecutiveCorrect: 0, consecutiveWrong: 1, lastPractisedAt: 1_000 })
     expect(after.calibrationMs).toBe(before.calibrationMs)
   })

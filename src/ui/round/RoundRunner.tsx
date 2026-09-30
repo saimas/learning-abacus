@@ -142,7 +142,7 @@ export function RoundRunner({
       const pace = latencyMs === null ? null : latencyMs / problemTargetMs(problem, calibrationMs)
       // An answer with help counts in the tally below all the same; it is the
       // record that leaves it out (spec (core rounds) §5).
-      onAttempt({ id: practiceId(kind), correct, pace, assisted })
+      onAttempt({ id: practiceId(kind), correct, pace, assisted, fade })
       setTally((previous) => ({
         answered: previous.answered + 1,
         correct: previous.correct + (correct ? 1 : 0),

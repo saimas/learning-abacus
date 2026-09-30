@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
-import type { Problem } from '@/domain/problem'
+import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
-import { setBeads } from '@/ui/session/testing'
+import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RoundRunner } from './RoundRunner'
 
@@ -95,10 +95,12 @@ describe('RoundRunner', () => {
     expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
   })
 
-  it('records each answer against the kind, untimed on the beads', () => {
-    const { onAttempt } = renderRound()
+  // The level goes with each answer: the round holds it, and the record
+  // counts only answers made at its own level (practice.ts).
+  it.each([0, 4] as const)('records each answer against the kind, untimed on the beads, at level %p', (fade) => {
+    const { onAttempt } = renderRound({ fade })
     answerBeads(81)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade })
   })
 
   // Spec (core rounds) §4–§5: 手順を見る opens the problem's steps without
@@ -110,12 +112,12 @@ describe('RoundRunner', () => {
     expect(screen.queryByTestId('correction-answer')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     answerBeads(81)
-    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true })
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true, fade: 0 })
 
     // The next problem starts afresh.
     finishRightAnswerRoll()
     answerBeads(100)
-    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade: 0 })
   })
 
   it('reviews a miss, then moves on without repeating it', () => {
@@ -320,7 +322,7 @@ describe('RoundRunner with ÷', () => {
     const { onAttempt } = renderRound(divide)
     setBeads(onSoroban, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false, fade: 0 })
     finishRightAnswerRoll()
     expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
   })
@@ -371,6 +373,140 @@ describe('RoundRunner with ÷', () => {
     restoreWindow = () => {}
   })
 
+  it.each([
+    ['a short window', 375, 667, OPERAND_SHORT_WINDOW_SCALE],
+    ['a tall window', 402, 874, OPERAND_MAX_SCALE],
+  ])('fits a 3けた problem’s seven rods and the board to %s', (_window, width, height, board) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
+    const reactNative = require('react-native')
+    const spy = jest
+      .spyOn(reactNative, 'useWindowDimensions')
+      .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+    restoreWindow = () => spy.mockRestore()
+    renderRound({ kind: { op: 'div', digits: 3 }, problems: [{ op: 'div', digits: 3, a: 202032, b: 976 }] })
+    const padding = (container: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
+    expect(onSoroban('rod-6')).toBeTruthy()
+    expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * beadModeScale(7, width - 40))
+    expect(padding('operand-b')).toBeCloseTo(FRAME_PADDING * board)
+  })
+})
+
+// Spec (見取算) §2: the problem is a column above the soroban, and stepping
+// through a miss highlights the number each move belongs to.
+describe('RoundRunner with 見取算', () => {
+  const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
+  const mitoriRound: Partial<Parameters<typeof RoundRunner>[0]> = { kind: { op: 'mitori', digits: 2 }, problems: [column] }
+  const lit = () =>
+    [0, 1, 2, 3, 4].filter((row) => {
+      const number = within(screen.getByTestId(`term-${row}`)).getByText(String(Math.abs(column.terms[row] ?? 0)))
+      return StyleSheet.flatten(number.props.style).color === colors.accent
+    })
+  // How many bead steps the moves of number `term` take.
+  const stepsOf = (term: number) =>
+    problemSteps(column).reduce((n, g) => (g.kind === 'column' && g.term === term ? n + g.steps.length : n), 0)
+
+  it('shows the column, read as one sentence, and the soroban starting at the first number', () => {
+    renderRound(mitoriRound)
+    expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
+    expect(screen.getByTestId('rod-1').props.accessibilityValue.text).toBe('4')
+    expect(screen.getByTestId('rod-2').props.accessibilityValue.text).toBe('7')
+    expect(lit()).toEqual([])
+  })
+
+  it('takes the total on the beads', () => {
+    const { onAttempt } = renderRound(mitoriRound)
+    answerBeads(96)
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'mitori:2', correct: true, pace: null, assisted: false, fade: 0 })
+  })
+
+  it('highlights the number, and its line, of each move stepped through', () => {
+    renderRound(mitoriRound)
+    answerBeads(95)
+    expect(lit()).toEqual([])
+    fireEvent.press(screen.getByTestId('step-next'))
+    expect(lit()).toEqual([1])
+    expect(StyleSheet.flatten(screen.getByTestId('correction-term-1-1').props.style)?.color).toBe(colors.accent)
+    // Past 30's moves, onto 23's.
+    for (let i = 1; i < stepsOf(1) + 1; i++) fireEvent.press(screen.getByTestId('step-next'))
+    expect(lit()).toEqual([2])
+    fireEvent.press(screen.getByTestId('step-restart'))
+    expect(lit()).toEqual([])
+  })
+
+  // The owner (2026-09-27): it was hard to tell which clicks were −59's and
+  // which +39's. A number's beads stay coloured across its rods, and its
+  // heading and lines are shaded together, until the next number begins.
+  it('keeps a number coloured and shaded as one, across its rods', () => {
+    renderRound(mitoriRound)
+    answerBeads(95)
+    const tinted = () => tintedBeads(screen.getByTestId('soroban-wrap'), 3)
+    const shaded = (testID: string) =>
+      StyleSheet.flatten(screen.getByTestId(testID).props.style)?.backgroundColor === colors.accentSoft
+    // Into −23: its tens move (rod 1), then the first step of its ones (rod 2).
+    for (let i = 0; i < stepsOf(1) + 2; i++) fireEvent.press(screen.getByTestId('step-next'))
+    expect(tinted().some((bead) => bead.startsWith('1 ') && bead.endsWith(' group'))).toBe(true)
+    expect(tinted().some((bead) => bead.startsWith('2 ') && bead.endsWith(' latest'))).toBe(true)
+    expect([shaded('correction-heading-0'), shaded('correction-heading-1'), shaded('correction-term-2-1')]).toEqual([
+      false,
+      true,
+      true,
+    ])
+  })
+
+  // The owner (2026-09-30): every level is answered on the beads, so the
+  // column stays above the soroban however faded its beads are.
+  it('shows the column above the soroban at a faded level too', () => {
+    renderRound({ ...mitoriRound, fade: 3 })
+    expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
+    expect(screen.getByTestId('term-4')).toBeTruthy()
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('prompt')).toBeLessThan(drawn.indexOf('abacus-frame'))
+  })
+
+  // Review focus: 3けた can total four digits, and the beads must take them.
+  it('takes a four-digit 3けた total on the beads', () => {
+    const { onAttempt } = renderRound({
+      kind: { op: 'mitori', digits: 3 },
+      problems: [{ op: 'mitori', digits: 3, terms: [999, 999, 999, -999, 999] }],
+      fade: 3,
+    })
+    setBeads(screen.getByTestId, 2997, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onAttempt).toHaveBeenCalledWith(expect.objectContaining({ id: 'mitori:3', correct: true }))
+  })
+
+  it('draws a two-number problem’s prompt as text, with no column', () => {
+    renderRound()
+    expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(screen.queryByTestId('term-0')).toBeNull()
+  })
+
+  describe('on a short window', () => {
+    let restoreWindow = () => {}
+    afterEach(() => {
+      restoreWindow()
+      restoreWindow = () => {}
+    })
+
+    it.each([
+      ['a short window', 375, 667, SHORT_WINDOW_BEAD_SCALE],
+      ['a tall window', 402, 874, beadModeScale(3, 402 - 40)],
+    ])('sizes the soroban for %s, as with a board', (_window, width, height, scale) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- as in the × test above
+      const reactNative = require('react-native')
+      const spy = jest
+        .spyOn(reactNative, 'useWindowDimensions')
+        .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
+      restoreWindow = () => spy.mockRestore()
+      renderRound(mitoriRound)
+      const frame = within(screen.getByTestId('soroban-wrap')).getByTestId('abacus-frame')
+      expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
+    })
+
+  })
 })
 
 // Spec (card swipe, 2026-09-29): the next problem is already in its place

@@ -73,7 +73,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     // streaks as they were.
     const withAttempt = attempt.assisted
       ? latest.current
-      : recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, now)
+      : recordPracticeAttempt(latest.current, attempt.id, attempt.correct, attempt.pace, attempt.fade, now)
     // A round of problems is practice too, so it stamps the day's seal.
     const next = markDayPracticed(withAttempt, dayKey(now))
     latest.current = next

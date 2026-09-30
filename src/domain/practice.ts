@@ -17,23 +17,37 @@ export type PracticeRecord = {
 // null for an untimed answer, one made on the beads. `assisted` marks an
 // answer given after 手順を見る (spec (core rounds) §5): the learner had the
 // steps in front of them, so it is not evidence of fluency and must not move
-// the record's fade either way.
-export type PracticeAttempt = { id: PracticeId; correct: boolean; pace: number | null; assisted: boolean }
+// the record's fade either way. `fade` is the level the answer was made at:
+// a round holds its level, so the record can move on before the round ends.
+export type PracticeAttempt = {
+  id: PracticeId
+  correct: boolean
+  pace: number | null
+  assisted: boolean
+  fade: FadeLevel
+}
 
 export function newPracticeRecord(now: number): PracticeRecord {
   return { fade: 0, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: now }
 }
 
-// The fade ladder (fade.ts): five fast correct answers in a row promote one
-// level, and two misses demote one. An untimed answer, one made on the beads,
-// counts on accuracy alone, and every level is answered on the beads (the
-// owner, 2026-09-30: fingers keep moving the beads however faded they are).
+// The fade ladder (fade.ts): five correct answers in a row promote one level,
+// and two misses demote one. An untimed answer, one made on the beads, counts
+// on accuracy alone, and every level is answered on the beads (the owner,
+// 2026-09-30: fingers keep moving the beads however faded they are).
+//
+// An answer made at another level than the record's (`playedAt`) moves
+// nothing: the record moved on earlier in the same round, which is still
+// played at the old level. So a round moves the record one level at most,
+// and no level is skipped.
 export function applyPracticeAttempt(
   record: PracticeRecord,
   correct: boolean,
   pace: number | null,
+  playedAt: FadeLevel,
   now: number,
 ): PracticeRecord {
+  if (playedAt !== record.fade) return { ...record, lastPractisedAt: now }
   const waived = pace === null
   const fastEnough = correct && (waived || (pace !== null && pace < 1))
   const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
