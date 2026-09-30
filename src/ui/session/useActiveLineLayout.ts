@@ -5,12 +5,11 @@ import type { LayoutChangeEvent } from 'react-native'
 // top, measured from the top of the card's own lines, and its height.
 export type ActiveLayout = (y: number, height: number) => void
 
-// The owner's request (2026-09-23): in bead mode the step lines fill the
+// The owner's request (2026-09-23): the step lines fill the
 // space below ◀ ▶ and scroll there on their own (ScrollingStepLines), so the
 // line stepped to has to be scrolled into view, and only the card knows
 // where its lines are. That scroll gives the card inside it this, to tell it
-// where the active line sits. Outside it, as in keypad mode, where the lines
-// scroll with the prompt, there is nothing to tell. It is a context rather
+// where the active line sits. Outside it there is nothing to tell. It is a context rather
 // than a prop passed on through renderSteps because the scroll reads its
 // refs to answer, and React Compiler's rules allow handing such a function
 // on as a JSX prop, never through a call made while rendering.

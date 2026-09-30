@@ -10,8 +10,8 @@ export type Exercise = {
   expected: number
   // What the soroban reads when the question is done, where that is not
   // `expected`. Spec (division) §2: 商除法 leaves the quotient on the rods
-  // followed by N + 1 zeros (1692 ÷ 36 ends at 47000), while the keypad
-  // takes the quotient itself (47). Absent everywhere else, since the beads
+  // followed by N + 1 zeros (1692 ÷ 36 ends at 47000), while `expected`
+  // stays the quotient itself (47). Absent everywhere else, since the beads
   // end at the answer.
   expectedBeads?: number
   // The soroban at the start, then after each step, for the replay.

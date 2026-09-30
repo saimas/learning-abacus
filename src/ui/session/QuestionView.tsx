@@ -21,9 +21,9 @@ export type Submission = { correct: boolean; latencyMs: number | null; t: number
 
 // Outside a round (a lesson's やってみよう, spec (howto tutorial) §2): once
 // the question is answered, right or wrong, its bottom row offers leaving,
-// or another problem through onMoveOn, in place of もどす/こたえる, the
-// keypad, or つぎへ. A round leaves it out: a right answer rolls on by
-// itself, and a miss has つぎへ.
+// or another problem through onMoveOn, in place of もどす/こたえる or つぎへ.
+// A round leaves it out: a right answer rolls on by itself, and a miss has
+// つぎへ.
 export type AfterAnswer = { leaveLabel: string; onLeave: () => void; againLabel: string }
 
 // A missed question held on screen until つぎへ: only whether its step panel
@@ -107,8 +107,8 @@ export function QuestionView({
   // The step panel's walk through the move, one bead move at a time, on the
   // same soroban.
   const stepper = useStepper(exercise.states)
-  // The soroban as the learner has moved it in bead mode. null means
-  // untouched: it shows the question's starting value.
+  // The soroban as the learner has moved it. null means untouched: it shows
+  // the question's starting value.
   const [beads, setBeads] = useState<Soroban | null>(null)
   // When the last press that つぎへ or こたえる can sit under landed (the
   // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
@@ -204,7 +204,7 @@ export function QuestionView({
   }
 
   // Back to the question as the learner left it: the panel never touched
-  // their beads or typed answer, only the stepper, which goes back to not
+  // their beads, only the stepper, which goes back to not
   // stepping. こたえる comes back under とじる, hence the guard.
   function closeSteps() {
     guardFrom.current = now()
@@ -347,9 +347,10 @@ export function QuestionView({
 
   // Layout A: the soroban takes the place a keypad would, enlarged and within
   // thumb reach, at every level (the owner, 2026-09-30: the fingers keep
-  // moving the beads however faded they are). Only the prompt above it and the step panel's lines below
-  // the controls scroll, so the soroban, the step controls under it and
-  // the buttons stay on screen even on a 375 × 667 phone.
+  // moving the beads however faded they are). Only the prompt above it and
+  // the step panel's lines below the controls scroll, so the soroban, the
+  // step controls under it and the buttons stay on screen even on a
+  // 375 × 667 phone.
   // The beads take no taps while the question is answered (under review)
   // or while they show the steps before an answer.
   const locked = review !== null || beforeAnswer || answeredRight

@@ -9,9 +9,8 @@ import { ActiveLayoutContext } from './useActiveLineLayout'
 // explains one, after a miss and before an answer. It comes in two
 // parts because they live in different places on the question screen. The
 // controls stay pinned in the fixed area just above the bottom buttons,
-// where the thumb is, so ◀ ▶ can never scroll off a short phone. In keypad
-// mode the lines scroll with the prompt above the soroban. In bead mode
-// they fill the space below the controls and scroll there on their own
+// where the thumb is, so ◀ ▶ can never scroll off a short phone. The lines
+// fill the space below the controls and scroll there on their own
 // (ScrollingStepLines), since above the soroban they only had room for two
 // lines while the screen below ◀ ▶ stood empty (the owner, 2026-09-23).
 

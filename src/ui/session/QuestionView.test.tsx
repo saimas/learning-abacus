@@ -426,8 +426,8 @@ describe('QuestionView offering 手順を見る where the steps appear', () => {
 
 // The owner's request (2026-09-23): the step lines sat in the small scroll
 // above the soroban, two lines at a time, while the screen below ◀ ▶ was
-// empty. In bead mode they now fill that space, scrolling on their own, and
-// the line stepped to is scrolled into view. Keypad mode is unchanged.
+// empty. They now fill that space, scrolling on their own, and the line
+// stepped to is scrolled into view.
 describe('QuestionView with the step lines below the controls', () => {
   // Every testID on screen, in the order they are drawn.
   const order = () =>

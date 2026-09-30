@@ -59,7 +59,7 @@ describe('Abacus', () => {
   it.each([5, 6] as const)('keeps every rod’s tap surface out of the faded layer at F%p', (fade) => {
     render(<Abacus soroban={emptySoroban(2)} fade={fade} onTapBead={jest.fn()} />)
     for (const rod of screen.getAllByTestId(/^rod-\d+$/)) {
-      for (let node = rod.parent; node !== null; node = node.parent) {
+      for (let node: typeof rod | null = rod; node !== null; node = node.parent) {
         const style = typeof node.props.style === 'function' ? undefined : StyleSheet.flatten(node.props.style)
         expect(style?.opacity ?? 1).toBeGreaterThanOrEqual(0.01)
       }
@@ -67,7 +67,7 @@ describe('Abacus', () => {
     }
   })
 
-  it('keeps its layout at F6 so the prompt and keypad do not jump', () => {
+  it('keeps its layout at F6 so the prompt and buttons do not jump', () => {
     const { getAllByTestId, queryByTestId } = render(<Abacus soroban={emptySoroban(2)} fade={6} />)
     expect(queryByTestId('deck-lines')).toBeNull()
     expect(getAllByTestId(/^rod-\d+$/)).toHaveLength(2)
