@@ -1,4 +1,4 @@
-import { answerModeForFade, MAX_FADE, nextFadeLevel, type FadeLevel } from './fade'
+import { MAX_FADE, nextFadeLevel, type FadeLevel } from './fade'
 import type { PracticeId } from './problem'
 
 // Spec (multi-digit ＋ −) §5: one record per practice kind. Problems are
@@ -25,15 +25,16 @@ export function newPracticeRecord(now: number): PracticeRecord {
 }
 
 // The fade ladder (fade.ts): five fast correct answers in a row promote one
-// level, two misses demote one, and an untimed bead answer counts on accuracy
-// alone only while the record's own level is still a bead level.
+// level, and two misses demote one. An untimed answer, one made on the beads,
+// counts on accuracy alone, and every level is answered on the beads (the
+// owner, 2026-09-30: fingers keep moving the beads however faded they are).
 export function applyPracticeAttempt(
   record: PracticeRecord,
   correct: boolean,
   pace: number | null,
   now: number,
 ): PracticeRecord {
-  const waived = pace === null && answerModeForFade(record.fade) === 'beads'
+  const waived = pace === null
   const fastEnough = correct && (waived || (pace !== null && pace < 1))
   const consecutiveCorrect = fastEnough ? record.consecutiveCorrect + 1 : 0
   const consecutiveWrong = correct ? 0 : record.consecutiveWrong + 1

@@ -1,24 +1,16 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { stepColouring, type Exercise } from '@/domain/exercise'
-import { answerModeForFade, type Coaching, type FadeLevel } from '@/domain/fade'
+import type { Coaching, FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { Abacus, tintsFor } from '@/ui/abacus/Abacus'
-import {
-  beadModeScale,
-  scaleToFit,
-  SHORT_WINDOW_BEAD_SCALE,
-  SHORT_WINDOW_HEIGHT,
-  SHORT_WINDOW_KEYPAD_SCALE,
-} from '@/ui/abacus/geometry'
-import { AnswerPad } from '@/ui/answer/AnswerPad'
+import { beadModeScale, SHORT_WINDOW_BEAD_SCALE, SHORT_WINDOW_HEIGHT } from '@/ui/abacus/geometry'
 import { BUTTON_HEIGHT, Button } from '@/ui/kit/Button'
-import { parseAnswer } from '@/ui/parseAnswer'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 import { Batsu } from './Batsu'
 import { Maru } from './Maru'
-import { ScrollingStepLines, STEP_CONTROLS_HEIGHT, StepControls, StepLines } from './StepPanel'
+import { ScrollingStepLines, STEP_CONTROLS_HEIGHT, StepControls } from './StepPanel'
 import { useStepper } from './useStepper'
 
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
@@ -74,24 +66,21 @@ export function QuestionView({
   // learner has just stepped to, counted from 0, or undefined at the start
   // (where the panel opens) or when not stepping. `showAnswer` says whether
   // the lines give the answer, which they do only once the question has
-  // been answered. In bead mode the lines scroll on their own, and the
-  // card's highlighted line reports where it sits so it can be scrolled into
-  // view (see useActiveLineLayout).
+  // been answered. The lines scroll on their own, and the card's highlighted
+  // line reports where it sits so it can be scrolled into view (see
+  // useActiveLineLayout).
   // `given` is what the learner's beads read, for a miss on the beads whose
   // steps have taken those beads over (see `given` below).
   renderSteps: (options: { activeStep: number | undefined; showAnswer: boolean; given?: number }) => ReactNode
   // A × problem's operand board, which shows the two numbers that 両落とし
   // leaves off the soroban, or a ÷ problem's, which shows the divisor,
-  // following the same `activeStep` as the step lines. Bead mode draws it
-  // right under the soroban; keypad mode after the prompt. Nothing for any
-  // other question.
+  // following the same `activeStep` as the step lines, drawn right under
+  // the soroban. Nothing for any other question.
   renderBeneath?: (activeStep: number | undefined) => ReactNode
   // Spec (見取算) §4: a problem drawn in place of the text prompt — a 見取算
   // column — following the same `activeStep` as the step lines. `prompt`
-  // is not drawn when this is given. Drawn above the soroban in both the
-  // bead and keypad layouts (keypad mode's text prompt, for every other
-  // question, stays below the soroban as it always has). Nothing for any
-  // other question.
+  // is not drawn when this is given. Drawn above the soroban, where the text
+  // prompt stands for every other question.
   renderPrompt?: (activeStep: number | undefined) => ReactNode
   shownAt: number
   now: () => number
@@ -101,7 +90,6 @@ export function QuestionView({
 }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
-  const [answer, setAnswer] = useState('')
   // Non-null while a missed question is held on screen for review.
   const [review, setReview] = useState<Review | null>(null)
   // Spec (roll) §3: a right answer stays on screen under its 〇 until the
@@ -126,11 +114,10 @@ export function QuestionView({
   // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
   const guardFrom = useRef<number | null>(null)
 
-  const mode = answerModeForFade(fade)
   const start = setValue(emptySoroban(exercise.rods), exercise.start)
   const shownBeads = beads ?? start
-  // An untouched soroban is not an answer, the same rule as a blank keypad:
-  // a stray tap on こたえる must not burn an attempt.
+  // An untouched soroban is not an answer: a stray tap on こたえる must not
+  // burn an attempt.
   const moved = readValue(shownBeads) !== exercise.start
   // The screen's gutters are space.xl on each side (Screen).
   const room = width - 2 * space.xl
@@ -142,47 +129,34 @@ export function QuestionView({
     (renderBeneath !== undefined || renderPrompt !== undefined) && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
       : fittedBeadScale
-  // Keypad mode draws the soroban at scale 1, but a 3×3 product's six rods
-  // (416 pt), or a 3けた division's seven, are wider than a 375 pt phone, so
-  // it has to shrink to fit too. With a column above it (renderPrompt), a
-  // short phone caps it further, at SHORT_WINDOW_KEYPAD_SCALE, so the five
-  // lines and the soroban both fit above the keypad (spec (見取算) §4).
-  const fittedKeypadScale = scaleToFit(exercise.rods, room, 1)
-  const keypadScale =
-    renderPrompt !== undefined && height < SHORT_WINDOW_HEIGHT
-      ? Math.min(fittedKeypadScale, SHORT_WINDOW_KEYPAD_SCALE)
-      : fittedKeypadScale
-  // What the learner is told the answer is. A keypad answer is checked
-  // against `expected` itself, so that is all it is ever told. A ÷ answer
-  // given on the beads is checked against the final soroban reading instead
-  // (expectedBeads, spec (division) §2's quotient followed by zeros), so a
-  // miss there must say what the beads actually needed to show, not just the
-  // quotient — otherwise "こたえは 47" reads wrong under beads that had to
-  // reach 47000.
+  // What the learner is told the answer is. A ÷ answer on the beads is
+  // checked against the final soroban reading (expectedBeads, spec (division)
+  // §2's quotient followed by zeros), so a miss must say what the beads
+  // actually needed to show, not just the quotient — otherwise "こたえは 47"
+  // reads wrong under beads that had to reach 47000.
   const answerLine =
-    mode === 'beads' && exercise.expectedBeads !== undefined
+    exercise.expectedBeads !== undefined
       ? strings.correctionAnswerOnBeads(exercise.expected, exercise.expectedBeads)
       : strings.correctionAnswer(exercise.expected)
 
   // Scores the answer. A right one is the parent's to move on from; a miss
   // holds the question here for review until つぎへ.
   function submit() {
-    // A blank or unparseable field is not an answer. Scoring it would mark
-    // every n−n atom correct, and scoring it wrong would burn an attempt for
-    // a mistap, so nothing happens at all.
-    const given = mode === 'beads' ? (moved ? readValue(shownBeads) : null) : parseAnswer(answer)
+    // Untouched beads are not an answer. Scoring them would burn an attempt
+    // for a mistap, so nothing happens at all.
+    const given = moved ? readValue(shownBeads) : null
     if (given === null) return
     if (answeredRight) return
 
     const t = now()
     if (guarded(t)) return
-    // Bead answers are untimed: speed only counts once the work is mental.
-    const latencyMs = mode === 'beads' ? null : Math.max(0, t - shownAt)
+    // Every answer is on the beads (the owner, 2026-09-30), and bead answers
+    // are untimed: moving up a level counts accuracy alone.
+    const latencyMs = null
     // The beads are checked against what the soroban reads when the work is
     // done, which for ÷ is the quotient followed by zeros (spec (division)
-    // §2), and the keypad against the answer itself. What the learner is
-    // told is the answer, either way.
-    const wanted = mode === 'beads' ? (exercise.expectedBeads ?? exercise.expected) : exercise.expected
+    // §2). What the learner is told is the answer.
+    const wanted = exercise.expectedBeads ?? exercise.expected
     const correct = given === wanted
 
     // Either way, the moment after an answer takes no つぎへ, もう一問 or
@@ -258,8 +232,8 @@ export function QuestionView({
   }
 
   // Offered until the question is answered, and hidden while the panel it
-  // opens is up. It stands where the step lines appear once opened: below
-  // the soroban in bead mode, after the prompt in keypad mode. The owner
+  // opens is up. It stands where the step lines appear once opened, below
+  // the soroban. The owner
   // (2026-09-24): it sat under the prompt while the steps showed at the
   // bottom of the screen, and should be where they are, to keep it
   // consistent.
@@ -292,7 +266,7 @@ export function QuestionView({
   // Under the soroban while the learner's own beads are on show; once the
   // steps take the soroban over, beside the answer in the card instead.
   const answered = review !== null || answeredRight
-  const given = mode === 'beads' && reviewing ? readValue(shownBeads) : undefined
+  const given = reviewing ? readValue(shownBeads) : undefined
   const afterAnswerRow =
     afterAnswer !== undefined && answered ? (
       <View style={styles.buttonRow}>
@@ -311,13 +285,10 @@ export function QuestionView({
         </View>
       </View>
     ) : null
-  // The step panel in its two places: the controls sit in the fixed area
-  // just above the bottom buttons, where the thumb is, so ◀ ▶ cannot scroll
-  // off a short phone, and in keypad mode the lines scroll with the prompt
-  // (bead mode puts them below the controls; see beadStepLines). Before an
-  // answer nothing has been got wrong, so the lines carry no correction edge.
+  // The step panel: the controls sit in the slot under the soroban, and the
+  // lines below them (see beadStepLines). Before an answer nothing has been
+  // got wrong, so the lines carry no correction edge.
   const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing, given }) : null
-  const stepLines = panelOpen ? <StepLines accent={reviewing}>{steps}</StepLines> : null
   const stepControls = panelOpen ? (
     <StepControls
       index={stepper.index}
@@ -374,201 +345,140 @@ export function QuestionView({
       renderPrompt(activeStep)
     )
 
-  if (mode === 'beads') {
-    // Layout A: the soroban takes the keypad's place, enlarged and within
-    // thumb reach. Only the prompt above it and the step panel's lines below
-    // the controls scroll, so the soroban, the step controls under it and
-    // the buttons stay on screen even on a 375 × 667 phone.
-    // The beads take no taps while the question is answered (under review)
-    // or while they show the steps before an answer.
-    const locked = review !== null || beforeAnswer || answeredRight
-    // The owner's request (2026-09-23): the lines used to share the small
-    // scroll above the soroban with the prompt, two lines on show at a
-    // time, while below ◀ ▶ the screen stood empty. So with the panel open
-    // they take that empty space instead, in the flexible spacer's place
-    // under the controls, filling it to the bottom and scrolling on their
-    // own, with the line stepped to scrolled into view. Before an answer
-    // they take the もどす/こたえる row's place too; in a miss's review
-    // つぎへ keeps its row below them.
-    // The owner again (2026-09-24, on a 375 × 667 phone): the prompt's
-    // scroll above kept a share of the height, so it stood mostly empty
-    // between the prompt and the soroban while the lines were cut off at
-    // the bottom. So that scroll is only as tall as the prompt
-    // (scrollFitted), and the lines take all the height that is left. It
-    // is fitted with the panel closed too, before an answer and in review:
-    // the owner found the soroban jumping up as the panel opened and back
-    // down as it closed distracting, and asked for it to start where the
-    // open panel puts it. So the soroban and the board always sit right
-    // under the prompt, and opening or closing the panel moves neither;
-    // only the space below the controls changes hands (see the spacer).
-    const beadStepLines = panelOpen ? (
-      <View testID="step-lines" style={[styles.bottomRegion, beforeAnswer && styles.stepLinesOverAnswerRow]}>
-        <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
-      </View>
-    ) : null
-    return (
-      <View style={styles.practice}>
-        <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
-          {promptView}
-        </ScrollView>
-        <View style={styles.sorobanWrap} testID="soroban-wrap">
-          {/* `previous ?? start` relies on `start` staying constant for the
-              presented question: the parent keys this view by question, so a
-              new question mounts a new view with `beads` back at null. Under
-              review the beads stay as the learner left them and take no
-              taps: the answer is in. Stepping through the move draws each
-              step over them instead, until the next question, or before an
-              answer until とじる, which leaves `beads` as it was. */}
-          <Abacus
-            soroban={stepper.soroban ?? shownBeads}
-            fade={shownFade}
-            scale={beadScale}
-            tintedBeads={tintedBeads}
-            onTapBead={
-              locked
-                ? undefined
-                : (rodIndex, bead) => setBeads((previous) => tapSoroban(previous ?? start, rodIndex, bead))
-            }
-            onAdjustRod={
-              locked
-                ? undefined
-                : (rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))
-            }
-          />
-          {stamp(140)}
-        </View>
-        {/* Fixed, like the soroban, and outside the stamp's wrap, so the 〇
-            or ✕ lands on the soroban alone. */}
-        {renderBeneath?.(activeStep)}
-        {/* With the panel open the hint gives way to the step controls,
-            and once answered to what the beads read (see `given`). All
-            three share one slot of the controls' height, so the swap moves
-            nothing below it either: the owner (2026-09-24) found the jump
-            from the one-line hint to the taller ◀ ▶ row distracting. */}
-        <View testID="step-controls-slot" style={styles.controlsSlot}>
-          {panelOpen ? (
-            stepControls
-          ) : answered ? (
-            <Text
-              testID="bead-reading"
-              accessibilityLabel={strings.beadReadingLabel(readValue(shownBeads))}
-              maxFontSizeMultiplier={1.3}
-              style={styles.reading}
-            >
-              {String(readValue(shownBeads))}
-            </Text>
-          ) : (
-            <Text style={styles.hint}>{strings.beadHint}</Text>
-          )}
-        </View>
-        {/* The flexible space under the soroban, the board and the controls'
-            slot. The prompt's scroll above is only as tall as the prompt,
-            so all the spare height comes here, and nothing above depends on
-            what this holds, which is what keeps the soroban still as the
-            panel opens and closes (see beadStepLines). With the panel open
-            the step lines take its place. Until then 手順を見る sits at its
-            top, where the lines will start. It never gets less than the
-            button's room (bottomRegion), even where a large text size makes
-            the prompt taller than the height to spare: the prompt's scroll
-            is what gives way, and scrolls, so the button can always be
-            reached, and the soroban, the slot and the buttons stay on
-            screen. The space scrolls as well, so should the button ever
-            outgrow that room, a small scroll reaches it rather than it
-            spilling over もどす and こたえる, which are drawn after it and
-            would take its taps. Elsewhere there is nothing to scroll and it
-            looks as a plain spacer would. */}
-        {beadStepLines ?? (
-          <ScrollView
-            testID="bead-spacer"
-            style={styles.bottomRegion}
-            contentContainerStyle={styles.beadSpacerContent}
-            showsVerticalScrollIndicator={false}
-            alwaysBounceVertical={false}
-          >
-            {stepsOpenButton}
-          </ScrollView>
-        )}
-        {/* Before an answer, the steps' とじる stands in for もどす and
-            こたえる: the learner answers once they have closed the steps.
-            The step lines take that row's height meanwhile. */}
-        {afterAnswerRow ?? (review !== null ? (
-          reviewButtons
-        ) : beforeAnswer ? null : (
-          <View style={styles.buttonRow}>
-            <View style={styles.resetSlot}>
-              <Button
-                testID="reset-beads"
-                variant="outline"
-                label={strings.resetBeads}
-                onPress={() => setBeads(null)}
-              />
-            </View>
-            <View style={styles.submitSlot}>
-              <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
-            </View>
-          </View>
-        ))}
-      </View>
-    )
-  }
-
+  // Layout A: the soroban takes the place a keypad would, enlarged and within
+  // thumb reach, at every level (the owner, 2026-09-30: the fingers keep
+  // moving the beads however faded they are). Only the prompt above it and the step panel's lines below
+  // the controls scroll, so the soroban, the step controls under it and
+  // the buttons stay on screen even on a 375 × 667 phone.
+  // The beads take no taps while the question is answered (under review)
+  // or while they show the steps before an answer.
+  const locked = review !== null || beforeAnswer || answeredRight
+  // The owner's request (2026-09-23): the lines used to share the small
+  // scroll above the soroban with the prompt, two lines on show at a
+  // time, while below ◀ ▶ the screen stood empty. So with the panel open
+  // they take that empty space instead, in the flexible spacer's place
+  // under the controls, filling it to the bottom and scrolling on their
+  // own, with the line stepped to scrolled into view. Before an answer
+  // they take the もどす/こたえる row's place too; in a miss's review
+  // つぎへ keeps its row below them.
+  // The owner again (2026-09-24, on a 375 × 667 phone): the prompt's
+  // scroll above kept a share of the height, so it stood mostly empty
+  // between the prompt and the soroban while the lines were cut off at
+  // the bottom. So that scroll is only as tall as the prompt
+  // (scrollFitted), and the lines take all the height that is left. It
+  // is fitted with the panel closed too, before an answer and in review:
+  // the owner found the soroban jumping up as the panel opened and back
+  // down as it closed distracting, and asked for it to start where the
+  // open panel puts it. So the soroban and the board always sit right
+  // under the prompt, and opening or closing the panel moves neither;
+  // only the space below the controls changes hands (see the spacer).
+  const beadStepLines = panelOpen ? (
+    <View testID="step-lines" style={[styles.bottomRegion, beforeAnswer && styles.stepLinesOverAnswerRow]}>
+      <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
+    </View>
+  ) : null
   return (
     <View style={styles.practice}>
-      {/* R9: the keypad below is always fully visible, pinned at the bottom.
-          Everything here that can grow scrolls instead of pushing the keypad
-          off a short screen. Under review the review buttons take its place,
-          with the step controls above them once the panel is open. With the
-          steps open before an answer, the step controls take its place
-          alone, and the keypad comes back, with what was typed, at とじる. */}
-      <ScrollView testID="question-scroll" style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Spec (見取算) §4: the column is what a keypad answer is read
-            from, so with a renderPrompt it is drawn above the soroban, as
-            in bead mode. Every other question keeps its text prompt below
-            the soroban, as today. */}
-        {renderPrompt !== undefined && promptView}
-        <View style={styles.soroban}>
-          <Abacus
-            soroban={stepper.soroban ?? start}
-            fade={shownFade}
-            scale={keypadScale}
-            tintedBeads={tintedBeads}
-          />
-          {stamp(110)}
-        </View>
-        {renderPrompt === undefined && promptView}
-        {/* After the prompt rather than under the soroban, so it can never
-            push the prompt off a short phone, but ahead of the step lines
-            (and 手順を見る, which stands where they appear), near the
-            soroban it explains. */}
-        {renderBeneath?.(activeStep)}
-        {stepsOpenButton}
-        {stepLines}
+      <ScrollView testID="question-scroll" style={styles.scrollFitted} contentContainerStyle={styles.scrollContent}>
+        {promptView}
       </ScrollView>
-      {afterAnswerRow !== null ? (
-        <>
-          {review !== null ? stepControls : null}
-          {afterAnswerRow}
-        </>
-      ) : review !== null ? (
-        <>
-          {stepControls}
-          {reviewButtons}
-        </>
-      ) : beforeAnswer ? (
-        stepControls
-      ) : (
-        <AnswerPad
-          value={answer}
-          onChange={setAnswer}
-          onSubmit={submit}
-          submitLabel={strings.answer}
-          submitTestID="submit"
-          // The answer always fits the soroban's rods: 2 for a single move,
-          // the operands' digit count + 1 for ＋ −, that count × 2 for ×,
-          // and 2N + 1 for ÷, whose quotient has only N digits.
-          maxDigits={exercise.rods}
+      <View style={styles.sorobanWrap} testID="soroban-wrap">
+        {/* `previous ?? start` relies on `start` staying constant for the
+            presented question: the parent keys this view by question, so a
+            new question mounts a new view with `beads` back at null. Under
+            review the beads stay as the learner left them and take no
+            taps: the answer is in. Stepping through the move draws each
+            step over them instead, until the next question, or before an
+            answer until とじる, which leaves `beads` as it was. */}
+        <Abacus
+          soroban={stepper.soroban ?? shownBeads}
+          fade={shownFade}
+          scale={beadScale}
+          tintedBeads={tintedBeads}
+          onTapBead={
+            locked
+              ? undefined
+              : (rodIndex, bead) => setBeads((previous) => tapSoroban(previous ?? start, rodIndex, bead))
+          }
+          onAdjustRod={
+            locked
+              ? undefined
+              : (rodIndex, delta) => setBeads((previous) => adjustRod(previous ?? start, rodIndex, delta))
+          }
         />
+        {stamp(140)}
+      </View>
+      {/* Fixed, like the soroban, and outside the stamp's wrap, so the 〇
+          or ✕ lands on the soroban alone. */}
+      {renderBeneath?.(activeStep)}
+      {/* With the panel open the hint gives way to the step controls,
+          and once answered to what the beads read (see `given`). All
+          three share one slot of the controls' height, so the swap moves
+          nothing below it either: the owner (2026-09-24) found the jump
+          from the one-line hint to the taller ◀ ▶ row distracting. */}
+      <View testID="step-controls-slot" style={styles.controlsSlot}>
+        {panelOpen ? (
+          stepControls
+        ) : answered ? (
+          <Text
+            testID="bead-reading"
+            accessibilityLabel={strings.beadReadingLabel(readValue(shownBeads))}
+            maxFontSizeMultiplier={1.3}
+            style={styles.reading}
+          >
+            {String(readValue(shownBeads))}
+          </Text>
+        ) : (
+          <Text style={styles.hint}>{strings.beadHint}</Text>
+        )}
+      </View>
+      {/* The flexible space under the soroban, the board and the controls'
+          slot. The prompt's scroll above is only as tall as the prompt,
+          so all the spare height comes here, and nothing above depends on
+          what this holds, which is what keeps the soroban still as the
+          panel opens and closes (see beadStepLines). With the panel open
+          the step lines take its place. Until then 手順を見る sits at its
+          top, where the lines will start. It never gets less than the
+          button's room (bottomRegion), even where a large text size makes
+          the prompt taller than the height to spare: the prompt's scroll
+          is what gives way, and scrolls, so the button can always be
+          reached, and the soroban, the slot and the buttons stay on
+          screen. The space scrolls as well, so should the button ever
+          outgrow that room, a small scroll reaches it rather than it
+          spilling over もどす and こたえる, which are drawn after it and
+          would take its taps. Elsewhere there is nothing to scroll and it
+          looks as a plain spacer would. */}
+      {beadStepLines ?? (
+        <ScrollView
+          testID="bead-spacer"
+          style={styles.bottomRegion}
+          contentContainerStyle={styles.beadSpacerContent}
+          showsVerticalScrollIndicator={false}
+          alwaysBounceVertical={false}
+        >
+          {stepsOpenButton}
+        </ScrollView>
       )}
+      {/* Before an answer, the steps' とじる stands in for もどす and
+          こたえる: the learner answers once they have closed the steps.
+          The step lines take that row's height meanwhile. */}
+      {afterAnswerRow ?? (review !== null ? (
+        reviewButtons
+      ) : beforeAnswer ? null : (
+        <View style={styles.buttonRow}>
+          <View style={styles.resetSlot}>
+            <Button
+              testID="reset-beads"
+              variant="outline"
+              label={strings.resetBeads}
+              onPress={() => setBeads(null)}
+            />
+          </View>
+          <View style={styles.submitSlot}>
+            <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
+          </View>
+        </View>
+      ))}
     </View>
   )
 }
@@ -601,8 +511,7 @@ const styles = StyleSheet.create({
   scrollFitted: { flexGrow: 0, flexShrink: 1 },
   scrollContent: { paddingBottom: space.sm },
   sorobanWrap: { alignSelf: 'center', marginTop: space.sm, position: 'relative' },
-  // Centred over whichever soroban it is placed inside (bead mode's
-  // sorobanWrap, or keypad mode's soroban view) — that view must itself be
+  // Centred over the soroban's wrap (sorobanWrap), which must itself be
   // position:'relative' for this to fill and centre over it.
   stampOverlay: {
     position: 'absolute',
@@ -614,8 +523,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // A small outline button, centred: an offer, not the main action, so it
-  // stays quieter than こたえる, but still a full 44 pt tap target. In bead
-  // mode its gap from the hint's slot is the same as the step lines' from
+  // stays quieter than こたえる, but still a full 44 pt tap target. Its gap
+  // from the hint's slot is the same as the step lines' from
   // the controls, which fill that slot, so it sits where their card will
   // start.
   stepsOpen: {

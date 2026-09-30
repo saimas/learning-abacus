@@ -1,5 +1,5 @@
 import { exerciseForProblem } from '@/domain/exercise'
-import { answerModeForFade, coachingForFade, type FadeLevel } from '@/domain/fade'
+import { coachingForFade, type FadeLevel } from '@/domain/fade'
 import { groupOfStep, problemSteps, type Problem } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { TermColumn } from '@/ui/mitori/TermColumn'
@@ -29,11 +29,6 @@ export function ProblemQuestion({
 }) {
   const strings = useStrings()
   const exercise = exerciseForProblem(problem)
-  // QuestionView decides bead vs. keypad from the same fade (see its own
-  // `mode`). The review card needs it too: a ÷ miss's beads were checked
-  // against expectedBeads (the final soroban reading), so only in bead mode
-  // does its answer line say more than the quotient.
-  const mode = answerModeForFade(fade)
   const groups = problemSteps(problem)
   // The group of the move the learner has stepped to, if any: an index into
   // `groups` for the answer card's lines, and the group itself for the
@@ -55,7 +50,9 @@ export function ProblemQuestion({
         <ProblemCorrectionCard
           problem={problem}
           expected={exercise.expected}
-          expectedBeads={mode === 'beads' ? exercise.expectedBeads : undefined}
+          // A ÷ answer on the beads is checked against the final soroban
+          // reading, so the review's answer line names it too.
+          expectedBeads={exercise.expectedBeads}
           activeGroup={groupIndexOf(activeStep)}
           showAnswer={showAnswer}
           given={given}

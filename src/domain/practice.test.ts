@@ -35,8 +35,12 @@ describe('applyPracticeAttempt', () => {
     expect(play(at(0), Array.from({ length: 5 }, () => [true, null] as [boolean, null])).fade).toBe(1)
   })
 
-  it('does not count an untimed answer once the record is past the bead levels', () => {
-    expect(play(at(3), [[true, null]]).consecutiveCorrect).toBe(0)
+  // The owner (2026-09-30): every level is answered on the beads, faded or
+  // not, and speed does not gate moving up.
+  it('counts an untimed correct answer on accuracy alone at the faded levels too', () => {
+    for (const fade of [3, 5] as const) {
+      expect(play(at(fade), Array.from({ length: 5 }, () => [true, null] as [boolean, null])).fade).toBe(fade + 1)
+    }
   })
 
   it('stamps when it was practised', () => {
