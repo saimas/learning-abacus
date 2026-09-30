@@ -5,7 +5,7 @@ import type { BeadRef, PlacedBead, Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { colors } from '@/ui/theme'
 import type { BeadTint } from './Bead'
-import { FadeLayer, showsFrame } from './FadeLayer'
+import { BEAD_OPACITY, showsFrame } from './beadOpacity'
 import { DeckLines, FrameBackground } from './Frame'
 import { geometryFor } from './geometry'
 import { Rod } from './Rod'
@@ -25,9 +25,10 @@ export function tintsFor(colouring: StepColouring): TintedBead[] {
 
 // Controlled: the parent owns the soroban. With onTapBead and onAdjustRod the
 // rods take taps and VoiceOver adjustments. Without them it is the static
-// soroban the keypad levels show. `highlightRods` (rod indices, highest place
-// first) puts a soft band behind those rods' columns. `tintedBeads` draws
-// those beads red instead of wood, for stepping through a move.
+// soroban the walkthroughs and boards show. `highlightRods` (rod indices,
+// highest place first) puts a soft band behind those rods' columns.
+// `tintedBeads` draws those beads red instead of wood, for stepping through a
+// move.
 export function Abacus({
   soroban,
   fade,
@@ -60,24 +61,26 @@ export function Abacus({
       {framed ? <FrameBackground scale={scale} /> : null}
       <View style={[styles.deck, { paddingHorizontal: g.deckPadding }, framed && styles.deckFilled]}>
         {framed ? <DeckLines rodCount={count} scale={scale} highlight={highlightRods} /> : null}
-        {/* Only the beads fade. At F6 nothing above is drawn, but the bead
+        {/* Only the beads fade, inside each rod: the rods' tap surfaces stay
+            out of the faded layer, since iOS will not hit-test a view below
+            alpha 0.01, and beads that cannot be seen must still move (the
+            owner, 2026-09-30). At F6 nothing above is drawn, but the bead
             columns still take their space, so the screen does not jump. */}
-        <FadeLayer level={fade}>
-          <View style={styles.rods}>
-            {soroban.rods.map((rod, index) => (
-              <Rod
-                key={index}
-                rod={rod}
-                index={index}
-                scale={scale}
-                label={strings.rodName(count - 1 - index)}
-                tints={tintedBeads?.filter((tinted) => tinted.rod === index)}
-                onTapBead={onTapBead === undefined ? undefined : (bead) => onTapBead(index, bead)}
-                onAdjust={onAdjustRod === undefined ? undefined : (delta) => onAdjustRod(index, delta)}
-              />
-            ))}
-          </View>
-        </FadeLayer>
+        <View style={styles.rods}>
+          {soroban.rods.map((rod, index) => (
+            <Rod
+              key={index}
+              rod={rod}
+              index={index}
+              scale={scale}
+              label={strings.rodName(count - 1 - index)}
+              beadOpacity={BEAD_OPACITY[visual]}
+              tints={tintedBeads?.filter((tinted) => tinted.rod === index)}
+              onTapBead={onTapBead === undefined ? undefined : (bead) => onTapBead(index, bead)}
+              onAdjust={onAdjustRod === undefined ? undefined : (delta) => onAdjustRod(index, delta)}
+            />
+          ))}
+        </View>
       </View>
     </View>
   )

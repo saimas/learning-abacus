@@ -209,7 +209,7 @@ describe('QuestionView with a 3-digit problem', () => {
 // answer, without the answer, and とじる gives the question back as the
 // learner left it. §5: an answer given after it counts "with help".
 describe('QuestionView before an answer, with 手順を見る', () => {
-  const opacity = () => screen.getByTestId('fade-layer').props.style.opacity as number
+  const opacity = () => screen.getAllByTestId('fade-layer')[0]?.props.style.opacity as number
   const edge = () => StyleSheet.flatten(screen.getByTestId('step-panel').props.style).borderLeftColor
 
   it('opens the steps before answering, without the answer', () => {
@@ -954,7 +954,7 @@ describe('QuestionView at the faded levels', () => {
     const { onSubmit } = renderView({ fade, coaching: 'silent' })
     expect(screen.queryByTestId('key-1')).toBeNull()
     const wrap = within(screen.getByTestId('soroban-wrap'))
-    expect(StyleSheet.flatten(wrap.getByTestId('fade-layer').props.style).opacity).toBe(opacity)
+    for (const layer of wrap.getAllByTestId('fade-layer')) expect(layer.props.style.opacity).toBe(opacity)
     expect(wrap.getByTestId(frame)).toBeTruthy()
     // The beads move where they would be, shown or not.
     setBeads(screen.getByTestId, 857, 4)
