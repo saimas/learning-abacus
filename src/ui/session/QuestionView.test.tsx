@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 import { AccessibilityInfo, ScrollView, StyleSheet, Text } from 'react-native'
 import { exerciseForProblem } from '@/domain/exercise'
-import { emptySoroban, setValue } from '@/domain/soroban'
 import { BEAD_MODE_SCALE, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { BUTTON_HEIGHT } from '@/ui/kit/Button'
 import { colors, space } from '@/ui/theme'
@@ -61,19 +60,11 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(screen.getByTestId('rod-1').props.accessibilityValue.text).toBe('4')
   })
 
-  // With the beads as answered, which a run keeps to show again when the
-  // learner looks back (spec (runs) §5).
   it('scores a bead answer untimed', () => {
     const { onSubmit } = renderView()
     setBeads(screen.getByTestId, 857, 4)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(onSubmit).toHaveBeenCalledWith({
-      correct: true,
-      latencyMs: null,
-      t: expect.any(Number),
-      assisted: false,
-      beads: setValue(emptySoroban(4), 857),
-    })
+    expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: null, t: expect.any(Number), assisted: false })
   })
 
   it('holds a miss for review, with the card up at a coaching level', () => {
@@ -990,136 +981,6 @@ describe('QuestionView after an answer outside a round', () => {
     expect(screen.queryByTestId('steps-open')).toBeNull()
   })
 
-})
-
-// Spec (runs) §5, the owner (2026-10-06): a run's earlier problem, looked
-// back at as it was left. It shows, and explains, but takes no answer.
-describe('QuestionView looking back at an answered question', () => {
-  const past = (value: number, correct: boolean, onReturn = jest.fn()) => ({
-    beads: setValue(emptySoroban(4), value),
-    correct,
-    returnLabel: 'いまの問題にもどる',
-    onReturn,
-  })
-
-  it('shows the learner’s beads under the 〇 and what they read, and takes no answer', () => {
-    const { onSubmit, onMoveOn } = renderView({ past: past(857, true) })
-    expect(rods()).toBe('0857')
-    expect(screen.getByTestId('maru')).toBeTruthy()
-    expect(screen.queryByTestId('batsu')).toBeNull()
-    expect(screen.getByTestId('bead-reading').props.children).toBe('857')
-    for (const testID of ['submit', 'reset-beads', 'review-next', 'review-show', 'after-again']) {
-      expect(screen.queryByTestId(testID)).toBeNull()
-    }
-    // Locked: a bead moves nothing.
-    expect(screen.getByTestId('rod-1').props.accessibilityRole).toBeUndefined()
-    fireEvent(screen.getByTestId('rod-3'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } })
-    expect(rods()).toBe('0857')
-    expect(onSubmit).not.toHaveBeenCalled()
-    expect(onMoveOn).not.toHaveBeenCalled()
-  })
-
-  it('shows a miss under a ✕ that stays, drawn at once', () => {
-    renderView({ past: past(800, false) })
-    expect(screen.queryByTestId('maru')).toBeNull()
-    expect(StyleSheet.flatten(screen.getByTestId('batsu').props.style).opacity).toBe(1)
-    act(() => jest.advanceTimersByTime(1_000))
-    expect(StyleSheet.flatten(screen.getByTestId('batsu').props.style).opacity).toBe(1)
-    expect(screen.getByTestId('bead-reading').props.children).toBe('800')
-  })
-
-  it('draws the 〇 at once too', () => {
-    renderView({ past: past(857, true) })
-    expect(StyleSheet.flatten(screen.getByTestId('maru').props.style).opacity).toBe(1)
-  })
-
-  // VoiceOver can tell a past problem's 〇 from its ✕; on a question being
-  // answered the stamps stay unnamed, as the answer is announced.
-  it.each([
-    [857, true, 'maru', '正解'],
-    [800, false, 'batsu', 'ちがいます'],
-  ] as const)('names a past %p’s stamp for VoiceOver', (value, correct, stamp, label) => {
-    renderView({ past: past(value, correct) })
-    expect(screen.getByTestId(stamp).props.accessible).toBe(true)
-    expect(screen.getByTestId(stamp).props.accessibilityLabel).toBe(label)
-  })
-
-  it('leaves the stamps of a question being answered unnamed', () => {
-    renderView({ fade: 2, coaching: 'silent' })
-    setBeads(screen.getByTestId, 800, 4)
-    fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.getByTestId('batsu').props.accessibilityLabel).toBeUndefined()
-    screen.unmount()
-    renderView()
-    setBeads(screen.getByTestId, 857, 4)
-    fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.getByTestId('maru').props.accessibilityLabel).toBeUndefined()
-  })
-
-  // The ruling (2026-10-06): looking back is review, not a test, so the
-  // learner's beads are drawn solid, frame and all, at any level.
-  it.each([3, 6] as const)('draws the beads solid at level %p', (fade) => {
-    renderView({ fade, coaching: 'silent', past: past(857, true) })
-    const wrap = within(screen.getByTestId('soroban-wrap'))
-    for (const layer of wrap.getAllByTestId('fade-layer')) expect(layer.props.style.opacity).toBe(1)
-    expect(wrap.getByTestId('abacus-frame')).toBeTruthy()
-    expect(rods()).toBe('0857')
-  })
-
-  it('opens the steps at the start, with the answer and the miss’s beads, and closes them', () => {
-    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
-    try {
-      renderView({
-        past: past(800, false),
-        renderSteps: ({ activeStep, showAnswer, given }) => (
-          <Text testID="card">{`${String(activeStep)} ${String(showAnswer)} ${String(given)}`}</Text>
-        ),
-      })
-      announce.mockClear()
-      fireEvent.press(screen.getByTestId('steps-open'))
-      // Opening at the start says nothing, as 手順を見る does before an answer.
-      expect(announce).not.toHaveBeenCalled()
-      expect(textOf(screen.getByTestId('card'))).toBe('undefined true 800')
-      expect(screen.getByTestId('step-count').props.children).toBe('0 / 5')
-      expect(rods()).toBe('0472')
-      // A miss's correction edge, as its review drew it.
-      expect(StyleSheet.flatten(screen.getByTestId('step-panel').props.style).borderLeftColor).toBe(colors.accent)
-      // Its way back stays below the lines.
-      expect(screen.getByTestId('look-back-return')).toBeTruthy()
-      fireEvent.press(screen.getByTestId('step-next'))
-      expect(textOf(screen.getByTestId('card'))).toBe('0 true 800')
-      expect(rods()).toBe('0972')
-
-      fireEvent.press(screen.getByTestId('steps-close'))
-      expect(screen.queryByTestId('step-panel')).toBeNull()
-      expect(rods()).toBe('0800')
-      expect(screen.getByTestId('bead-reading').props.children).toBe('800')
-      expect(screen.getByTestId('steps-open')).toBeTruthy()
-      // Only the steps are heard: nothing of 正解 or ちがいます, which were
-      // said as the answer was given.
-      expect(announce.mock.calls).toEqual([['1 / 5']])
-    } finally {
-      announce.mockRestore()
-    }
-  })
-
-  it('gives a right one’s steps the answer alone, with no correction edge', () => {
-    renderView({
-      past: past(857, true),
-      renderSteps: ({ showAnswer, given }) => <Text testID="card">{`${String(showAnswer)} ${String(given)}`}</Text>,
-    })
-    fireEvent.press(screen.getByTestId('steps-open'))
-    expect(textOf(screen.getByTestId('card'))).toBe('true undefined')
-    expect(StyleSheet.flatten(screen.getByTestId('step-panel').props.style).borderLeftColor).not.toBe(colors.accent)
-  })
-
-  it('goes back through its one button', () => {
-    const onReturn = jest.fn()
-    renderView({ past: past(857, true, onReturn) })
-    expect(screen.getByTestId('look-back-return')).toHaveTextContent('いまの問題にもどる')
-    fireEvent.press(screen.getByTestId('look-back-return'))
-    expect(onReturn).toHaveBeenCalledTimes(1)
-  })
 })
 
 // The owner (2026-09-30): every level is answered on the beads, however

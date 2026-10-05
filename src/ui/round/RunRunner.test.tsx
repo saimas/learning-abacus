@@ -7,7 +7,6 @@ import { answerPoints } from '@/domain/score'
 import { BEAD_EASE_MS } from '@/ui/abacus/Rod'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
-import { NEXT_GUARD_MS } from '@/ui/session/QuestionView'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RunRunner } from './RunRunner'
@@ -486,99 +485,84 @@ describe('RunRunner quitting', () => {
   })
 })
 
-// Spec (runs) §5, the owner (2026-10-06): "user should be able to go back to
-// the previous problem if they wanted". ‹ in the bar shows an answered
-// problem as it was left, on a card over the stack, and touches nothing of
-// the run.
-describe('RunRunner looking back', () => {
-  const past = () => within(screen.getByTestId('card-past'))
-  // The current card's three rods, highest place first.
+// Spec (runs) §5, the owner (2026-10-06): "user should be able to go back as
+// far back as they want … we dont need to keep the state of previous problem
+// when user go back". 戻る shows the problem before afresh, and an answer to
+// it counts like any other (the owner's choice).
+describe('RunRunner going back', () => {
+  // The three rods, highest place first.
   const rods = () => [0, 1, 2].map((i) => screen.getByTestId(`rod-${i}`).props.accessibilityValue.text).join('')
+  const prompt = () => screen.getByTestId('prompt').props.children
+  const goBack = () => fireEvent.press(screen.getByTestId('go-back'))
+  // As if shown for the first time: its beads at its start, nothing
+  // answered, こたえる waiting for the beads to move, 手順を見る on offer.
+  const expectFresh = (start: string) => {
+    expect(rods()).toBe(start)
+    expect(screen.queryByTestId('maru')).toBeNull()
+    expect(screen.queryByTestId('batsu')).toBeNull()
+    expect(screen.queryByTestId('bead-reading')).toBeNull()
+    expect(screen.getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: true })
+    expect(screen.getByTestId('reset-beads')).toBeTruthy()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
+  }
 
-  it('shows the problem before, as it was left, and returns to the current one', () => {
+  it('shows the problem before afresh, at once, from the second problem on', () => {
     renderRun()
-    expect(screen.queryByTestId('look-back')).toBeNull()
+    expect(screen.queryByTestId('go-back')).toBeNull()
     answerBeads(81)
     finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
-    expect(past().getByTestId('maru')).toBeTruthy()
-    expect(past().getByTestId('bead-reading').props.children).toBe('81')
-    // Nothing on it can be answered or moved.
-    for (const testID of ['submit', 'reset-beads', 'review-next', 'review-show']) {
-      expect(past().queryByTestId(testID)).toBeNull()
-    }
-    expect(past().getByTestId('rod-1').props.accessibilityRole).toBeUndefined()
-    expect(past().getByTestId('look-back-return')).toHaveTextContent('いまの問題にもどる')
-
-    fireEvent.press(past().getByTestId('look-back-return'))
-    expect(screen.queryByTestId('card-past')).toBeNull()
-    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
-    expect(screen.getByTestId('submit')).toBeTruthy()
+    goBack()
+    expect(prompt()).toBe('23に58をたす。')
+    expectFresh('023')
+    // No swipe: the one card, on top.
+    expect(screen.getAllByTestId('prompt')).toHaveLength(1)
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    expect(screen.queryByTestId('roll-blocker')).toBeNull()
+    // The run's first problem: nothing before it.
+    expect(screen.queryByTestId('go-back')).toBeNull()
+    setBeads(screen.getByTestId, 24, 3)
+    expect(screen.getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: false })
   })
 
-  it('shows a miss under its ✕, with what the beads read', () => {
-    renderRun()
+  it('counts a right answer to a problem gone back to, then goes on to the problem after it', () => {
+    const { onAttempt, onPoints } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    goBack()
+    answerBeads(81)
+    expect(onAttempt).toHaveBeenCalledTimes(2)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade: 0 })
+    expect(onPoints).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('maru')).toBeTruthy()
+    expect(Haptics.impactAsync).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('run-combo').props.children).toBe('2れんぞく ×1')
+    // Held under its 〇 and swiped off, as ever.
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    expect(within(screen.getByTestId('card')).getByTestId('prompt').props.children).toBe('46に54をたす。')
+    finishRoll()
+    expect(prompt()).toBe('46に54をたす。')
+    expectFresh('046')
+  })
+
+  it('costs a life for a miss on a problem gone back to', () => {
+    const { onAttempt } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    goBack()
     answerBeads(80)
+    expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: false, pace: null, assisted: false, fade: 0 })
+    expect(screen.getAllByTestId('life')).toHaveLength(2)
+    expect(screen.getByTestId('batsu')).toBeTruthy()
+    expect(screen.getByTestId('correction')).toBeTruthy()
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Warning)
     moveOnFromMiss()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('batsu')).toBeTruthy()
-    expect(past().queryByTestId('maru')).toBeNull()
-    expect(past().getByTestId('bead-reading').props.children).toBe('80')
-    // The ✕ stays: it says which the problem was for as long as it is
-    // looked at.
-    act(() => jest.advanceTimersByTime(1_000))
-    expect(StyleSheet.flatten(past().getByTestId('batsu').props.style).opacity).toBe(1)
+    expect(prompt()).toBe('46に54をたす。')
   })
 
-  it('goes further back, as far as the first', () => {
-    renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    answerBeads(99)
-    moveOnFromMiss()
-    expect(screen.getByTestId('prompt').props.children).toBe('10に11をたす。')
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('prompt').props.children).toBe('46に54をたす。')
-    expect(past().getByTestId('batsu')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
-    expect(past().getByTestId('maru')).toBeTruthy()
-    expect(screen.queryByTestId('look-back')).toBeNull()
-    fireEvent.press(past().getByTestId('look-back-return'))
-    expect(screen.getByTestId('prompt').props.children).toBe('10に11をたす。')
-  })
-
-  // As with とじる before an answer (NEXT_GUARD_MS): the way back gives way
-  // to もどす and こたえる (or つぎへ, or もう一回 and おわる), and a second
-  // tap must not land on them.
-  it('takes no tap on what it uncovers in the moment after the way back', () => {
-    renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(screen.queryByTestId('roll-blocker')).toBeNull()
-    fireEvent.press(screen.getByTestId('look-back-return'))
-    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
-    passTime(NEXT_GUARD_MS)
-    expect(screen.queryByTestId('roll-blocker')).toBeNull()
-  })
-
-  it('keeps the current problem’s beads as the learner left them', () => {
-    renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    setBeads(screen.getByTestId, 37, 3)
-    expect(rods()).toBe('037')
-    fireEvent.press(screen.getByTestId('look-back'))
-    fireEvent.press(screen.getByTestId('look-back-return'))
-    expect(rods()).toBe('037')
-  })
-
-  // The time spent looking back is not the current problem's.
-  // Paused, not restarted: the 10 s spent on the problem before ‹ still
-  // count, and only the ten minutes looking back do not.
-  it('pauses the current problem’s clock while looking back', () => {
+  // 23 + 58 again, two in a row at F0: 2 s from when 戻る showed it (×1.5),
+  // not 12 s from when the problem left was uncovered (about ×1.3).
+  it('starts a problem gone back to’s clock when it is shown', () => {
     let clock = 0
     const { onPoints } = renderRun({ now: () => clock })
     clock = 1_000
@@ -586,159 +570,179 @@ describe('RunRunner looking back', () => {
     // 46 + 54 is uncovered at 1 s.
     finishRightAnswerRoll()
     clock = 11_000
-    fireEvent.press(screen.getByTestId('look-back'))
-    clock = 611_000
-    fireEvent.press(screen.getByTestId('look-back-return'))
-    clock = 613_000
+    goBack()
+    clock = 13_000
+    answerBeads(81)
+    const again = { problem: { op: 'add', digits: 2, a: 23, b: 58 }, calibrationMs: 900, level: 0, combo: 2 } as const
+    const shown = answerPoints({ ...again, answerMs: 2_000 })
+    expect(onPoints).toHaveBeenLastCalledWith(shown)
+    expect(shown).not.toBe(answerPoints({ ...again, answerMs: 12_000 }))
+  })
+
+  it('goes back one problem a press, as far as the run’s first', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    moveOnFromMiss()
+    expect(prompt()).toBe('10に11をたす。')
+    goBack()
+    expect(prompt()).toBe('46に54をたす。')
+    expectFresh('046')
+    goBack()
+    expect(prompt()).toBe('23に58をたす。')
+    expectFresh('023')
+    expect(screen.queryByTestId('go-back')).toBeNull()
+  })
+
+  it('goes on in the run’s order after going back, and draws a new problem past the latest', () => {
+    const fourth: Problem = { op: 'add', digits: 2, a: 37, b: 45 }
+    const draw = jest.fn(drawFrom([...problems, fourth]))
+    renderRun({ draw })
+    answerBeads(81)
+    finishRightAnswerRoll()
     answerBeads(100)
-    // Two in a row at F0, its base 44 and its bead target 8.8 s: 12 s of its
-    // own (speed about ×1.32, 58 points), where restarting the clock would
-    // count 2 s (×1.5, 66) and counting the time away 612 s (×1, 44).
-    const second = { problem: { op: 'add', digits: 2, a: 46, b: 54 }, calibrationMs: 900, level: 0, combo: 2 } as const
-    const paused = answerPoints({ ...second, answerMs: 12_000 })
-    expect(onPoints).toHaveBeenLastCalledWith(paused)
-    expect(paused).not.toBe(answerPoints({ ...second, answerMs: 2_000 }))
-    expect(paused).not.toBe(answerPoints({ ...second, answerMs: 612_000 }))
-  })
-
-  // The ruling (2026-10-06): looking back is review, not a test, so the
-  // beads the learner left are drawn solid, frame and all, whatever level
-  // the problem was answered at. The problem on top keeps its own.
-  it.each([
-    [3, 0.35],
-    [6, 0],
-  ] as const)('draws a problem answered at level %p with its beads solid', (level, onTop) => {
-    renderRun({ level })
-    answerBeads(81)
     finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    const layers = past().getAllByTestId('fade-layer')
-    expect(layers.map((layer) => StyleSheet.flatten(layer.props.style).opacity)).toEqual(layers.map(() => 1))
-    expect(past().getByTestId('abacus-frame')).toBeTruthy()
-    expect(screen.getByTestId('run-level').props.children).toBe(`レベル ${level}/6`)
-    fireEvent.press(past().getByTestId('look-back-return'))
-    expect(beadOpacities().every((opacity) => opacity === onTop)).toBe(true)
+    expect(prompt()).toBe('10に11をたす。')
+    expect(draw).toHaveBeenCalledTimes(3)
+    goBack()
+    answerBeads(100)
+    finishRightAnswerRoll()
+    // Already drawn: shown again, not drawn again.
+    expect(prompt()).toBe('10に11をたす。')
+    expectFresh('010')
+    expect(draw).toHaveBeenCalledTimes(3)
+    answerBeads(21)
+    finishRightAnswerRoll()
+    expect(prompt()).toBe('37に45をたす。')
+    expect(draw).toHaveBeenCalledTimes(4)
+    expect(draw).toHaveBeenLastCalledWith([problems[0], problems[1], problems[2]])
   })
 
-  // VoiceOver keeps to the card looked at and the bar. The modal card hides
-  // its native siblings, so the cards' container must stay a view of its own
-  // (Fabric would flatten a layout-only one): then those siblings are the
-  // stack and its moments, never ✕, ‹ or the bar's status.
-  it('keeps the bar out of what the card looked at hides from VoiceOver', () => {
+  it('keeps nothing of the problem left', () => {
     renderRun()
     answerBeads(81)
     finishRightAnswerRoll()
-    answerBeads(99)
-    moveOnFromMiss()
-    // At the second problem, with the first still to look back at.
-    fireEvent.press(screen.getByTestId('look-back'))
-    const kept = screen.root.findAll((node) => typeof node.type === 'string' && node.props.collapsable === false)
-    const container = kept.find((node) => within(node).queryByTestId('card-past') !== null)
-    expect(container).toBeDefined()
-    if (container === undefined) return
-    expect(within(container).queryByTestId('quit', hidden)).toBeNull()
-    expect(screen.getByTestId('quit')).toBeTruthy()
-    expect(screen.getByTestId('look-back')).toBeTruthy()
-    expect(screen.getByTestId('run-status')).toBeTruthy()
+    setBeads(screen.getByTestId, 37, 3)
+    expect(rods()).toBe('037')
+    goBack()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    expect(prompt()).toBe('46に54をたす。')
+    expectFresh('046')
   })
 
-  // VoiceOver can tell whether the problem looked at was right.
-  it('names a past 〇 and ✕ for VoiceOver', () => {
+  // Spec (runs) §2: each card is laid at the record's level as it stands.
+  it('lays a problem gone back to at the record’s level, with the banner for a moved one', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      const { relevel, onAttempt } = renderRun({ level: 3 })
+      answerBeads(81)
+      finishRightAnswerRoll()
+      answerBeads(99)
+      relevel(2)
+      expect(screen.queryByTestId('level-banner', hidden)).toBeNull()
+      announce.mockClear()
+      goBack()
+      expect(prompt()).toBe('23に58をたす。')
+      expect(screen.getByTestId('run-level').props.children).toBe('レベル 2/6')
+      expect(screen.getByTestId('level-banner', hidden)).toBeTruthy()
+      expect(announce).toHaveBeenCalledWith('レベル 2')
+      expect(beadOpacities().every((opacity) => opacity === 1)).toBe(true)
+      answerBeads(81)
+      expect(onAttempt).toHaveBeenLastCalledWith(expect.objectContaining({ fade: 2 }))
+    } finally {
+      announce.mockRestore()
+    }
+  })
+
+  it('offers 戻る only while no card moves', () => {
     renderRun()
     answerBeads(81)
     finishRightAnswerRoll()
-    answerBeads(99)
-    moveOnFromMiss()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('batsu').props.accessibilityLabel).toBe('ちがいます')
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('maru').props.accessibilityLabel).toBe('正解')
-  })
-
-  it('records nothing, and opens the steps with the answer', () => {
-    const { onAttempt, onPoints } = renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    fireEvent.press(past().getByTestId('steps-open'))
-    expect(past().getByTestId('correction-answer').props.children).toBe('こたえは 81')
-    expect(past().getByTestId('step-count').props.children).toBe('0 / 3')
-    fireEvent.press(past().getByTestId('step-next'))
-    expect(past().getByTestId('step-count').props.children).toBe('1 / 3')
-    fireEvent.press(past().getByTestId('steps-close'))
-    expect(past().queryByTestId('correction-answer')).toBeNull()
-    expect(past().getByTestId('bead-reading').props.children).toBe('81')
-    fireEvent.press(past().getByTestId('look-back-return'))
-    expect(onAttempt).toHaveBeenCalledTimes(1)
-    expect(onPoints).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId('run-score').props.children).toBe('54点')
-    expect(screen.getAllByTestId('life')).toHaveLength(3)
-  })
-
-  it('names a miss’s beads beside the answer in its steps', () => {
-    renderRun()
-    answerBeads(80)
-    moveOnFromMiss()
-    fireEvent.press(screen.getByTestId('look-back'))
-    fireEvent.press(past().getByTestId('steps-open'))
-    expect(past().getByTestId('correction-answer').props.children).toBe('こたえは 81　あなたの答え 80')
-  })
-
-  it('looks back from the results at the last problem answered, skipping one never answered', () => {
-    renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    // ✕ on 46 + 54, unanswered, rolls it away to the results.
-    fireEvent.press(screen.getByTestId('quit'))
-    finishRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
-    expect(past().getByTestId('look-back-return')).toHaveTextContent('結果にもどる')
-    expect(screen.queryByTestId('look-back')).toBeNull()
-    fireEvent.press(past().getByTestId('look-back-return'))
-    expect(screen.queryByTestId('card-past')).toBeNull()
-    expect(screen.getByTestId('run-results')).toBeTruthy()
-  })
-
-  it('offers nothing to look back at while a card moves', () => {
-    renderRun()
-    answerBeads(81)
-    finishRightAnswerRoll()
-    expect(screen.getByTestId('look-back')).toBeTruthy()
+    expect(screen.getByTestId('go-back')).toBeTruthy()
     answerBeads(100)
     // Under the 〇's hold.
-    expect(screen.queryByTestId('look-back')).toBeNull()
+    expect(screen.queryByTestId('go-back')).toBeNull()
     passTime(ROLL_HOLD_MS)
     passUntilSwiping()
     expect(screen.getByTestId('card-leaving')).toBeTruthy()
-    expect(screen.queryByTestId('look-back')).toBeNull()
+    expect(screen.queryByTestId('go-back')).toBeNull()
     finishRoll()
-    expect(screen.getByTestId('look-back')).toBeTruthy()
+    expect(screen.getByTestId('go-back')).toBeTruthy()
   })
 
-  it('ends the run from ✕ while looking back, closing the past card', () => {
-    const { askQuit, onEnd } = renderRun()
+  it('offers 戻る on a miss’s review while the run goes on, and not once it has ended', () => {
+    renderRun()
+    answerBeads(80)
+    moveOnFromMiss()
+    answerBeads(99)
+    expect(screen.getByTestId('go-back')).toBeTruthy()
+    moveOnFromMiss()
+    // The third miss's review: the run is over.
+    answerBeads(20)
+    expect(screen.getByTestId('correction')).toBeTruthy()
+    expect(screen.queryByTestId('go-back')).toBeNull()
+    moveOnFromMiss()
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+    expect(screen.queryByTestId('go-back')).toBeNull()
+  })
+
+  // On a phone a tap can land on the card 戻る left before the render that
+  // takes it away. Its こたえる or つぎへ must not answer for the run or
+  // roll it on: the problem gone back to stays, untouched.
+  describe('with a tap that lands on the problem left', () => {
+    // The press handler of the button on screen now, to call once it is gone.
+    const handlerOf = (testID: string) => {
+      const onPress: unknown = screen.UNSAFE_getAllByProps({ testID })[0]?.props.onPress
+      if (typeof onPress !== 'function') throw new Error(`no ${testID} to press`)
+      return onPress as () => void
+    }
+
+    it('takes no answer from its こたえる', () => {
+      const { onAttempt } = renderRun()
+      answerBeads(81)
+      finishRightAnswerRoll()
+      setBeads(screen.getByTestId, 100, 3)
+      const answer = handlerOf('submit')
+      goBack()
+      act(() => answer())
+      passTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 50)
+      expect(onAttempt).toHaveBeenCalledTimes(1)
+      expect(screen.getByTestId('run-score').props.children).toBe('54点')
+      expect(prompt()).toBe('23に58をたす。')
+      expectFresh('023')
+      expect(screen.queryByTestId('roll-blocker')).toBeNull()
+    })
+
+    it('does not roll on from its つぎへ', () => {
+      renderRun()
+      answerBeads(81)
+      finishRightAnswerRoll()
+      answerBeads(99)
+      act(() => jest.advanceTimersByTime(500))
+      const next = handlerOf('review-next')
+      goBack()
+      act(() => next())
+      passTime(ROLL_SWIPE_MS + 50)
+      expect(screen.queryByTestId('card-leaving')).toBeNull()
+      expect(prompt()).toBe('23に58をたす。')
+      expectFresh('023')
+      // From it, the run still goes on in order.
+      answerBeads(81)
+      finishRightAnswerRoll()
+      expect(prompt()).toBe('46に54をたす。')
+    })
+  })
+
+  it('offers no 戻る on the results after ✕', () => {
+    renderRun()
     answerBeads(81)
     finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
     fireEvent.press(screen.getByTestId('quit'))
-    expect(askQuit).toHaveBeenCalledTimes(1)
-    expect(screen.queryByTestId('card-past')).toBeNull()
     finishRoll()
     expect(screen.getByTestId('run-results')).toBeTruthy()
-    expect(onEnd).toHaveBeenCalledTimes(1)
-    expect(onEnd).toHaveBeenCalledWith(54)
-  })
-
-  it('keeps looking back when the learner keeps going', () => {
-    const askQuit = jest.fn()
-    renderRun({ askQuit })
-    answerBeads(81)
-    finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('look-back'))
-    fireEvent.press(screen.getByTestId('quit'))
-    expect(askQuit).toHaveBeenCalledTimes(1)
-    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(screen.queryByTestId('go-back')).toBeNull()
   })
 })
 

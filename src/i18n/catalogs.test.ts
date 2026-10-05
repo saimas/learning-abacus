@@ -553,11 +553,17 @@ describe('a run’s results', () => {
   })
 })
 
-// Spec (runs) §5 (the owner, 2026-10-06): looking back at earlier problems.
-describe('looking back in a run', () => {
-  it('names ‹ and the ways back', () => {
-    expect([ja.lookBackLabel, en.lookBackLabel]).toEqual(['前の問題を見る', 'See the previous problem'])
-    expect([ja.lookBackReturn, en.lookBackReturn]).toEqual(['いまの問題にもどる', 'Back to the current problem'])
-    expect([ja.lookBackToResults, en.lookBackToResults]).toEqual(['結果にもどる', 'Back to the results'])
+// Spec (runs) §5 (the owner, 2026-10-06): 戻る goes back to the problem
+// before; build 35's look-back and its ways back are gone.
+describe('going back in a run', () => {
+  it('names 戻る', () => {
+    expect([ja.goBack, en.goBack]).toEqual(['戻る', 'Back'])
+    expect([ja.goBackLabel, en.goBackLabel]).toEqual(['前の問題にもどる', 'Back to the previous problem'])
+  })
+
+  it('has no look-back strings left', () => {
+    for (const catalog of [ja, en]) {
+      for (const key of ['lookBackLabel', 'lookBackReturn', 'lookBackToResults']) expect(catalog).not.toHaveProperty(key)
+    }
   })
 })

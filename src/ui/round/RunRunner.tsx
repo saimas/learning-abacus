@@ -4,10 +4,9 @@ import { visualForFade, type FadeLevel } from '@/domain/fade'
 import type { PracticeAttempt } from '@/domain/practice'
 import { practiceId, type PracticeKind, type Problem } from '@/domain/problem'
 import { answerRun, quitRun, startRun, type RunState } from '@/domain/run'
-import type { Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { feel } from '@/ui/feel'
-import { NEXT_GUARD_MS, type Submission } from '@/ui/session/QuestionView'
+import type { Submission } from '@/ui/session/QuestionView'
 import { colors } from '@/ui/theme'
 import { ProblemQuestion } from './ProblemQuestion'
 import { RunBar } from './RunBar'
@@ -25,33 +24,35 @@ import { RunResults } from './RunResults'
 export const ROLL_HOLD_MS = 700
 export const ROLL_SWIPE_MS = 300
 
-// A problem of the run, at the level it is shown at. `banner` says the level
-// moved since the card before (`up` which way). `easeFrom`, set when it moved
-// up to a new look (F2 → F3 and on: F0–F2 all look solid), is the old level:
-// the beads start at its look and ease to the new one once the card is
-// uncovered (spec (runs) §5). `answer`, once it is answered, is the learner's
-// soroban and whether it was right, to look back at (spec (runs) §5).
+// One showing of a problem of the run, at the level it is shown at.
+// `position` is the problem's place in the run's problems: a problem gone
+// back to is shown again as a new card at the same position (spec (runs) §5).
+// `banner` says the level moved since the card before (`up` which way).
+// `easeFrom`, set when it moved up to a new look (F2 → F3 and on: F0–F2 all
+// look solid), is the old level: the beads start at its look and ease to the
+// new one once the card is uncovered (spec (runs) §5).
 type RunCard = {
   problem: Problem
+  position: number
   level: FadeLevel
   banner: boolean
   up: boolean
   easeFrom?: FadeLevel
-  answer?: { beads: Soroban; correct: boolean }
 }
 
-function cardAt(problem: Problem, level: FadeLevel, previous: FadeLevel | undefined): RunCard {
-  if (previous === undefined || previous === level) return { problem, level, banner: false, up: false }
+function cardAt(problem: Problem, position: number, level: FadeLevel, previous: FadeLevel | undefined): RunCard {
+  if (previous === undefined || previous === level) return { problem, position, level, banner: false, up: false }
   const up = level > previous
   const newLook = up && visualForFade(level) !== visualForFade(previous)
-  return { problem, level, banner: true, up, ...(newLook ? { easeFrom: previous } : {}) }
+  return { problem, position, level, banner: true, up, ...(newLook ? { easeFrom: previous } : {}) }
 }
 
 // Spec (runs) §2: a run is its kind's problems one card after another, until
 // the third miss or a confirmed ✕, then its results. Each card is laid at
 // the kind's level as it stands then (`level`, the record's, live), so a
 // promotion earned on one answer shows from the next problem on. A miss is
-// reviewed and the run moves on; it does not come back.
+// reviewed and the run moves on; it does not come back unless the learner
+// goes back to it (戻る, spec (runs) §5).
 export function RunRunner({
   kind,
   level,
@@ -70,7 +71,8 @@ export function RunRunner({
   kind: PracticeKind
   level: FadeLevel
   calibrationMs: number
-  // The next problem, given every problem shown so far in the run.
+  // The next problem, given the run's problems so far, in order, each once
+  // however often it was gone back to.
   draw: (shown: readonly Problem[]) => Problem
   // For the results: the lifetime points, and the kind's best, before the run.
   pointsBefore: number
@@ -87,13 +89,22 @@ export function RunRunner({
   now?: () => number
 }) {
   const strings = useStrings()
-  const [cards, setCards] = useState<RunCard[]>(() => [cardAt(draw([]), level, undefined)])
+  const [first] = useState(() => draw([]))
+  // Each card laid so far, in order: only ever added to, so each keeps its
+  // place, which keys it. The one on screen is the last (`index`), or past
+  // the last, the results.
+  const [cards, setCards] = useState<RunCard[]>(() => [cardAt(first, 0, level, undefined)])
   const [run, setRun] = useState<RunState>(() => startRun(level))
   const [index, setIndex] = useState(0)
   // As of the latest press or timer, which can come before the next render.
   const cardsRef = useRef(cards)
   const runRef = useRef(run)
   const indexRef = useRef(0)
+  // The run's problems in order, each once, growing only as a new one is
+  // drawn: a card's `position` is its problem's place here. What is drawn
+  // next keeps clear of them (`draw`, spec (runs) §2), however often one is
+  // gone back to.
+  const problemsRef = useRef<readonly Problem[]>([first])
   // The record's level, which moves as answers are recorded: each new card
   // is laid at it.
   const levelRef = useRef(level)
@@ -113,8 +124,7 @@ export function RunRunner({
   const left = useRef(false)
   const { width } = useWindowDimensions()
   // While a roll is pending or running: a blocker over the cards takes their
-  // taps, so nothing is answered or stepped mid-roll (and, just after
-  // looking back, `settling`).
+  // taps, so nothing is answered or stepped mid-roll.
   const [rolling, setRolling] = useState(false)
   // The answered card being swiped off, over `index`'s.
   const [leaving, setLeaving] = useState<number | null>(null)
@@ -123,25 +133,9 @@ export function RunRunner({
   // Spec (roll) §3, (runs) §5: with Reduce Motion on, nothing travels.
   const [reduceMotion, setReduceMotion] = useState(false)
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // The last card rolled on from: each rolls on once.
-  const rolledFrom = useRef(-1)
   // A moved level's banner over the card it moved for, keyed so it plays
   // once.
   const [banner, setBanner] = useState<{ key: number; level: FadeLevel } | null>(null)
-  // Spec (runs) §5 (the owner, 2026-10-06): the answered card looked back
-  // at, drawn over the stack, or null. The stack stays mounted underneath,
-  // so the problem on top keeps its beads and all else as the learner left
-  // it.
-  const [lookingAt, setLookingAt] = useState<number | null>(null)
-  // When looking back began, from the stack: the time spent looking back is
-  // not the current problem's, so its clock pauses meanwhile.
-  const lookedFrom = useRef<number | null>(null)
-  // For NEXT_GUARD_MS after the way back, as after とじる: the full-width
-  // button gives way to もどす and こたえる, つぎへ, or もう一回 and おわる,
-  // and the second tap of a double tap must not answer, move on or leave.
-  // The blocker takes it meanwhile.
-  const [settling, setSettling] = useState(false)
-  const settle = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     // It starts off, so only on is set: setting it off again can still
     // schedule a render for nothing.
@@ -151,19 +145,29 @@ export function RunRunner({
     // Leaving mid-roll: nothing may fire into the unmounted run.
     return () => {
       if (hold.current !== null) clearTimeout(hold.current)
-      if (settle.current !== null) clearTimeout(settle.current)
       offset.stopAnimation()
       opacity.stopAnimation()
     }
   }, [offset, opacity])
 
-  // Rolls on from card `from`: the next card is laid underneath (or, the run
-  // over, the results), and the answered one, back in its place, stays on
-  // top. Only once: a second つぎへ can land before the blocker is drawn and
-  // reach here after the swipe has started.
+  // The problem at `position` in the run: one already shown, or past the
+  // latest, a new one.
+  function problemAt(position: number): Problem {
+    const shown = problemsRef.current[position]
+    if (shown !== undefined) return shown
+    const drawn = draw(problemsRef.current)
+    problemsRef.current = [...problemsRef.current, drawn]
+    return drawn
+  }
+
+  // Rolls on from card `from`: the card of the problem after its own in the
+  // run is laid underneath (or, the run over, the results), and the answered
+  // one, back in its place, stays on top. Only from the card on top, so only
+  // once: a second つぎへ can land before the blocker is drawn and reach here
+  // after the swipe has started, and a tap on a card just left by 戻る can
+  // land before the render that takes it away.
   function roll(from: number) {
-    if (from <= rolledFrom.current) return
-    rolledFrom.current = from
+    if (from !== indexRef.current) return
     if (hold.current !== null) {
       clearTimeout(hold.current)
       hold.current = null
@@ -178,9 +182,10 @@ export function RunRunner({
         onEnd(runRef.current.score)
       }
     } else {
-      const laid = cardsRef.current
-      const next = cardAt(draw(laid.map((card) => card.problem)), levelRef.current, laid[from]?.level)
-      cardsRef.current = [...laid, next]
+      const last = cardsRef.current[from]
+      const position = last === undefined ? problemsRef.current.length : last.position + 1
+      const next = cardAt(problemAt(position), position, levelRef.current, last?.level)
+      cardsRef.current = [...cardsRef.current, next]
       setCards(cardsRef.current)
     }
     indexRef.current = from + 1
@@ -203,10 +208,7 @@ export function RunRunner({
       roll(index)
       return
     }
-    if (!shown.banner) return
-    setBanner({ key: index, level: shown.level })
-    AccessibilityInfo.announceForAccessibility(strings.levelName(shown.level))
-    if (shown.up) feel.levelUp()
+    showLevel(index, shown)
   })
   useEffect(() => {
     if (leaving === null) return
@@ -219,6 +221,15 @@ export function RunRunner({
     })
   }, [leaving, offset, opacity, width, reduceMotion])
 
+  // Card `at`, just put on screen: a moved level's banner, said to
+  // VoiceOver, and a promotion felt.
+  function showLevel(at: number, shown: RunCard) {
+    if (!shown.banner) return
+    setBanner({ key: at, level: shown.level })
+    AccessibilityInfo.announceForAccessibility(strings.levelName(shown.level))
+    if (shown.up) feel.levelUp()
+  }
+
   function leave() {
     if (left.current) return
     left.current = true
@@ -227,9 +238,6 @@ export function RunRunner({
 
   function quit() {
     askQuit(() => {
-      // Confirmed while looking back: the run ends as it would from the
-      // problem on top, which the stack still holds.
-      lookBackReturn()
       // Nothing answered: nothing to show.
       if (runRef.current.answered === 0) {
         leave()
@@ -243,32 +251,35 @@ export function RunRunner({
     })
   }
 
-  // Looks back at card `at`: from the stack, the problem on top's clock
-  // stops; further back, it stays stopped.
-  function lookBack(at: number) {
-    if (lookedFrom.current === null) lookedFrom.current = now()
-    setLookingAt(at)
-  }
-
-  // Back to the stack as it was: the problem on top's clock starts again
-  // where it stopped.
-  function lookBackReturn() {
-    const from = lookedFrom.current
-    if (from === null) return
-    lookedFrom.current = null
-    const away = now() - from
-    setShownAt((at) => at + away)
-    setLookingAt(null)
-    if (settle.current !== null) clearTimeout(settle.current)
-    setSettling(true)
-    settle.current = setTimeout(() => {
-      settle.current = null
-      setSettling(false)
-    }, NEXT_GUARD_MS)
+  // Spec (runs) §5 (the owner, 2026-10-06: "user should be able to go back
+  // as far back as they want … we dont need to keep the state of previous
+  // problem when user go back"): the problem before the one on screen in the
+  // run, laid again as a new card at the level as it stands, and put on top
+  // at once, with no swipe. It starts afresh, as if shown for the first
+  // time, and its clock with it; nothing of the problem left is kept. Its
+  // answer counts like any other's (the owner's choice), and from it the run
+  // goes on to the problem after it. Offered only while nothing moves and
+  // the run goes on (`onBack`), and checked again here, as a second tap can
+  // land before the render that takes 戻る away.
+  function goBack() {
+    if (moving.current || runRef.current.ended) return
+    const shown = cardsRef.current[indexRef.current]
+    if (shown === undefined || shown.position === 0) return
+    const position = shown.position - 1
+    const back = cardAt(problemAt(position), position, levelRef.current, shown.level)
+    cardsRef.current = [...cardsRef.current, back]
+    setCards(cardsRef.current)
+    indexRef.current = cardsRef.current.length - 1
+    setIndex(indexRef.current)
+    setShownAt(now())
+    showLevel(indexRef.current, back)
   }
 
   function question(at: number, card: RunCard) {
-    function submitted({ correct, assisted, t, beads }: Submission) {
+    function submitted({ correct, assisted, t }: Submission) {
+      // A card just left by 戻る, answered by a tap that landed before the
+      // render that took it away: it is not the run's any more.
+      if (at !== indexRef.current) return
       const next = answerRun(runRef.current, {
         problem: card.problem,
         level: card.level,
@@ -279,9 +290,6 @@ export function RunRunner({
       })
       runRef.current = next
       setRun(next)
-      // Kept to look back at.
-      cardsRef.current = cardsRef.current.map((laid, i) => (i === at ? { ...laid, answer: { beads, correct } } : laid))
-      setCards(cardsRef.current)
       // Spec (runs) §3: the time is for points only, so the record still
       // moves on accuracy alone (the owner, 2026-09-30).
       onAttempt({ id: practiceId(kind), correct, pace: null, assisted, fade: card.level })
@@ -337,52 +345,21 @@ export function RunRunner({
     )
   }
 
-  // The answered card before card `at`, if any: one rolled away unanswered
-  // (✕ confirmed on it) has nothing to look back at.
-  function answeredBefore(at: number): number | undefined {
-    for (let earlier = at - 1; earlier >= 0; earlier--) {
-      if (cards[earlier]?.answer !== undefined) return earlier
-    }
-    return undefined
-  }
-
-  const blocker = rolling || settling ? <View testID="roll-blocker" style={StyleSheet.absoluteFill} /> : null
+  const blocker = rolling ? <View testID="roll-blocker" style={StyleSheet.absoluteFill} /> : null
   // The bar sits outside the cards, so it stays put while they move. It
   // shows the level of the card on top, and on the results the last card's;
   // there its ✕, with nothing left to lose, just leaves. The cards are keyed
-  // by position: the answered one keeps its answer and its 〇 as it goes on
-  // top, and the next keeps its place once uncovered.
+  // by their place in `cards`: the answered one keeps its answer and its 〇
+  // as it goes on top, the next keeps its place once uncovered, and a
+  // problem gone back to is a card of its own, so it starts afresh.
   const atResults = index >= cards.length
   const shownLevel = cards[Math.min(index, cards.length - 1)]?.level ?? level
   const stack = leaving === null ? [index] : [index, leaving]
-  // ‹ looks back from the card on screen, the one looked at or else the
-  // stack's top (a problem or the results), to the answered one before it.
-  // Not while a card moves.
-  const before = answeredBefore(lookingAt ?? index)
-  const onBack = rolling || before === undefined ? undefined : () => lookBack(before)
-  // An answered card looked back at, as it was left: over the stack and its
-  // moments, opaque, at once, keyed so each starts as it was left. VoiceOver
-  // keeps to it and the bar (accessibilityViewIsModal), as the eye does. It
-  // takes no answer: nothing on it calls onSubmit or onMoveOn.
-  const looked = lookingAt === null ? undefined : cards[lookingAt]
-  const pastCard =
-    lookingAt !== null && looked?.answer !== undefined ? (
-      <View key={lookingAt} testID="card-past" accessibilityViewIsModal style={styles.card}>
-        <ProblemQuestion
-          problem={looked.problem}
-          fade={looked.level}
-          shownAt={shownAt}
-          now={now}
-          onSubmit={() => {}}
-          onMoveOn={() => {}}
-          past={{
-            ...looked.answer,
-            returnLabel: atResults ? strings.lookBackToResults : strings.lookBackReturn,
-            onReturn: lookBackReturn,
-          }}
-        />
-      </View>
-    ) : null
+  // 戻る: on a problem after the run's first, while no card moves (under a
+  // 〇 or swiping off) and the run goes on, so not on the third miss's
+  // review nor the results.
+  const onScreen = cards[index]
+  const onBack = onScreen !== undefined && onScreen.position > 0 && !rolling && !run.ended ? goBack : undefined
   return (
     <View style={styles.practice}>
       <RunBar
@@ -394,10 +371,7 @@ export function RunRunner({
         onQuit={atResults ? leave : quit}
         onBack={onBack}
       />
-      {/* Not flattened away (collapsable): the card looked at hides its
-          native siblings from VoiceOver, which must be the stack and its
-          moments alone, never the bar's ✕, ‹ and status. */}
-      <View collapsable={false} style={styles.practice}>
+      <View style={styles.practice}>
         {stack.map((at) => (
           <Animated.View
             key={at}
@@ -414,7 +388,6 @@ export function RunRunner({
             <LevelBanner key={`banner-${banner.key}`} level={banner.level} reduceMotion={reduceMotion} />
           ) : null}
         </View>
-        {pastCard}
         {blocker}
       </View>
     </View>

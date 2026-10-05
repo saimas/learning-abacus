@@ -15,8 +15,8 @@ export const COMBO_PULSE_MS = 220
 // Under it, the combo once there is one; its row keeps its height either
 // way, so nothing below moves as it comes and goes. VoiceOver reads the
 // lives, level and score as one line; ✕ stays a button of its own.
-// Right after ✕, ‹ looks back at the problem before (the owner, 2026-10-06),
-// given `onBack` while there is one to look back at.
+// Right after ✕, 戻る goes back to the problem before (the owner,
+// 2026-10-06), given `onBack` while it is offered.
 export function RunBar({
   lives,
   level,
@@ -49,23 +49,35 @@ export function RunBar({
             <Icon name="close" size={BAR_ICON_SIZE} />
           </Pressable>
         ) : null}
-        {/* ‹'s place is kept while it is not offered (before the first
-            answer, and while a card moves), so the lives beside it do not
-            shift each time it comes and goes, as the combo's row keeps its
-            height. A placeholder in its stead rather than a box around it,
-            which would cut its hitSlop short. */}
+        {/* 戻る's place is kept while it is not offered (on the run's
+            first problem, while a card moves, and once the run is over), so
+            the lives beside it do not shift each time it comes and goes, as
+            the combo's row keeps its height. A placeholder in its stead
+            rather than a box around it, which would cut its hitSlop short:
+            the same icon and word, unseen and unheard, so it is as wide at
+            any text size. */}
         {onBack !== undefined ? (
           <Pressable
-            testID="look-back"
+            testID="go-back"
             accessibilityRole="button"
-            accessibilityLabel={strings.lookBackLabel}
+            accessibilityLabel={strings.goBackLabel}
             onPress={onBack}
             hitSlop={12}
+            style={styles.back}
           >
             <Icon name="back" size={BAR_ICON_SIZE} />
+            <Text style={styles.backLabel}>{strings.goBack}</Text>
           </Pressable>
         ) : (
-          <View style={styles.backPlace} />
+          <View
+            testID="go-back-place"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.back, styles.backPlace]}
+          >
+            <Icon name="back" size={BAR_ICON_SIZE} />
+            <Text style={styles.backLabel}>{strings.goBack}</Text>
+          </View>
         )}
         <View
           testID="run-status"
@@ -132,12 +144,15 @@ function Combo({ combo, reduceMotion }: { combo: number; reduceMotion: boolean }
 }
 
 const LIFE_SIZE = 12
-// ✕'s and ‹'s icons.
+// ✕'s and 戻る's icons.
 const BAR_ICON_SIZE = 18
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: space.md, height: 28 },
-  backPlace: { width: BAR_ICON_SIZE, height: BAR_ICON_SIZE },
+  // The icon and the word together, as BackLink draws them.
+  back: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backLabel: { fontSize: fontSizes.body, color: colors.ink },
+  backPlace: { opacity: 0 },
   status: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md },
   lives: { flex: 1, flexDirection: 'row', gap: 6 },
   life: { width: LIFE_SIZE, height: LIFE_SIZE },

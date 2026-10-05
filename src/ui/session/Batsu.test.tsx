@@ -42,14 +42,4 @@ describe('Batsu', () => {
     act(() => jest.advanceTimersByTime(1_000))
     expect(StyleSheet.flatten(screen.getByTestId('batsu').props.style).opacity).toBe(0)
   })
-
-  // Spec (runs) §5: on a problem looked back at, as it was left.
-  it('can be drawn still, at once, and stay', () => {
-    render(<Batsu still />)
-    const style = () => StyleSheet.flatten(screen.getByTestId('batsu').props.style)
-    expect(style().opacity).toBe(1)
-    expect(JSON.stringify(style().transform)).toContain('{"scale":1}')
-    act(() => jest.advanceTimersByTime(1_000))
-    expect(style().opacity).toBe(1)
-  })
 })
