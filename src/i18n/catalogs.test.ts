@@ -551,4 +551,8 @@ describe('a run’s results', () => {
     expect([ja.rankUp(1), en.rankUp(10)]).toEqual(['練習9級に上がりました！', 'Up to Practice 1st dan!'])
     expect([ja.runAgain, en.runAgain]).toEqual(['もう一回', 'Again'])
   })
+
+  it('floats the points an answer earned', () => {
+    expect([ja.pointsEarned(1_242), en.pointsEarned(1_242)]).toEqual(['+1,242', '+1,242'])
+  })
 })

@@ -460,6 +460,8 @@ export const en: Strings = {
   rankUp: (rank) => `Up to Practice ${rankGrade(rank)}!`,
   runAgain: 'Again',
 
+  pointsEarned: (points) => `+${formatPoints(points)}`,
+
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',
   check: 'Check',

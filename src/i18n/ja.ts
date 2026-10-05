@@ -475,6 +475,9 @@ export const ja = {
   rankUp: (rank: number) => `練習${rankGrade(rank)}に上がりました！`,
   runAgain: 'もう一回',
 
+  // Spec (runs) §5: a right answer's points, floated over its 〇.
+  pointsEarned: (points: number) => `+${formatPoints(points)}`,
+
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',
   check: 'たしかめる',
