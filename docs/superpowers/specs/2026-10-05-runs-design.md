@@ -93,10 +93,12 @@ Existing players start at 0 points: 1.0 has only just been released.
 **The run's bar** (in `RoundTrack`'s place): ✕, the three life beads, the level (「レベル 3/6」, as now) and the score. Under it, the combo once it is 2 or more: 「12れんぞく ×2」 (en "12 in a row ×2"), with a pulse as it grows. The prompt, the soroban, the boards and 手順を見る stay where they are.
 
 **Moments.**
-- 〇: the points earned float up from the 〇 (「+242」) during the hold, then the card swipes off as now.
+- 〇: the 〇 alone (the owner, 2026-10-06: no numbers in the 〇; the points float was removed) during the hold, then the card swipes off as now. The points go to the bar's score.
 - A promotion: a short 「レベル 4」 banner on the next card. Where the level's look changes (F2→F3 and up), that card's beads start at the old look and ease to the new one once the card is uncovered, so the fade is seen happening.
 - ✕: a life bead drops from the bar and the combo goes; then the review as now.
 - A demotion: the same banner with the lower level; the beads come back without easing.
+
+**Looking back** (the owner's request, 2026-10-06: "user should be able to go back to the previous problem if they wanted"). Once a problem has been answered, a ‹ sits in the bar right after ✕ (its place kept while it is not offered, so the lives do not shift). It is offered while no card moves. It shows the answered problem before the one on screen as it was left, on an opaque card over the stack, at once: its prompt (and board or column), the learner's beads under its 〇 or ✕, drawn still, and what they read. 手順を見る opens the step panel at the start with the answer (and, for a miss, the learner's number beside it); とじる closes it. Nothing on it can be answered or moved, and it touches nothing of the run: score, lives, combo and the record. Its one button, 「いまの問題にもどる」 (「結果にもどる」 from the results), closes it, and for a moment after, as after とじる, what it uncovers takes no tap, so a double tap cannot answer, move on or leave; ‹ again goes further back, as far as the first, skipping a problem rolled away unanswered by ✕. The stack stays as it was underneath, and the current problem's clock pauses while the learner looks back. ✕ works as ever (it asks first) and, confirmed, also closes the card looked at.
 
 **Results** (replacing the round summary):
 - The run's score, large; beneath it 「自己ベスト！」 for a new best, otherwise 「ベスト 3,420」.
@@ -110,7 +112,7 @@ Existing players start at 0 points: 1.0 has only just been released.
 
 **Haptics** (`expo-haptics`): a light impact on 〇, a success notification on a promotion and on a rank stamped on the results, a warning notification on ✕. The calls go through one helper (`src/ui/feel.ts`), so tests mock them in one place.
 
-**Reduce Motion.** The float, the combo pulse and the banner become plain fades, and the beads change level without easing, as the card swipe already becomes a fade (spec (roll) §3).
+**Reduce Motion.** The combo pulse and the banner become plain fades, and the beads change level without easing, as the card swipe already becomes a fade (spec (roll) §3).
 
 **VoiceOver.** A promotion or demotion is announced (「レベル 4」), and a miss announces the lives left alongside the ✕. Points are not announced per answer. The bar's lives, level and score are one label.
 
@@ -144,7 +146,7 @@ Both are checked on load like `practices`: a missing or invalid `points` reads a
 - `run.test.ts`: the third miss ends a run; a miss resets the combo; a right answer with help keeps the combo and scores 0; a wrong answer with help costs a life; the score sums the points; longest combo and highest level; no problem repeats within 10, for the smallest kinds too.
 - `practice.test.ts` and `progress.test.ts`: a run's start clears both streaks and keeps the level; points add up; a best run is replaced only by a higher score; stored values are checked on load.
 - Screen tests: a run through a promotion (the next problem at the new level, the banner); three misses to the results; quitting with and without answers; もう一回 starting a fresh run at the record's level; a new best saved and shown; the rank seal on Home; a rank crossed on the results.
-- On the simulator (Expo Go and Maestro, recorded): the float, the combo pulse, the banner and the beads easing to a new level.
+- On the simulator (Expo Go and Maestro, recorded): the combo pulse, the banner and the beads easing to a new level.
 - On TestFlight: the haptics, which only a phone has, and `BEAD_SPEED_FACTOR`, tuned from the owner's first runs.
 
 ## 8. Out of scope

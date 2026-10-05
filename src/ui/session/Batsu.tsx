@@ -4,9 +4,10 @@ import { STAMP_STROKE_RATIO, useStamp } from './useStamp'
 
 // The 〇's counterpart for a miss: a big vermilion ✕ over the soroban, the
 // same size and timing as the 〇. The missed question stays on screen for
-// review underneath it, and it never intercepts a tap.
-export function Batsu({ size = 140 }: { size?: number }) {
-  const { scale, opacity } = useStamp()
+// review underneath it, and it never intercepts a tap. `still`, on a
+// problem looked back at, it is drawn at once and stays (useStamp).
+export function Batsu({ size = 140, still = false }: { size?: number; still?: boolean }) {
+  const { scale, opacity } = useStamp(false, still)
   const stroke = Math.round(size * STAMP_STROKE_RATIO)
   // Each stroke is a bar down the middle of the square, turned ±45°.
   const bar = { left: (size - stroke) / 2, width: stroke, height: size, borderRadius: stroke / 2 }

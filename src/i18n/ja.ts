@@ -472,8 +472,11 @@ export const ja = {
   rankUp: (rank: number) => `練習${rankGrade(rank)}に上がりました！`,
   runAgain: 'もう一回',
 
-  // Spec (runs) §5: a right answer's points, floated over its 〇.
-  pointsEarned: (points: number) => `+${formatPoints(points)}`,
+  // Spec (runs) §5 (the owner, 2026-10-06): ‹ in the run's bar looks back at
+  // the problems already answered; one button goes back.
+  lookBackLabel: '前の問題を見る',
+  lookBackReturn: 'いまの問題にもどる',
+  lookBackToResults: '結果にもどる',
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',

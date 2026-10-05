@@ -6,9 +6,18 @@ import { STAMP_STROKE_RATIO, useStamp } from './useStamp'
 // round holds the answered question under it before rolling on
 // (RunRunner, spec (roll) §3), so it is `lasting`: it stays until its
 // question rolls away, and the latency the next question records starts
-// after it. Decoration only: it never intercepts a tap.
-export function Maru({ size = 140, lasting = false }: { size?: number; lasting?: boolean }) {
-  const { scale, opacity } = useStamp(lasting)
+// after it. `still`, on a problem looked back at, it is drawn at once and
+// stays (useStamp). Decoration only: it never intercepts a tap.
+export function Maru({
+  size = 140,
+  lasting = false,
+  still = false,
+}: {
+  size?: number
+  lasting?: boolean
+  still?: boolean
+}) {
+  const { scale, opacity } = useStamp(lasting, still)
 
   return (
     <Animated.View

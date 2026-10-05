@@ -3,9 +3,11 @@ import * as Haptics from 'expo-haptics'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
 import type { FadeLevel } from '@/domain/fade'
 import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
+import { answerPoints } from '@/domain/score'
 import { BEAD_EASE_MS } from '@/ui/abacus/Rod'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
+import { NEXT_GUARD_MS } from '@/ui/session/QuestionView'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RunRunner } from './RunRunner'
@@ -131,8 +133,8 @@ function beadOpacities() {
     .map((layer) => StyleSheet.flatten(layer.props.style).opacity)
 }
 
-// The points float and the level banner are hidden from VoiceOver, which
-// the queries skip unless asked.
+// The level banner is hidden from VoiceOver, which the queries skip unless
+// asked.
 const hidden = { includeHiddenElements: true }
 
 describe('RunRunner', () => {
@@ -168,14 +170,16 @@ describe('RunRunner', () => {
   })
 
   // 23 + 58's base is 36; answered within its target at F0, early in a
-  // combo: 36 × 1.5.
-  it('scores a right answer, adds it to the bar and floats it up', () => {
+  // combo: 36 × 1.5. The owner (2026-10-06): just the 〇, no numbers in it,
+  // so the points go to the bar alone (spec (runs) §5).
+  it('scores a right answer and adds it to the bar, with only the 〇 over it', () => {
     const { onPoints } = renderRun()
     answerBeads(81)
     expect(onPoints).toHaveBeenCalledWith(54)
     expect(screen.getByTestId('run-score').props.children).toBe('54点')
-    expect(screen.getByTestId('points-float', hidden).props.children).toBe('+54')
-    finishRightAnswerRoll()
+    expect(screen.getByTestId('maru')).toBeTruthy()
+    expect(screen.queryByTestId('points-float', hidden)).toBeNull()
+    passTime(ROLL_HOLD_MS)
     expect(screen.queryByTestId('points-float', hidden)).toBeNull()
   })
 
@@ -479,6 +483,202 @@ describe('RunRunner quitting', () => {
     fireEvent.press(screen.getByTestId('quit'))
     expect(askQuit).toHaveBeenCalledTimes(1)
     expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Spec (runs) §5, the owner (2026-10-06): "user should be able to go back to
+// the previous problem if they wanted". ‹ in the bar shows an answered
+// problem as it was left, on a card over the stack, and touches nothing of
+// the run.
+describe('RunRunner looking back', () => {
+  const past = () => within(screen.getByTestId('card-past'))
+  // The current card's three rods, highest place first.
+  const rods = () => [0, 1, 2].map((i) => screen.getByTestId(`rod-${i}`).props.accessibilityValue.text).join('')
+
+  it('shows the problem before, as it was left, and returns to the current one', () => {
+    renderRun()
+    expect(screen.queryByTestId('look-back')).toBeNull()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(past().getByTestId('maru')).toBeTruthy()
+    expect(past().getByTestId('bead-reading').props.children).toBe('81')
+    // Nothing on it can be answered or moved.
+    for (const testID of ['submit', 'reset-beads', 'review-next', 'review-show']) {
+      expect(past().queryByTestId(testID)).toBeNull()
+    }
+    expect(past().getByTestId('rod-1').props.accessibilityRole).toBeUndefined()
+    expect(past().getByTestId('look-back-return')).toHaveTextContent('いまの問題にもどる')
+
+    fireEvent.press(past().getByTestId('look-back-return'))
+    expect(screen.queryByTestId('card-past')).toBeNull()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(screen.getByTestId('submit')).toBeTruthy()
+  })
+
+  it('shows a miss under its ✕, with what the beads read', () => {
+    renderRun()
+    answerBeads(80)
+    moveOnFromMiss()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('batsu')).toBeTruthy()
+    expect(past().queryByTestId('maru')).toBeNull()
+    expect(past().getByTestId('bead-reading').props.children).toBe('80')
+    // The ✕ stays: it says which the problem was for as long as it is
+    // looked at.
+    act(() => jest.advanceTimersByTime(1_000))
+    expect(StyleSheet.flatten(past().getByTestId('batsu').props.style).opacity).toBe(1)
+  })
+
+  it('goes further back, as far as the first', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    moveOnFromMiss()
+    expect(screen.getByTestId('prompt').props.children).toBe('10に11をたす。')
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('prompt').props.children).toBe('46に54をたす。')
+    expect(past().getByTestId('batsu')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(past().getByTestId('maru')).toBeTruthy()
+    expect(screen.queryByTestId('look-back')).toBeNull()
+    fireEvent.press(past().getByTestId('look-back-return'))
+    expect(screen.getByTestId('prompt').props.children).toBe('10に11をたす。')
+  })
+
+  // As with とじる before an answer (NEXT_GUARD_MS): the way back gives way
+  // to もどす and こたえる (or つぎへ, or もう一回 and おわる), and a second
+  // tap must not land on them.
+  it('takes no tap on what it uncovers in the moment after the way back', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(screen.queryByTestId('roll-blocker')).toBeNull()
+    fireEvent.press(screen.getByTestId('look-back-return'))
+    expect(screen.getByTestId('roll-blocker')).toBeTruthy()
+    passTime(NEXT_GUARD_MS)
+    expect(screen.queryByTestId('roll-blocker')).toBeNull()
+  })
+
+  it('keeps the current problem’s beads as the learner left them', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    setBeads(screen.getByTestId, 37, 3)
+    expect(rods()).toBe('037')
+    fireEvent.press(screen.getByTestId('look-back'))
+    fireEvent.press(screen.getByTestId('look-back-return'))
+    expect(rods()).toBe('037')
+  })
+
+  // The time spent looking back is not the current problem's.
+  it('pauses the current problem’s clock while looking back', () => {
+    let clock = 0
+    const { onPoints } = renderRun({ now: () => clock })
+    clock = 1_000
+    answerBeads(81)
+    finishRightAnswerRoll()
+    clock = 2_000
+    fireEvent.press(screen.getByTestId('look-back'))
+    clock = 602_000
+    fireEvent.press(screen.getByTestId('look-back-return'))
+    clock = 603_000
+    answerBeads(100)
+    // 46 + 54, two in a row at F0, answered 2 s after it was uncovered
+    // less the ten minutes spent looking back.
+    const second = { problem: { op: 'add', digits: 2, a: 46, b: 54 }, calibrationMs: 900, level: 0, combo: 2 } as const
+    expect(onPoints).toHaveBeenLastCalledWith(answerPoints({ ...second, answerMs: 2_000 }))
+    expect(answerPoints({ ...second, answerMs: 2_000 })).toBeGreaterThan(answerPoints({ ...second, answerMs: 602_000 }))
+  })
+
+  it('records nothing, and opens the steps with the answer', () => {
+    const { onAttempt, onPoints } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    fireEvent.press(past().getByTestId('steps-open'))
+    expect(past().getByTestId('correction-answer').props.children).toBe('こたえは 81')
+    expect(past().getByTestId('step-count').props.children).toBe('0 / 3')
+    fireEvent.press(past().getByTestId('step-next'))
+    expect(past().getByTestId('step-count').props.children).toBe('1 / 3')
+    fireEvent.press(past().getByTestId('steps-close'))
+    expect(past().queryByTestId('correction-answer')).toBeNull()
+    expect(past().getByTestId('bead-reading').props.children).toBe('81')
+    fireEvent.press(past().getByTestId('look-back-return'))
+    expect(onAttempt).toHaveBeenCalledTimes(1)
+    expect(onPoints).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('run-score').props.children).toBe('54点')
+    expect(screen.getAllByTestId('life')).toHaveLength(3)
+  })
+
+  it('names a miss’s beads beside the answer in its steps', () => {
+    renderRun()
+    answerBeads(80)
+    moveOnFromMiss()
+    fireEvent.press(screen.getByTestId('look-back'))
+    fireEvent.press(past().getByTestId('steps-open'))
+    expect(past().getByTestId('correction-answer').props.children).toBe('こたえは 81　あなたの答え 80')
+  })
+
+  it('looks back from the results at the last problem answered, skipping one never answered', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    // ✕ on 46 + 54, unanswered, rolls it away to the results.
+    fireEvent.press(screen.getByTestId('quit'))
+    finishRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
+    expect(past().getByTestId('look-back-return')).toHaveTextContent('結果にもどる')
+    expect(screen.queryByTestId('look-back')).toBeNull()
+    fireEvent.press(past().getByTestId('look-back-return'))
+    expect(screen.queryByTestId('card-past')).toBeNull()
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+  })
+
+  it('offers nothing to look back at while a card moves', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    expect(screen.getByTestId('look-back')).toBeTruthy()
+    answerBeads(100)
+    // Under the 〇's hold.
+    expect(screen.queryByTestId('look-back')).toBeNull()
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    expect(screen.getByTestId('card-leaving')).toBeTruthy()
+    expect(screen.queryByTestId('look-back')).toBeNull()
+    finishRoll()
+    expect(screen.getByTestId('look-back')).toBeTruthy()
+  })
+
+  it('ends the run from ✕ while looking back, closing the past card', () => {
+    const { askQuit, onEnd } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    fireEvent.press(screen.getByTestId('quit'))
+    expect(askQuit).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('card-past')).toBeNull()
+    finishRoll()
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    expect(onEnd).toHaveBeenCalledWith(54)
+  })
+
+  it('keeps looking back when the learner keeps going', () => {
+    const askQuit = jest.fn()
+    renderRun({ askQuit })
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    fireEvent.press(screen.getByTestId('quit'))
+    expect(askQuit).toHaveBeenCalledTimes(1)
+    expect(past().getByTestId('prompt').props.children).toBe('23に58をたす。')
   })
 })
 

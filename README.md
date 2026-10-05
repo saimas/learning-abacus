@@ -98,6 +98,7 @@ within twice its target up to ×1.5 (slow costs nothing). The results show the s
 kind's best, the right answers, the longest combo and the highest level, and the lifetime points
 fill a rank bar: twenty ranks, 練習10級 to 練習十段, marked 練習 so they are not taken for 珠算検定
 grades. A run is felt as well as seen: a tap on 〇, a pulse on a level or rank gained, a buzz on ✕.
+The ‹ in the run's bar looks back at the problems already answered, as they were left.
 
 ## Screens
 

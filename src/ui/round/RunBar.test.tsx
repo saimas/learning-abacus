@@ -34,4 +34,25 @@ describe('RunBar', () => {
     render(<RunBar lives={3} level={0} score={0} combo={0} reduceMotion={false} />)
     expect(screen.queryByTestId('quit')).toBeNull()
   })
+
+  // Spec (runs) §5 (the owner, 2026-10-06): ‹ looks back at the problem
+  // before, right after ✕.
+  it('looks back through ‹ when there is something to look back at', () => {
+    const onBack = jest.fn()
+    renderBar({ onBack })
+    const back = screen.getByTestId('look-back')
+    expect(back.props.accessibilityRole).toBe('button')
+    expect(back.props.accessibilityLabel).toBe('前の問題を見る')
+    fireEvent.press(back)
+    expect(onBack).toHaveBeenCalledTimes(1)
+    const drawn = screen.root
+      .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
+      .map((node) => node.props.testID as string)
+    expect(drawn.indexOf('look-back')).toBe(drawn.indexOf('quit') + 1)
+  })
+
+  it('has no ‹ without it', () => {
+    renderBar()
+    expect(screen.queryByTestId('look-back')).toBeNull()
+  })
 })

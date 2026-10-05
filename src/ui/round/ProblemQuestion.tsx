@@ -4,12 +4,13 @@ import { groupOfStep, problemSteps, type Problem } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { TermColumn } from '@/ui/mitori/TermColumn'
 import { OperandBoard } from '@/ui/multiply/OperandBoard'
-import { QuestionView, type AfterAnswer, type Submission } from '@/ui/session/QuestionView'
+import { QuestionView, type AfterAnswer, type Past, type Submission } from '@/ui/session/QuestionView'
 import { ProblemCorrectionCard } from './ProblemCorrectionCard'
 
 // One problem as a question: QuestionView with the problem's correction
 // card, its 見取算 column or its operand board. A round and a lesson's
-// やってみよう ask problems the same way.
+// やってみよう ask problems the same way, and a run shows one answered
+// earlier the same way when the learner looks back (`past`).
 export function ProblemQuestion({
   problem,
   fade,
@@ -20,6 +21,7 @@ export function ProblemQuestion({
   afterAnswer,
   easeFade,
   missNote,
+  past,
 }: {
   problem: Problem
   fade: FadeLevel
@@ -30,6 +32,7 @@ export function ProblemQuestion({
   afterAnswer?: AfterAnswer
   easeFade?: boolean
   missNote?: string
+  past?: Past
 }) {
   const strings = useStrings()
   const exercise = exerciseForProblem(problem)
@@ -90,6 +93,7 @@ export function ProblemQuestion({
       afterAnswer={afterAnswer}
       easeFade={easeFade}
       missNote={missNote}
+      past={past}
     />
   )
 }

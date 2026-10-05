@@ -457,7 +457,9 @@ export const en: Strings = {
   rankUp: (rank) => `Up to Practice ${rankGrade(rank)}!`,
   runAgain: 'Again',
 
-  pointsEarned: (points) => `+${formatPoints(points)}`,
+  lookBackLabel: 'See the previous problem',
+  lookBackReturn: 'Back to the current problem',
+  lookBackToResults: 'Back to the results',
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',

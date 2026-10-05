@@ -551,8 +551,13 @@ describe('a run’s results', () => {
     expect([ja.rankUp(1), en.rankUp(10)]).toEqual(['練習9級に上がりました！', 'Up to Practice 1st dan!'])
     expect([ja.runAgain, en.runAgain]).toEqual(['もう一回', 'Again'])
   })
+})
 
-  it('floats the points an answer earned', () => {
-    expect([ja.pointsEarned(1_242), en.pointsEarned(1_242)]).toEqual(['+1,242', '+1,242'])
+// Spec (runs) §5 (the owner, 2026-10-06): looking back at earlier problems.
+describe('looking back in a run', () => {
+  it('names ‹ and the ways back', () => {
+    expect([ja.lookBackLabel, en.lookBackLabel]).toEqual(['前の問題を見る', 'See the previous problem'])
+    expect([ja.lookBackReturn, en.lookBackReturn]).toEqual(['いまの問題にもどる', 'Back to the current problem'])
+    expect([ja.lookBackToResults, en.lookBackToResults]).toEqual(['結果にもどる', 'Back to the results'])
   })
 })

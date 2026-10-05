@@ -4,13 +4,14 @@ import { visualForFade, type FadeLevel } from '@/domain/fade'
 import type { PracticeAttempt } from '@/domain/practice'
 import { practiceId, type PracticeKind, type Problem } from '@/domain/problem'
 import { answerRun, quitRun, startRun, type RunState } from '@/domain/run'
+import type { Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
 import { feel } from '@/ui/feel'
-import type { Submission } from '@/ui/session/QuestionView'
+import { NEXT_GUARD_MS, type Submission } from '@/ui/session/QuestionView'
 import { colors } from '@/ui/theme'
 import { ProblemQuestion } from './ProblemQuestion'
 import { RunBar } from './RunBar'
-import { LevelBanner, PointsFloat } from './RunMoments'
+import { LevelBanner } from './RunMoments'
 import { RunResults } from './RunResults'
 
 // Spec (roll) §3: a right answer's 〇 is held on the answered problem for
@@ -28,8 +29,16 @@ export const ROLL_SWIPE_MS = 300
 // moved since the card before (`up` which way). `easeFrom`, set when it moved
 // up to a new look (F2 → F3 and on: F0–F2 all look solid), is the old level:
 // the beads start at its look and ease to the new one once the card is
-// uncovered (spec (runs) §5).
-type RunCard = { problem: Problem; level: FadeLevel; banner: boolean; up: boolean; easeFrom?: FadeLevel }
+// uncovered (spec (runs) §5). `answer`, once it is answered, is the learner's
+// soroban and whether it was right, to look back at (spec (runs) §5).
+type RunCard = {
+  problem: Problem
+  level: FadeLevel
+  banner: boolean
+  up: boolean
+  easeFrom?: FadeLevel
+  answer?: { beads: Soroban; correct: boolean }
+}
 
 function cardAt(problem: Problem, level: FadeLevel, previous: FadeLevel | undefined): RunCard {
   if (previous === undefined || previous === level) return { problem, level, banner: false, up: false }
@@ -104,7 +113,8 @@ export function RunRunner({
   const left = useRef(false)
   const { width } = useWindowDimensions()
   // While a roll is pending or running: a blocker over the cards takes their
-  // taps, so nothing is answered or stepped mid-roll.
+  // taps, so nothing is answered or stepped mid-roll (and, just after
+  // looking back, `settling`).
   const [rolling, setRolling] = useState(false)
   // The answered card being swiped off, over `index`'s.
   const [leaving, setLeaving] = useState<number | null>(null)
@@ -115,10 +125,23 @@ export function RunRunner({
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   // The last card rolled on from: each rolls on once.
   const rolledFrom = useRef(-1)
-  // The latest answer's points over its 〇, and a moved level's banner over
-  // the card it moved for, each keyed so it plays once.
-  const [float, setFloat] = useState<{ key: number; points: number } | null>(null)
+  // A moved level's banner over the card it moved for, keyed so it plays
+  // once.
   const [banner, setBanner] = useState<{ key: number; level: FadeLevel } | null>(null)
+  // Spec (runs) §5 (the owner, 2026-10-06): the answered card looked back
+  // at, drawn over the stack, or null. The stack stays mounted underneath,
+  // so the problem on top keeps its beads and all else as the learner left
+  // it.
+  const [lookingAt, setLookingAt] = useState<number | null>(null)
+  // When looking back began, from the stack: the time spent looking back is
+  // not the current problem's, so its clock pauses meanwhile.
+  const lookedFrom = useRef<number | null>(null)
+  // For NEXT_GUARD_MS after the way back, as after とじる: the full-width
+  // button gives way to もどす and こたえる, つぎへ, or もう一回 and おわる,
+  // and the second tap of a double tap must not answer, move on or leave.
+  // The blocker takes it meanwhile.
+  const [settling, setSettling] = useState(false)
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     // It starts off, so only on is set: setting it off again can still
     // schedule a render for nothing.
@@ -128,6 +151,7 @@ export function RunRunner({
     // Leaving mid-roll: nothing may fire into the unmounted run.
     return () => {
       if (hold.current !== null) clearTimeout(hold.current)
+      if (settle.current !== null) clearTimeout(settle.current)
       offset.stopAnimation()
       opacity.stopAnimation()
     }
@@ -172,7 +196,6 @@ export function RunRunner({
     setLeaving(null)
     setShownAt(now())
     setRolling(false)
-    setFloat(null)
     const shown = cardsRef.current[index]
     if (shown === undefined) return
     // ✕ was confirmed while this card came in: on to the results.
@@ -204,6 +227,9 @@ export function RunRunner({
 
   function quit() {
     askQuit(() => {
+      // Confirmed while looking back: the run ends as it would from the
+      // problem on top, which the stack still holds.
+      lookBackReturn()
       // Nothing answered: nothing to show.
       if (runRef.current.answered === 0) {
         leave()
@@ -217,8 +243,32 @@ export function RunRunner({
     })
   }
 
+  // Looks back at card `at`: from the stack, the problem on top's clock
+  // stops; further back, it stays stopped.
+  function lookBack(at: number) {
+    if (lookedFrom.current === null) lookedFrom.current = now()
+    setLookingAt(at)
+  }
+
+  // Back to the stack as it was: the problem on top's clock starts again
+  // where it stopped.
+  function lookBackReturn() {
+    const from = lookedFrom.current
+    if (from === null) return
+    lookedFrom.current = null
+    const away = now() - from
+    setShownAt((at) => at + away)
+    setLookingAt(null)
+    if (settle.current !== null) clearTimeout(settle.current)
+    setSettling(true)
+    settle.current = setTimeout(() => {
+      settle.current = null
+      setSettling(false)
+    }, NEXT_GUARD_MS)
+  }
+
   function question(at: number, card: RunCard) {
-    function submitted({ correct, assisted, t }: Submission) {
+    function submitted({ correct, assisted, t, beads }: Submission) {
       const next = answerRun(runRef.current, {
         problem: card.problem,
         level: card.level,
@@ -229,13 +279,15 @@ export function RunRunner({
       })
       runRef.current = next
       setRun(next)
+      // Kept to look back at.
+      cardsRef.current = cardsRef.current.map((laid, i) => (i === at ? { ...laid, answer: { beads, correct } } : laid))
+      setCards(cardsRef.current)
       // Spec (runs) §3: the time is for points only, so the record still
       // moves on accuracy alone (the owner, 2026-09-30).
       onAttempt({ id: practiceId(kind), correct, pace: null, assisted, fade: card.level })
-      if (next.lastPoints > 0) {
-        onPoints(next.lastPoints)
-        setFloat({ key: next.answered, points: next.lastPoints })
-      }
+      // The owner (2026-10-06): just the 〇, with no points in or over it;
+      // the bar's score shows them (spec (runs) §5).
+      if (next.lastPoints > 0) onPoints(next.lastPoints)
       if (!correct) {
         feel.miss()
         return
@@ -285,7 +337,16 @@ export function RunRunner({
     )
   }
 
-  const blocker = rolling ? <View testID="roll-blocker" style={StyleSheet.absoluteFill} /> : null
+  // The answered card before card `at`, if any: one rolled away unanswered
+  // (✕ confirmed on it) has nothing to look back at.
+  function answeredBefore(at: number): number | undefined {
+    for (let earlier = at - 1; earlier >= 0; earlier--) {
+      if (cards[earlier]?.answer !== undefined) return earlier
+    }
+    return undefined
+  }
+
+  const blocker = rolling || settling ? <View testID="roll-blocker" style={StyleSheet.absoluteFill} /> : null
   // The bar sits outside the cards, so it stays put while they move. It
   // shows the level of the card on top, and on the results the last card's;
   // there its ✕, with nothing left to lose, just leaves. The cards are keyed
@@ -294,6 +355,34 @@ export function RunRunner({
   const atResults = index >= cards.length
   const shownLevel = cards[Math.min(index, cards.length - 1)]?.level ?? level
   const stack = leaving === null ? [index] : [index, leaving]
+  // ‹ looks back from the card on screen, the one looked at or else the
+  // stack's top (a problem or the results), to the answered one before it.
+  // Not while a card moves.
+  const before = answeredBefore(lookingAt ?? index)
+  const onBack = rolling || before === undefined ? undefined : () => lookBack(before)
+  // An answered card looked back at, as it was left: over the stack and its
+  // moments, opaque, at once, keyed so each starts as it was left. VoiceOver
+  // keeps to it and the bar (accessibilityViewIsModal), as the eye does. It
+  // takes no answer: nothing on it calls onSubmit or onMoveOn.
+  const looked = lookingAt === null ? undefined : cards[lookingAt]
+  const pastCard =
+    lookingAt !== null && looked?.answer !== undefined ? (
+      <View key={lookingAt} testID="card-past" accessibilityViewIsModal style={styles.card}>
+        <ProblemQuestion
+          problem={looked.problem}
+          fade={looked.level}
+          shownAt={shownAt}
+          now={now}
+          onSubmit={() => {}}
+          onMoveOn={() => {}}
+          past={{
+            ...looked.answer,
+            returnLabel: atResults ? strings.lookBackToResults : strings.lookBackReturn,
+            onReturn: lookBackReturn,
+          }}
+        />
+      </View>
+    ) : null
   return (
     <View style={styles.practice}>
       <RunBar
@@ -303,6 +392,7 @@ export function RunRunner({
         combo={run.combo}
         reduceMotion={reduceMotion}
         onQuit={atResults ? leave : quit}
+        onBack={onBack}
       />
       <View style={styles.practice}>
         {stack.map((at) => (
@@ -317,13 +407,11 @@ export function RunRunner({
           </Animated.View>
         ))}
         <View pointerEvents="none" style={styles.moments}>
-          {float !== null ? (
-            <PointsFloat key={`float-${float.key}`} points={float.points} reduceMotion={reduceMotion} />
-          ) : null}
           {banner !== null ? (
             <LevelBanner key={`banner-${banner.key}`} level={banner.level} reduceMotion={reduceMotion} />
           ) : null}
         </View>
+        {pastCard}
         {blocker}
       </View>
     </View>

@@ -16,8 +16,10 @@ import { useStepper } from './useStepper'
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
 // the moment of the answer, which the runner uses as the next question's
 // start and to check its deadline. `assisted` says the learner looked at the
-// steps with 手順を見る before answering (spec (core rounds) §5).
-export type Submission = { correct: boolean; latencyMs: number | null; t: number; assisted: boolean }
+// steps with 手順を見る before answering (spec (core rounds) §5). `beads` is
+// the soroban as answered, which a run keeps so the learner can look back at
+// it (spec (runs) §5).
+export type Submission = { correct: boolean; latencyMs: number | null; t: number; assisted: boolean; beads: Soroban }
 
 // Outside a round (a lesson's やってみよう, spec (howto tutorial) §2): once
 // the question is answered, right or wrong, its bottom row offers leaving,
@@ -31,13 +33,23 @@ export type AfterAnswer = { leaveLabel: string; onLeave: () => void; againLabel:
 // and after こたえを見る at silent levels.
 type Review = { cardShown: boolean }
 
+// Spec (runs) §5 (the owner, 2026-10-06: "user should be able to go back to
+// the previous problem if they wanted"): a question answered earlier in a
+// run, looked back at as it was left. It starts from the learner's `beads`
+// under its 〇 or ✕ (`correct`) with what they read, locked, and offers
+// 手順を見る with the answer. It takes no answer and says nothing of 正解 or
+// ちがいます: its bottom row is one button, `returnLabel`, which calls
+// `onReturn`.
+export type Past = { beads: Soroban; correct: boolean; returnLabel: string; onReturn: () => void }
+
 // A tap on つぎへ this soon after a miss is the second half of a double tap
 // on こたえる, which sits in the same place. It must not skip a review the
 // learner has not seen yet. The same goes for こたえを見る: once it opens the
 // panel, つぎへ widens into its place. And for とじる before an answer: it
 // gives way to the answer controls, with こたえる under it, and a second tap
-// must not hand in an answer the learner has not chosen to give.
-const NEXT_GUARD_MS = 450
+// must not hand in an answer the learner has not chosen to give. A run's way
+// back from looking back gives way the same (RunRunner).
+export const NEXT_GUARD_MS = 450
 
 // One question, from the prompt to the answer and, after a miss, its review.
 // The parent keys it by question, so a new question starts with a clean
@@ -59,6 +71,7 @@ export function QuestionView({
   afterAnswer,
   easeFade,
   missNote,
+  past,
 }: {
   exercise: Exercise
   fade: FadeLevel
@@ -93,6 +106,7 @@ export function QuestionView({
   // (Abacus), and a run's word on what a miss leaves, said with the ✕.
   easeFade?: boolean
   missNote?: string
+  past?: Past
 }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
@@ -114,8 +128,10 @@ export function QuestionView({
   // same soroban.
   const stepper = useStepper(exercise.states)
   // The soroban as the learner has moved it. null means untouched: it shows
-  // the question's starting value.
-  const [beads, setBeads] = useState<Soroban | null>(null)
+  // the question's starting value. A question looked back at starts, and
+  // stays, as it was answered (the parent keys it by question, so `past` is
+  // read once).
+  const [beads, setBeads] = useState<Soroban | null>(past?.beads ?? null)
   // When the last press that つぎへ or こたえる can sit under landed (the
   // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
   const guardFrom = useRef<number | null>(null)
@@ -184,7 +200,7 @@ export function QuestionView({
       const wrong = missNote === undefined ? strings.wrong : `${strings.wrong} ${missNote}`
       AccessibilityInfo.announceForAccessibility(cardShown ? `${wrong} ${answerLine}` : wrong)
     }
-    onSubmit({ correct, latencyMs, t, assisted: assisted.current })
+    onSubmit({ correct, latencyMs, t, assisted: assisted.current, beads: shownBeads })
   }
 
   // Spec (core rounds) §4: the same step panel as after a miss, before the
@@ -229,9 +245,9 @@ export function QuestionView({
     return guardFrom.current !== null && t - guardFrom.current < NEXT_GUARD_MS
   }
 
-  // Offered until the question is answered, and hidden while the panel it
-  // opens is up. It stands where the step lines appear once opened, below
-  // the soroban. The owner
+  // Offered until the question is answered, and on a question looked back
+  // at, and hidden while the panel it opens is up. It stands where the step
+  // lines appear once opened, below the soroban. The owner
   // (2026-09-24): it sat under the prompt while the steps showed at the
   // bottom of the screen, and should be where they are, to keep it
   // consistent.
@@ -255,16 +271,29 @@ export function QuestionView({
   const activeStep = stepper.index !== null && stepper.index > 0 ? stepper.index - 1 : undefined
   // The panel is open either after a miss, where it gives the answer and
   // stays until つぎへ, or before an answer, where it keeps the answer back
-  // and closes with とじる.
+  // and closes with とじる. On a question looked back at it gives the
+  // answer, a miss's as its review did, and closes with とじる.
   const reviewing = review !== null && review.cardShown
-  const beforeAnswer = review === null && stepsOpen
-  const panelOpen = reviewing || beforeAnswer
+  const beforeAnswer = past === undefined && review === null && stepsOpen
+  const pastOpen = past !== undefined && stepsOpen
+  const panelOpen = reviewing || beforeAnswer || pastOpen
+  const withAnswer = reviewing || pastOpen
+  const missed = past !== undefined ? !past.correct : review !== null
   // The owner (2026-09-29): once answered on the beads, the number they read
   // is shown, so a 〇 says which number was right and a ✕ which was not.
   // Under the soroban while the learner's own beads are on show; once the
   // steps take the soroban over, beside the answer in the card instead.
-  const answered = review !== null || answeredRight
-  const given = reviewing ? reading : undefined
+  const answered = review !== null || answeredRight || past !== undefined
+  const given = withAnswer && missed ? reading : undefined
+  // Looked back at, the one way on is back to where the learner was.
+  const pastRow =
+    past !== undefined ? (
+      <View style={styles.buttonRow}>
+        <View style={styles.reviewSlot}>
+          <Button testID="look-back-return" label={past.returnLabel} onPress={past.onReturn} />
+        </View>
+      </View>
+    ) : null
   const afterAnswerRow =
     afterAnswer !== undefined && answered ? (
       <View style={styles.buttonRow}>
@@ -286,7 +315,7 @@ export function QuestionView({
   // The step panel: the controls sit in the slot under the soroban, and the
   // lines below them (see beadStepLines). Before an answer nothing has been
   // got wrong, so the lines carry no correction edge.
-  const steps = panelOpen ? renderSteps({ activeStep, showAnswer: reviewing, given }) : null
+  const steps = panelOpen ? renderSteps({ activeStep, showAnswer: withAnswer, given }) : null
   const stepControls = panelOpen ? (
     <StepControls
       index={stepper.index}
@@ -294,7 +323,7 @@ export function QuestionView({
       onBack={stepper.back}
       onNext={stepper.next}
       onRestart={stepper.restart}
-      onClose={beforeAnswer ? closeSteps : undefined}
+      onClose={beforeAnswer || pastOpen ? closeSteps : undefined}
     />
   ) : null
   // Stepping takes the soroban over, drawn solid whatever the fade level, so
@@ -311,11 +340,13 @@ export function QuestionView({
       : undefined
   // The ✕ over a missed question under review, or the 〇 over a right one
   // until the round rolls on. Either is decoration and never takes a tap.
+  // Looked back at, either is drawn still, as it was left.
   const stamp = (size: number) => {
     if (!answered) return null
+    const still = past !== undefined
     return (
       <View style={styles.stampOverlay} pointerEvents="none">
-        {review !== null ? <Batsu size={size} /> : <Maru size={size} lasting />}
+        {missed ? <Batsu size={size} still={still} /> : <Maru size={size} lasting still={still} />}
       </View>
     )
   }
@@ -349,9 +380,9 @@ export function QuestionView({
   // the step panel's lines below the controls scroll, so the soroban, the
   // step controls under it and the buttons stay on screen even on a
   // 375 × 667 phone.
-  // The beads take no taps while the question is answered (under review)
-  // or while they show the steps before an answer.
-  const locked = review !== null || beforeAnswer || answeredRight
+  // The beads take no taps while the question is answered (under review,
+  // or looked back at) or while they show the steps before an answer.
+  const locked = review !== null || beforeAnswer || answeredRight || past !== undefined
   // The owner's request (2026-09-23): the lines used to share the small
   // scroll above the soroban with the prompt, two lines on show at a
   // time, while below ◀ ▶ the screen stood empty. So with the panel open
@@ -373,7 +404,7 @@ export function QuestionView({
   // only the space below the controls changes hands (see the spacer).
   const beadStepLines = panelOpen ? (
     <View testID="step-lines" style={[styles.bottomRegion, beforeAnswer && styles.stepLinesOverAnswerRow]}>
-      <ScrollingStepLines accent={reviewing}>{steps}</ScrollingStepLines>
+      <ScrollingStepLines accent={withAnswer && missed}>{steps}</ScrollingStepLines>
     </View>
   ) : null
   return (
@@ -462,7 +493,7 @@ export function QuestionView({
       {/* Before an answer, the steps' とじる stands in for もどす and
           こたえる: the learner answers once they have closed the steps.
           The step lines take that row's height meanwhile. */}
-      {afterAnswerRow ?? (review !== null ? (
+      {pastRow ?? afterAnswerRow ?? (review !== null ? (
         reviewButtons
       ) : beforeAnswer ? null : (
         <View style={styles.buttonRow}>
