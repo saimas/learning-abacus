@@ -1033,6 +1033,39 @@ describe('QuestionView looking back at an answered question', () => {
     expect(StyleSheet.flatten(screen.getByTestId('maru').props.style).opacity).toBe(1)
   })
 
+  // VoiceOver can tell a past problem's 〇 from its ✕; on a question being
+  // answered the stamps stay unnamed, as the answer is announced.
+  it.each([
+    [857, true, 'maru', '正解'],
+    [800, false, 'batsu', 'ちがいます'],
+  ] as const)('names a past %p’s stamp for VoiceOver', (value, correct, stamp, label) => {
+    renderView({ past: past(value, correct) })
+    expect(screen.getByTestId(stamp).props.accessible).toBe(true)
+    expect(screen.getByTestId(stamp).props.accessibilityLabel).toBe(label)
+  })
+
+  it('leaves the stamps of a question being answered unnamed', () => {
+    renderView({ fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 800, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('batsu').props.accessibilityLabel).toBeUndefined()
+    screen.unmount()
+    renderView()
+    setBeads(screen.getByTestId, 857, 4)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('maru').props.accessibilityLabel).toBeUndefined()
+  })
+
+  // The ruling (2026-10-06): looking back is review, not a test, so the
+  // learner's beads are drawn solid, frame and all, at any level.
+  it.each([3, 6] as const)('draws the beads solid at level %p', (fade) => {
+    renderView({ fade, coaching: 'silent', past: past(857, true) })
+    const wrap = within(screen.getByTestId('soroban-wrap'))
+    for (const layer of wrap.getAllByTestId('fade-layer')) expect(layer.props.style.opacity).toBe(1)
+    expect(wrap.getByTestId('abacus-frame')).toBeTruthy()
+    expect(rods()).toBe('0857')
+  })
+
   it('opens the steps at the start, with the answer and the miss’s beads, and closes them', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
     try {

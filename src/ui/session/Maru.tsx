@@ -7,15 +7,18 @@ import { STAMP_STROKE_RATIO, useStamp } from './useStamp'
 // (RunRunner, spec (roll) §3), so it is `lasting`: it stays until its
 // question rolls away, and the latency the next question records starts
 // after it. `still`, on a problem looked back at, it is drawn at once and
-// stays (useStamp). Decoration only: it never intercepts a tap.
+// stays (useStamp), and VoiceOver reads it as `accessibilityLabel`; otherwise
+// it is unnamed. Decoration only: it never intercepts a tap.
 export function Maru({
   size = 140,
   lasting = false,
   still = false,
+  accessibilityLabel,
 }: {
   size?: number
   lasting?: boolean
   still?: boolean
+  accessibilityLabel?: string
 }) {
   const { scale, opacity } = useStamp(lasting, still)
 
@@ -23,6 +26,8 @@ export function Maru({
     <Animated.View
       testID="maru"
       pointerEvents="none"
+      accessible={accessibilityLabel !== undefined ? true : undefined}
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.maru,
         {

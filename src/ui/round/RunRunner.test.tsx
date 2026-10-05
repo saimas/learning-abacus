@@ -576,23 +576,83 @@ describe('RunRunner looking back', () => {
   })
 
   // The time spent looking back is not the current problem's.
+  // Paused, not restarted: the 10 s spent on the problem before ‹ still
+  // count, and only the ten minutes looking back do not.
   it('pauses the current problem’s clock while looking back', () => {
     let clock = 0
     const { onPoints } = renderRun({ now: () => clock })
     clock = 1_000
     answerBeads(81)
+    // 46 + 54 is uncovered at 1 s.
     finishRightAnswerRoll()
-    clock = 2_000
+    clock = 11_000
     fireEvent.press(screen.getByTestId('look-back'))
-    clock = 602_000
+    clock = 611_000
     fireEvent.press(screen.getByTestId('look-back-return'))
-    clock = 603_000
+    clock = 613_000
     answerBeads(100)
-    // 46 + 54, two in a row at F0, answered 2 s after it was uncovered
-    // less the ten minutes spent looking back.
+    // Two in a row at F0, its base 44 and its bead target 8.8 s: 12 s of its
+    // own (speed about ×1.32, 58 points), where restarting the clock would
+    // count 2 s (×1.5, 66) and counting the time away 612 s (×1, 44).
     const second = { problem: { op: 'add', digits: 2, a: 46, b: 54 }, calibrationMs: 900, level: 0, combo: 2 } as const
-    expect(onPoints).toHaveBeenLastCalledWith(answerPoints({ ...second, answerMs: 2_000 }))
-    expect(answerPoints({ ...second, answerMs: 2_000 })).toBeGreaterThan(answerPoints({ ...second, answerMs: 602_000 }))
+    const paused = answerPoints({ ...second, answerMs: 12_000 })
+    expect(onPoints).toHaveBeenLastCalledWith(paused)
+    expect(paused).not.toBe(answerPoints({ ...second, answerMs: 2_000 }))
+    expect(paused).not.toBe(answerPoints({ ...second, answerMs: 612_000 }))
+  })
+
+  // The ruling (2026-10-06): looking back is review, not a test, so the
+  // beads the learner left are drawn solid, frame and all, whatever level
+  // the problem was answered at. The problem on top keeps its own.
+  it.each([
+    [3, 0.35],
+    [6, 0],
+  ] as const)('draws a problem answered at level %p with its beads solid', (level, onTop) => {
+    renderRun({ level })
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('look-back'))
+    const layers = past().getAllByTestId('fade-layer')
+    expect(layers.map((layer) => StyleSheet.flatten(layer.props.style).opacity)).toEqual(layers.map(() => 1))
+    expect(past().getByTestId('abacus-frame')).toBeTruthy()
+    expect(screen.getByTestId('run-level').props.children).toBe(`レベル ${level}/6`)
+    fireEvent.press(past().getByTestId('look-back-return'))
+    expect(beadOpacities().every((opacity) => opacity === onTop)).toBe(true)
+  })
+
+  // VoiceOver keeps to the card looked at and the bar. The modal card hides
+  // its native siblings, so the cards' container must stay a view of its own
+  // (Fabric would flatten a layout-only one): then those siblings are the
+  // stack and its moments, never ✕, ‹ or the bar's status.
+  it('keeps the bar out of what the card looked at hides from VoiceOver', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    moveOnFromMiss()
+    // At the second problem, with the first still to look back at.
+    fireEvent.press(screen.getByTestId('look-back'))
+    const kept = screen.root.findAll((node) => typeof node.type === 'string' && node.props.collapsable === false)
+    const container = kept.find((node) => within(node).queryByTestId('card-past') !== null)
+    expect(container).toBeDefined()
+    if (container === undefined) return
+    expect(within(container).queryByTestId('quit', hidden)).toBeNull()
+    expect(screen.getByTestId('quit')).toBeTruthy()
+    expect(screen.getByTestId('look-back')).toBeTruthy()
+    expect(screen.getByTestId('run-status')).toBeTruthy()
+  })
+
+  // VoiceOver can tell whether the problem looked at was right.
+  it('names a past 〇 and ✕ for VoiceOver', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    moveOnFromMiss()
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('batsu').props.accessibilityLabel).toBe('ちがいます')
+    fireEvent.press(screen.getByTestId('look-back'))
+    expect(past().getByTestId('maru').props.accessibilityLabel).toBe('正解')
   })
 
   it('records nothing, and opens the steps with the answer', () => {

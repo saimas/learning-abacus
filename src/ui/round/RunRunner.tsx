@@ -394,7 +394,10 @@ export function RunRunner({
         onQuit={atResults ? leave : quit}
         onBack={onBack}
       />
-      <View style={styles.practice}>
+      {/* Not flattened away (collapsable): the card looked at hides its
+          native siblings from VoiceOver, which must be the stack and its
+          moments alone, never the bar's ✕, ‹ and status. */}
+      <View collapsable={false} style={styles.practice}>
         {stack.map((at) => (
           <Animated.View
             key={at}

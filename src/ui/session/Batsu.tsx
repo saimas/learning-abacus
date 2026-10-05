@@ -5,8 +5,17 @@ import { STAMP_STROKE_RATIO, useStamp } from './useStamp'
 // The 〇's counterpart for a miss: a big vermilion ✕ over the soroban, the
 // same size and timing as the 〇. The missed question stays on screen for
 // review underneath it, and it never intercepts a tap. `still`, on a
-// problem looked back at, it is drawn at once and stays (useStamp).
-export function Batsu({ size = 140, still = false }: { size?: number; still?: boolean }) {
+// problem looked back at, it is drawn at once and stays (useStamp), and
+// VoiceOver reads it as `accessibilityLabel`; otherwise it is unnamed.
+export function Batsu({
+  size = 140,
+  still = false,
+  accessibilityLabel,
+}: {
+  size?: number
+  still?: boolean
+  accessibilityLabel?: string
+}) {
   const { scale, opacity } = useStamp(false, still)
   const stroke = Math.round(size * STAMP_STROKE_RATIO)
   // Each stroke is a bar down the middle of the square, turned ±45°.
@@ -16,6 +25,8 @@ export function Batsu({ size = 140, still = false }: { size?: number; still?: bo
     <Animated.View
       testID="batsu"
       pointerEvents="none"
+      accessible={accessibilityLabel !== undefined ? true : undefined}
+      accessibilityLabel={accessibilityLabel}
       style={{ width: size, height: size, opacity, transform: [{ rotate: '-6deg' }, { scale }] }}
     >
       <View testID="batsu-stroke" style={[styles.stroke, bar, styles.forward]} />

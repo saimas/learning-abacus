@@ -327,8 +327,10 @@ export function QuestionView({
     />
   ) : null
   // Stepping takes the soroban over, drawn solid whatever the fade level, so
-  // there is something to watch at F3+.
-  const shownFade = stepper.soroban !== null ? 0 : fade
+  // there is something to watch at F3+. Looked back at, the learner's beads
+  // are drawn solid too: that is review, not a test (the ruling,
+  // 2026-10-06), so even at F5–F6 they can be seen.
+  const shownFade = stepper.soroban !== null || past !== undefined ? 0 : fade
   // The owner's request (2026-09-23): when one number takes several moves, as
   // with a carry, it was hard to see which moves belong to one operation. So
   // while stepping, the beads the operation on show (a column, a 九九, or a
@@ -340,13 +342,18 @@ export function QuestionView({
       : undefined
   // The ✕ over a missed question under review, or the 〇 over a right one
   // until the round rolls on. Either is decoration and never takes a tap.
-  // Looked back at, either is drawn still, as it was left.
+  // Looked back at, either is drawn still, as it was left, and named for
+  // VoiceOver, which heard nothing of 正解 or ちがいます this time.
   const stamp = (size: number) => {
     if (!answered) return null
     const still = past !== undefined
     return (
       <View style={styles.stampOverlay} pointerEvents="none">
-        {missed ? <Batsu size={size} still={still} /> : <Maru size={size} lasting still={still} />}
+        {missed ? (
+          <Batsu size={size} still={still} accessibilityLabel={still ? strings.wrong : undefined} />
+        ) : (
+          <Maru size={size} lasting still={still} accessibilityLabel={still ? strings.correct : undefined} />
+        )}
       </View>
     )
   }
