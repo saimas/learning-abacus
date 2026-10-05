@@ -1,11 +1,15 @@
 import {
   dayKey,
   DEFAULT_CALIBRATION_MS,
+  earnPoints,
   emptyProgress,
   markDayPracticed,
   markLessonSeen,
+  recordBestRun,
   recordPracticeAttempt,
   SCHEMA_VERSION,
+  startRunRecord,
+  type Progress,
 } from './progress'
 
 describe('emptyProgress', () => {
@@ -87,5 +91,48 @@ describe('recordPracticeAttempt', () => {
 
   it('starts empty', () => {
     expect(emptyProgress().practices).toEqual({})
+  })
+})
+
+describe('points and best runs', () => {
+  it('start with none', () => {
+    expect(emptyProgress()).toMatchObject({ points: 0, bestRuns: {} })
+  })
+
+  it('add up the points earned', () => {
+    expect(earnPoints(earnPoints(emptyProgress(), 242), 46).points).toBe(288)
+  })
+
+  it('keep a best run only when it is beaten', () => {
+    const first = recordBestRun(emptyProgress(), 'add:2', 1_200)
+    expect(first.bestRuns).toEqual({ 'add:2': 1_200 })
+    expect(recordBestRun(first, 'add:2', 900).bestRuns).toEqual({ 'add:2': 1_200 })
+    expect(recordBestRun(first, 'add:2', 1_200).bestRuns).toEqual({ 'add:2': 1_200 })
+    expect(recordBestRun(first, 'add:2', 1_300).bestRuns).toEqual({ 'add:2': 1_300 })
+    expect(recordBestRun(first, 'sub:1', 50).bestRuns).toEqual({ 'add:2': 1_200, 'sub:1': 50 })
+  })
+
+  it('set no best for a run that scored nothing', () => {
+    expect(recordBestRun(emptyProgress(), 'add:2', 0).bestRuns).toEqual({})
+  })
+})
+
+describe('startRunRecord', () => {
+  it('starts the kind’s streaks afresh, keeping its level', () => {
+    const progress: Progress = {
+      ...emptyProgress(),
+      practices: { 'add:2': { fade: 3, consecutiveCorrect: 2, consecutiveWrong: 1, lastPractisedAt: 5 } },
+    }
+    expect(startRunRecord(progress, 'add:2').practices['add:2']).toEqual({
+      fade: 3,
+      consecutiveCorrect: 0,
+      consecutiveWrong: 0,
+      lastPractisedAt: 5,
+    })
+  })
+
+  it('leaves a kind never played alone', () => {
+    const progress = emptyProgress()
+    expect(startRunRecord(progress, 'add:2')).toBe(progress)
   })
 })

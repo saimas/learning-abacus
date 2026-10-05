@@ -92,3 +92,10 @@ export function practiceStage(record: PracticeRecord | undefined): PracticeStage
   if (record.fade >= 3) return 'fading'
   return 'beads'
 }
+
+// Spec (runs) §2: a run starts its kind's streaks afresh. Every run ends on
+// a miss or a quit, so a streak carried in would make the next run's first
+// miss demote at once.
+export function freshStreaks(record: PracticeRecord): PracticeRecord {
+  return { ...record, consecutiveCorrect: 0, consecutiveWrong: 0 }
+}
