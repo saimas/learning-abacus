@@ -1,7 +1,34 @@
-import { Pressable, StyleSheet, View, type GestureResponderEvent } from 'react-native'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Animated, Easing, Pressable, StyleSheet, View, type GestureResponderEvent } from 'react-native'
 import { readRod, type BeadRef, type Rod as RodState } from '@/domain/soroban'
 import { Bead, type BeadTint } from './Bead'
 import { beadAt, beadTops, geometryFor } from './geometry'
+
+// Spec (runs) §5: on the first problem at a new look, the beads ease from
+// the old level's opacity to the new one, so the fade is seen happening.
+export const BEAD_EASE_MS = 600
+
+// The fade layer, easing to each new opacity instead of jumping to it. On
+// the JS thread, so the opacity reads true in tests; it runs as the card is
+// uncovered, with nothing else on the JS thread moving.
+function EasedFadeLayer({ opacity, children }: { opacity: number; children: ReactNode }) {
+  const [shown] = useState(() => new Animated.Value(opacity))
+  useEffect(() => {
+    const easing = Animated.timing(shown, {
+      toValue: opacity,
+      duration: BEAD_EASE_MS,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: false,
+    })
+    easing.start()
+    return () => easing.stop()
+  }, [opacity, shown])
+  return (
+    <Animated.View testID="fade-layer" pointerEvents="none" style={{ ...StyleSheet.absoluteFill, opacity: shown }}>
+      {children}
+    </Animated.View>
+  )
+}
 
 // One rod's beads, placed by value. The rod line and beam live in the static
 // layer (Frame.tsx), so they survive the fade.
@@ -18,6 +45,7 @@ export function Rod({
   scale = 1,
   label,
   beadOpacity = 1,
+  easeOpacity = false,
   tints = [],
   onTapBead,
   onAdjust,
@@ -27,6 +55,8 @@ export function Rod({
   scale?: number
   label?: string
   beadOpacity?: number
+  // Ease to a new beadOpacity instead of jumping (EasedFadeLayer).
+  easeOpacity?: boolean
   tints?: readonly { bead: BeadRef; tint: BeadTint }[]
   onTapBead?: (bead: BeadRef) => void
   onAdjust?: (delta: number) => void
@@ -35,12 +65,19 @@ export function Rod({
   const tops = beadTops(rod, scale)
   const size = { width: g.rodWidth, height: g.columnHeight }
   const value = { text: String(readRod(rod)) }
-  const beads = (
-    <View testID="fade-layer" pointerEvents="none" style={{ ...StyleSheet.absoluteFill, opacity: beadOpacity }}>
+  const beadViews = (
+    <>
       <Bead kind="heaven" top={tops.heaven} scale={scale} tint={tintOf(tints, { kind: 'heaven' })} />
       {tops.earth.map((top, i) => (
         <Bead key={i} kind="earth" top={top} scale={scale} tint={tintOf(tints, { kind: 'earth', index: i })} />
       ))}
+    </>
+  )
+  const beads = easeOpacity ? (
+    <EasedFadeLayer opacity={beadOpacity}>{beadViews}</EasedFadeLayer>
+  ) : (
+    <View testID="fade-layer" pointerEvents="none" style={{ ...StyleSheet.absoluteFill, opacity: beadOpacity }}>
+      {beadViews}
     </View>
   )
 
