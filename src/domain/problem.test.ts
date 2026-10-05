@@ -14,6 +14,7 @@ import {
   parsePracticeId,
   PRACTICE_KINDS,
   practiceId,
+  problemKey,
   problemSections,
   problemStates,
   problemSteps,
@@ -836,5 +837,12 @@ describe('problemSections', () => {
     for (const kind of PRACTICE_KINDS) {
       for (const p of generateProblems(kind, 30, seeded(17))) expectWholeAndChained(p)
     }
+  })
+})
+
+describe('problemKey', () => {
+  it('names a problem by its numbers', () => {
+    expect(problemKey({ op: 'add', digits: 2, a: 47, b: 85 })).toBe('47,85')
+    expect(problemKey({ op: 'mitori', digits: 1, terms: [7, 3, -2, 8, -4] })).toBe('7,3,-2,8,-4')
   })
 })
