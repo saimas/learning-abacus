@@ -44,7 +44,7 @@ export function RunBar({
             accessibilityRole="button"
             accessibilityLabel={strings.quitLabel}
             onPress={onQuit}
-            hitSlop={12}
+            hitSlop={QUIT_SLOP}
           >
             <Icon name="close" size={BAR_ICON_SIZE} />
           </Pressable>
@@ -62,7 +62,7 @@ export function RunBar({
             accessibilityRole="button"
             accessibilityLabel={strings.goBackLabel}
             onPress={onBack}
-            hitSlop={12}
+            hitSlop={BACK_SLOP}
             style={styles.back}
           >
             <Icon name="back" size={BAR_ICON_SIZE} />
@@ -146,6 +146,14 @@ function Combo({ combo, reduceMotion }: { combo: number; reduceMotion: boolean }
 const LIFE_SIZE = 12
 // ✕'s and 戻る's icons.
 const BAR_ICON_SIZE = 18
+// ✕'s and 戻る's tap areas: 44 pt tall round the icon, and short on the
+// sides that face each other, so the two never meet across the bar's gap
+// (space.md). 戻る acts at once, so a tap just right of ✕ must not land on
+// it (the controller's ruling, 2026-10-06).
+const SLOP_Y = (44 - BAR_ICON_SIZE) / 2
+const FACING_SLOP = 4
+const QUIT_SLOP = { top: SLOP_Y, bottom: SLOP_Y, left: 12, right: FACING_SLOP }
+const BACK_SLOP = { top: SLOP_Y, bottom: SLOP_Y, left: FACING_SLOP, right: 12 }
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: space.md, height: 28 },

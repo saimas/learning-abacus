@@ -49,7 +49,6 @@ describe('RunBar', () => {
     const back = screen.getByTestId('go-back')
     expect(back.props.accessibilityRole).toBe('button')
     expect(back.props.accessibilityLabel).toBe('前の問題にもどる')
-    expect(back.props.hitSlop).toBe(12)
     expect(back).toHaveTextContent('戻る')
     expect(within(back).UNSAFE_getByType(Icon).props.name).toBe('back')
     fireEvent.press(back)
@@ -58,6 +57,30 @@ describe('RunBar', () => {
       .findAll((node) => typeof node.type === 'string' && typeof node.props.testID === 'string')
       .map((node) => node.props.testID as string)
     expect(drawn.indexOf('go-back')).toBe(drawn.indexOf('quit') + 1)
+  })
+
+  // The controller's ruling (2026-10-06): ✕'s and 戻る's tap areas are each
+  // 44 pt tall, but they do not meet across the gap between them, so a tap
+  // just right of ✕ never lands on 戻る, which acts at once.
+  it('keeps ✕’s and 戻る’s tap areas apart, each 44 pt tall', () => {
+    renderBar({ onBack: jest.fn() })
+    const quit = screen.getByTestId('quit')
+    const back = screen.getByTestId('go-back')
+    expect(quit.props.hitSlop).toEqual({ top: 13, bottom: 13, left: 12, right: 4 })
+    expect(back.props.hitSlop).toEqual({ top: 13, bottom: 13, left: 4, right: 12 })
+    // The innermost view holding both is the bar's row, whose gap parts them.
+    const holding = (node: ReturnType<typeof screen.getByTestId>, testID: string) =>
+      node.findAll((inner) => inner.props.testID === testID).length > 0
+    const rows = screen.root.findAll(
+      (node) => typeof node.type === 'string' && holding(node, 'quit') && holding(node, 'go-back'),
+    )
+    const gap: unknown = StyleSheet.flatten(rows[rows.length - 1]?.props.style).gap
+    expect(gap).toBe(12)
+    expect(quit.props.hitSlop.right + back.props.hitSlop.left).toBeLessThanOrEqual(gap as number)
+    for (const button of [quit, back]) {
+      const tall = within(button).UNSAFE_getByType(Icon).props.size + button.props.hitSlop.top + button.props.hitSlop.bottom
+      expect(tall).toBeGreaterThanOrEqual(44)
+    }
   })
 
   // Its place is kept, so the lives beside it do not shift as it comes and
