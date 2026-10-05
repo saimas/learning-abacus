@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
-import { stepColouring, type Exercise } from '@/domain/exercise'
+import { answerReading, stepColouring, type Exercise } from '@/domain/exercise'
 import type { Coaching, FadeLevel } from '@/domain/fade'
 import { adjustRod, emptySoroban, readValue, setValue, tapSoroban, type Soroban } from '@/domain/soroban'
 import { useStrings } from '@/i18n'
@@ -129,22 +129,17 @@ export function QuestionView({
     (renderBeneath !== undefined || renderPrompt !== undefined) && height < SHORT_WINDOW_HEIGHT
       ? Math.min(fittedBeadScale, SHORT_WINDOW_BEAD_SCALE)
       : fittedBeadScale
-  // What the learner is told the answer is. A ÷ answer on the beads is
-  // checked against the final soroban reading (expectedBeads, spec (division)
-  // §2's quotient followed by zeros), so a miss must say what the beads
-  // actually needed to show, not just the quotient — otherwise "こたえは 47"
-  // reads wrong under beads that had to reach 47000.
-  const answerLine =
-    exercise.expectedBeads !== undefined
-      ? strings.correctionAnswerOnBeads(exercise.expected, exercise.expectedBeads)
-      : strings.correctionAnswer(exercise.expected)
+  // What the beads read as an answer, a ÷ from the quotient's ones rod
+  // (Exercise.onesPlace).
+  const reading = answerReading(exercise, shownBeads)
+  const answerLine = strings.correctionAnswer(exercise.expected)
 
   // Scores the answer. A right one is the parent's to move on from; a miss
   // holds the question here for review until つぎへ.
   function submit() {
     // Untouched beads are not an answer. Scoring them would burn an attempt
     // for a mistap, so nothing happens at all.
-    const given = moved ? readValue(shownBeads) : null
+    const given = moved ? reading : null
     if (given === null) return
     if (answeredRight) return
 
@@ -153,11 +148,7 @@ export function QuestionView({
     // Every answer is on the beads (the owner, 2026-09-30), and bead answers
     // are untimed: moving up a level counts accuracy alone.
     const latencyMs = null
-    // The beads are checked against what the soroban reads when the work is
-    // done, which for ÷ is the quotient followed by zeros (spec (division)
-    // §2). What the learner is told is the answer.
-    const wanted = exercise.expectedBeads ?? exercise.expected
-    const correct = given === wanted
+    const correct = given === exercise.expected
 
     // Either way, the moment after an answer takes no つぎへ, もう一問 or
     // おわる: a double tap on こたえる must not skip the 〇 or the review.
@@ -266,7 +257,7 @@ export function QuestionView({
   // Under the soroban while the learner's own beads are on show; once the
   // steps take the soroban over, beside the answer in the card instead.
   const answered = review !== null || answeredRight
-  const given = reviewing ? readValue(shownBeads) : undefined
+  const given = reviewing ? reading : undefined
   const afterAnswerRow =
     afterAnswer !== undefined && answered ? (
       <View style={styles.buttonRow}>
@@ -423,11 +414,11 @@ export function QuestionView({
         ) : answered ? (
           <Text
             testID="bead-reading"
-            accessibilityLabel={strings.beadReadingLabel(readValue(shownBeads))}
+            accessibilityLabel={strings.beadReadingLabel(reading)}
             maxFontSizeMultiplier={1.3}
             style={styles.reading}
           >
-            {String(readValue(shownBeads))}
+            {String(reading)}
           </Text>
         ) : (
           <Text style={styles.hint}>{strings.beadHint}</Text>

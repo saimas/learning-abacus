@@ -1,5 +1,5 @@
 import { ATOMS, atomId, moveStates } from './atoms'
-import { exerciseForProblem, stepColouring } from './exercise'
+import { answerReading, exerciseForProblem, stepColouring } from './exercise'
 import { problemStates, problemSteps, type MitoriProblem } from './problem'
 import { emptySoroban, setValue, type Soroban } from './soroban'
 
@@ -30,16 +30,15 @@ describe('exerciseForProblem', () => {
     })
   })
 
-  // Spec (division) §2: 商除法 leaves the quotient on the soroban followed
-  // by zeros, so the beads are checked against that reading, while the
-  // keypad takes the quotient itself.
-  it('sets the dividend for a division, and expects the quotient on the keypad and q × 10^(N+1) on the beads', () => {
+  // Spec (division) §2: 商除法 leaves the quotient N + 1 rods left of the
+  // dividend's ones rod, and reads its ones there.
+  it('sets the dividend for a division, and reads the quotient from its own ones rod', () => {
     const problem = { op: 'div', digits: 2, a: 1692, b: 36 } as const
     expect(exerciseForProblem(problem)).toEqual({
       rods: 5,
       start: 1692,
       expected: 47,
-      expectedBeads: 47000,
+      onesPlace: 3,
       states: problemStates(problem),
       // One operation per quotient digit (spec (core rounds) §11): place 4
       // (+4), 4×3 is −1 then −2 as −5 +3, 4×6 is −2 −4; then place 7 as
@@ -48,9 +47,9 @@ describe('exerciseForProblem', () => {
     })
   })
 
-  it('gives ＋ − × no separate bead answer', () => {
+  it('reads ＋ − × from the rightmost rod', () => {
     for (const op of ['add', 'sub', 'mul'] as const) {
-      expect(exerciseForProblem({ op, digits: 2, a: 47, b: 36 })).not.toHaveProperty('expectedBeads')
+      expect(exerciseForProblem({ op, digits: 2, a: 47, b: 36 })).not.toHaveProperty('onesPlace')
     }
   })
 
@@ -88,6 +87,28 @@ describe('exerciseForProblem', () => {
 
 // The owner's request (2026-09-23): while stepping, the beads the current
 // operation has moved so far are coloured, the latest step's the deepest.
+// The owner (2026-10-05): 36 ÷ 9 answered right showed 400 under the
+// soroban. A ÷ answer is read from the quotient's ones rod.
+describe('answerReading', () => {
+  const division = exerciseForProblem({ op: 'div', digits: 2, a: 1692, b: 36 })
+  const onFive = (value: number) => setValue(emptySoroban(5), value)
+
+  it('reads a ÷ quotient left where 商除法 leaves it as the quotient', () => {
+    expect(answerReading(division, onFive(47000))).toBe(47)
+    expect(answerReading(exerciseForProblem({ op: 'div', digits: 1, a: 36, b: 9 }), setValue(emptySoroban(3), 400))).toBe(4)
+  })
+
+  it('reads a quotient on rods too low, or a dividend not all taken away, as decimals', () => {
+    expect(answerReading(division, onFive(47))).toBe(0.047)
+    expect(answerReading(division, onFive(47042))).toBe(47.042)
+    expect(answerReading(division, onFive(1692))).toBe(1.692)
+  })
+
+  it('reads ＋ − × as the whole soroban', () => {
+    expect(answerReading(exerciseForProblem({ op: 'add', digits: 3, a: 472, b: 385 }), setValue(emptySoroban(4), 857))).toBe(857)
+  })
+})
+
 describe('stepColouring', () => {
   // stepColouring colours whatever operations it is given. These tests give
   // it one per column of 472 + 385, which exercises every case it has.

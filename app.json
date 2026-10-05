@@ -2,7 +2,7 @@
   "expo": {
     "name": "Learning Abacus",
     "slug": "learning-abacus",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "learningabacus",
@@ -12,7 +12,7 @@
       "icon": "./assets/app.icon",
       "supportsTablet": false,
       "bundleIdentifier": "com.saimas.learningabacus",
-      "buildNumber": "32",
+      "buildNumber": "33",
       "config": {
         "usesNonExemptEncryption": false
       },

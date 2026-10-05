@@ -27,18 +27,9 @@ describe('ProblemCorrectionCard', () => {
     expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 447　あなたの答え 440')
   })
 
-  it('names it after what the beads had to read, for a ÷', () => {
-    render(
-      <ProblemCorrectionCard
-        problem={{ op: 'div', digits: 2, a: 1692, b: 36 }}
-        expected={47}
-        expectedBeads={47000}
-        given={47}
-      />,
-    )
-    expect(screen.getByTestId('correction-answer').props.children).toBe(
-      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
-    )
+  it('names a ÷ reading the same way, read from the quotient’s ones rod', () => {
+    render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} given={0.047} />)
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47　あなたの答え 0.047')
   })
 
   // Spec (core rounds) §3: before an answer the same lines explain the
@@ -160,23 +151,9 @@ describe('ProblemCorrectionCard', () => {
     expect(textOf(screen.getByTestId('correction-subtract-2'))).toBe('1×0=00')
   })
 
-  // Spec (division) §2: a bead answer is checked against the final soroban
-  // reading, not the quotient, so a caller drawing this in bead mode passes
-  // expectedBeads and the answer line says both.
-  it('names what the beads themselves needed to read, when given expectedBeads', () => {
-    render(
-      <ProblemCorrectionCard
-        problem={{ op: 'div', digits: 2, a: 1692, b: 36 }}
-        expected={47}
-        expectedBeads={47000}
-      />,
-    )
-    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47（そろばんは 47000）')
-  })
-
-  // Undefined (any non-÷ problem) leaves the answer line
-  // exactly as it always read.
-  it('leaves the answer line alone without expectedBeads', () => {
+  // The owner (2026-10-05): the beads are read from the quotient's ones
+  // rod, so a ÷ answer is the quotient alone, not 47000.
+  it('names a ÷ answer as the quotient alone', () => {
     render(<ProblemCorrectionCard problem={{ op: 'div', digits: 2, a: 1692, b: 36 }} expected={47} />)
     expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47')
   })

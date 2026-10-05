@@ -38,7 +38,7 @@ Invariants, tested exhaustively:
 `groupOfStep`, `problemStates`, `stepColouring` and `groupStarts` work unchanged on the new group kinds, since every group has `steps` and `cascades`.
 
 ### Answer and target
-- `Exercise` gains `expectedBeads?: number`. For ÷ it is `q × 10^(N+1)`, the final soroban reading. `expected` stays the typed answer (q). Bead answers are checked against `expectedBeads ?? expected`.
+- `Exercise` gains `onesPlace?: number`, N + 1 for ÷: 商除法 reads the quotient with its ones on that rod, so the beads are read from there (`answerReading`) and checked against q. A misplaced quotient reads as decimals (47 on the lowest rods is 0.047). This replaced `expectedBeads = q × 10^(N+1)` after the owner (2026-10-05) saw 36 ÷ 9 answered right show 400.
 - `problemTargetMs` for ÷: the move targets, plus `MULTIPLY_RECALL_MS` per subtract group, plus `DIVIDE_ESTIMATE_MS` (1500 ms, a first estimate) per non-zero quotient digit, plus typing q.
 
 ## 3. Screens
@@ -50,7 +50,7 @@ Invariants, tested exhaustively:
     - head ÷ d0 of 10 or more (the guess is capped at 9): "32÷3は10以上なので、見当は9。…" (684 ÷ 36; en "32 ÷ 3 is 10 or more, so guess 9.");
     - a guess too big by 2 or more (mostly divisors starting with 1): "9だと引ききれないので、引けるまで下げて5にする。" (285 ÷ 19; en "9 is too big to take away; lower it until it fits: 5."); a drop of exactly 1 keeps "5だと引ききれないので4にする。";
     - nothing left at all (`remainderZero`, e.g. 360 ÷ 36 = 10 after the 1): "残りは0なので、商0（立てない）" (en "Nothing is left here: quotient 0, nothing to place."). Keyed on the remainder, not the head: 10815 ÷ 105 = 103 has a head of 0 after the 1 with 315 still left;
-    - any other guess of 0 (a head smaller than d0, 0 included, e.g. 202032 ÷ 976 after the 2, or 10815 ÷ 105 after the 1): "頭に9は入らないので、商0（立てない）" (en "9 doesn't go into the head: quotient 0, nothing to place."). A guess of 1 or more lowered to 0 reads like any lowering: "1÷1で見当をつけると1。1だと引ききれないので0にする。商0（立てない）" (17702 ÷ 167 = 106). A bead-mode miss also gives the final bead reading ("こたえは 47（そろばんは 47000）").
+    - any other guess of 0 (a head smaller than d0, 0 included, e.g. 202032 ÷ 976 after the 2, or 10815 ÷ 105 after the 1): "頭に9は入らないので、商0（立てない）" (en "9 doesn't go into the head: quotient 0, nothing to place."). A guess of 1 or more lowered to 0 reads like any lowering: "1÷1で見当をつけると1。1だと引ききれないので0にする。商0（立てない）" (17702 ÷ 167 = 106). (A bead-mode miss once also gave the final bead reading, "こたえは 47（そろばんは 47000）"; see Answer and target.)
   - subtract group: `subtractLine(q, y, place, cascades)`, e.g. "4×3=12　千の位から1、百の位から2を引く". Only non-zero digits are listed, with the P1 cascade note for a borrow that ripples on.
 - **Walkthrough** `/divide-intro` (1692 ÷ 36 = 47), shown before the first ÷ round (`Progress.divideIntroDone`, no schema bump) and from a わり算のやりかた link on Home beside かけ算のやりかた. Superseded after build 20 by a bead-by-bead walkthrough of 商除法, guess and fix included: see `2026-09-24-divide-walkthrough-design.md`.
 - **Home:** the grid gains a ÷ row automatically (from `OPERATIONS`). (Per-kind examples such as 56 ÷ 8 were planned here, but Home no longer shows examples for any operation since the chooser's round row was replaced by the grid, so none were added.)

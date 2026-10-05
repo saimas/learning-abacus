@@ -313,24 +313,10 @@ function correctionAnswer(expected: number): string {
   return `The answer is ${expected}`
 }
 
-// A ÷ miss answered on the beads: 商除法 leaves the quotient followed by
-// zeros on the rods (spec (division) §2), so the beads had to read that
-// final value, not the quotient `correctionAnswer` already names. Told
-// alongside it so a miss teaches what the beads themselves needed to show.
-function correctionAnswerOnBeads(expected: number, beads: number): string {
-  return `${correctionAnswer(expected)} (the soroban reads ${beads})`
-}
-
 // A miss on the beads, once the steps have taken the learner's beads over:
 // the answer line, then what their beads read.
 function correctionWithGiven(line: string, given: number): string {
   return `${line} · you answered ${given}`
-}
-
-// The same for a ÷, whose line already names the soroban's reading: what the
-// learner's soroban read goes on a line of its own.
-function correctionWithGivenOnBeads(line: string, given: number): string {
-  return `${line}\nyour soroban reads ${given}`
 }
 
 // The number shown under answered beads, as VoiceOver reads it.
@@ -389,9 +375,7 @@ export const en: Strings = {
   done: 'Done',
   answer: 'Answer',
   correctionAnswer,
-  correctionAnswerOnBeads,
   correctionWithGiven,
-  correctionWithGivenOnBeads,
   beadReadingLabel,
   correct: 'Correct',
   wrong: 'Not quite',

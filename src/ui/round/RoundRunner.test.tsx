@@ -318,7 +318,7 @@ describe('RoundRunner with ÷', () => {
     expect([0, 1, 2, 3, 4].map((i) => onSoroban(`rod-${i}`).props.accessibilityValue.text).join('')).toBe('01692')
   })
 
-  it('takes the final reading on the beads: the quotient followed by zeros', () => {
+  it('takes the quotient left where 商除法 leaves it, with zeros below it', () => {
     const { onAttempt } = renderRound(divide)
     setBeads(onSoroban, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
@@ -332,12 +332,8 @@ describe('RoundRunner with ÷', () => {
     // 47 on the lowest rods is not where 商除法 leaves the quotient.
     setBeads(onSoroban, 47, 5)
     fireEvent.press(screen.getByTestId('submit'))
-    // Bead mode's beads were checked against the final soroban reading
-    // (spec (division) §2), so the review names that reading too, not just
-    // the quotient, and then what the learner's beads read.
-    expect(screen.getByTestId('correction-answer').props.children).toBe(
-      'こたえは 47（そろばんは 47000）\nあなたのそろばんは 47',
-    )
+    // Read from the quotient's ones rod, the learner's beads are 0.047.
+    expect(screen.getByTestId('correction-answer').props.children).toBe('こたえは 47　あなたの答え 0.047')
     expect(lit()).toEqual([])
 
     const total = Number(String(screen.getByTestId('step-count').props.children).split(' / ')[1])
@@ -361,7 +357,7 @@ describe('RoundRunner with ÷', () => {
       'correction-subtract-4 [0]',
       'correction-subtract-5 [1]',
     ])
-    // The last state is the final reading the beads are checked against.
+    // The last state is where 商除法 leaves the quotient, zeros below it.
     expect([0, 1, 2, 3, 4].map((i) => onSoroban(`rod-${i}`).props.accessibilityValue.text).join('')).toBe('47000')
   })
 

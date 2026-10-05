@@ -727,24 +727,22 @@ describe('QuestionView on a short window, with something beneath the soroban', (
   })
 })
 
-// Spec (division) §2: 商除法 leaves the quotient on the soroban followed by
-// N + 1 zeros, so on the beads the answer is that final reading.
+// Spec (division) §2: 商除法 leaves the quotient N + 1 rods left of the
+// dividend's ones rod, and reads its ones there.
 describe('QuestionView with a division', () => {
   // 1692 ÷ 36 = 47, on five rods: the soroban ends at 47000.
   const division = exerciseForProblem({ op: 'div', digits: 2, a: 1692, b: 36 })
 
-  it('takes the final reading on the beads, the quotient followed by zeros', () => {
+  it('takes the quotient left where 商除法 leaves it, with zeros below it', () => {
     const { onSubmit } = renderView({ exercise: division })
     setBeads(screen.getByTestId, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, latencyMs: null }))
   })
 
-  // The digits in the wrong place are not what 商除法 leaves, and the miss
-  // must say what the beads themselves needed to read (the final soroban
-  // reading, spec (division) §2), not just the quotient — "こたえは 47"
-  // alone would read wrong against beads that had to reach 47000.
-  it('misses the quotient set on the lowest rods, and names the beads’ own reading', () => {
+  // The digits on the lowest rods are not where 商除法 leaves the quotient:
+  // read from the quotient's ones rod they are 0.047.
+  it('misses the quotient set on the lowest rods, and names the quotient', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
     try {
       const { onSubmit } = renderView({ exercise: division })
@@ -752,10 +750,26 @@ describe('QuestionView with a division', () => {
       announce.mockClear()
       fireEvent.press(screen.getByTestId('submit'))
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false }))
-      expect(announce).toHaveBeenCalledWith('ちがいます こたえは 47（そろばんは 47000）')
+      expect(announce).toHaveBeenCalledWith('ちがいます こたえは 47')
     } finally {
       announce.mockRestore()
     }
+  })
+
+  // The owner (2026-10-05): 36 ÷ 9 answered right showed 400.
+  it('shows the quotient under a right answer, read from its own ones rod', () => {
+    renderView({ exercise: exerciseForProblem({ op: 'div', digits: 1, a: 36, b: 9 }) })
+    setBeads(screen.getByTestId, 400, 3)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('bead-reading').props.children).toBe('4')
+    expect(screen.getByTestId('bead-reading').props.accessibilityLabel).toBe('あなたの答え 4')
+  })
+
+  it('shows a misplaced quotient as what it reads from that rod', () => {
+    renderView({ exercise: division, fade: 2, coaching: 'silent' })
+    setBeads(screen.getByTestId, 47, 5)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.getByTestId('bead-reading').props.children).toBe('0.047')
   })
 
 })
@@ -871,11 +885,11 @@ describe('QuestionView showing what the beads read once answered', () => {
     expect(screen.getByTestId('card').props.children).toBe('800')
   })
 
-  it('shows the full reading of a ÷ answered on the beads', () => {
-    renderView({ exercise: exerciseForProblem({ op: 'div', digits: 2, a: 1692, b: 36 }) })
-    setBeads(screen.getByTestId, 47000, 5)
+  it('gives the step card a ÷ reading from the quotient’s ones rod', () => {
+    renderView({ exercise: exerciseForProblem({ op: 'div', digits: 2, a: 1692, b: 36 }), renderSteps: givenCard })
+    setBeads(screen.getByTestId, 47, 5)
     fireEvent.press(screen.getByTestId('submit'))
-    expect(screen.getByTestId('bead-reading').props.children).toBe('47000')
+    expect(screen.getByTestId('card').props.children).toBe('0.047')
   })
 
 })
