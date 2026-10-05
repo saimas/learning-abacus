@@ -99,6 +99,9 @@ export function RunRunner({
   const [shownAt, setShownAt] = useState(() => now())
   // onEnd, once.
   const ended = useRef(false)
+  // onLeave, once: it writes progress and goes home, and ✕ then おわる on the
+  // results, or おわる twice while the write is pending, must not go twice.
+  const left = useRef(false)
   const { width } = useWindowDimensions()
   // While a roll is pending or running: a blocker over the cards takes their
   // taps, so nothing is answered or stepped mid-roll.
@@ -193,11 +196,17 @@ export function RunRunner({
     })
   }, [leaving, offset, opacity, width, reduceMotion])
 
+  function leave() {
+    if (left.current) return
+    left.current = true
+    onLeave()
+  }
+
   function quit() {
     askQuit(() => {
       // Nothing answered: nothing to show.
       if (runRef.current.answered === 0) {
-        onLeave()
+        leave()
         return
       }
       runRef.current = quitRun(runRef.current)
@@ -270,7 +279,7 @@ export function RunRunner({
         highestLevel={run.highestLevel}
         pointsBefore={pointsBefore}
         onAgain={onAgain}
-        onDone={onLeave}
+        onDone={leave}
       />
     )
   }
@@ -292,7 +301,7 @@ export function RunRunner({
         score={run.score}
         combo={run.combo}
         reduceMotion={reduceMotion}
-        onQuit={atResults ? onLeave : quit}
+        onQuit={atResults ? leave : quit}
       />
       <View style={styles.practice}>
         {stack.map((at) => (

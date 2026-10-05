@@ -236,4 +236,39 @@ describe('Round screen', () => {
     expect(screen.getByTestId('run-score').props.children).toBe('0点')
     expect(within(screen.getByTestId('run-status')).getAllByTestId('life')).toHaveLength(3)
   })
+
+  // Review focus: もう一回 after a run that ended on a miss starts the new
+  // run afresh too: its streaks (its first miss keeps the level), and what it
+  // reads as it starts (the best is now the run before's).
+  it('starts the run after もう一回 afresh, after a run that ended on a miss', async () => {
+    mockParams.current = { kind: 'add:2' }
+    mockLoad.mockResolvedValue({
+      ...emptyProgress(),
+      tutorialDone: true,
+      practices: { 'add:2': { fade: 2, consecutiveCorrect: 0, consecutiveWrong: 0, lastPractisedAt: 0 } },
+    })
+    confirmQuits()
+    renderRound()
+    await waitFor(() => expect(screen.getByTestId('prompt')).toBeTruthy())
+    // The first run: one right, then a miss, then ✕ to its results.
+    answerSum(true)
+    passTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 50)
+    answerSum(false)
+    fireEvent.press(screen.getByTestId('quit'))
+    passTime(ROLL_SWIPE_MS + 50)
+    const first = String(screen.getByTestId('results-score').props.children)
+    expect(Number(first.replace(/,/g, ''))).toBeGreaterThan(0)
+
+    fireEvent.press(screen.getByTestId('run-again'))
+    await waitFor(() => expect(screen.getByTestId('prompt')).toBeTruthy())
+    answerSum(false)
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('review-next'))
+    passTime(ROLL_SWIPE_MS + 50)
+    expect(screen.getByTestId('run-level').props.children).toBe('レベル 2/6')
+
+    fireEvent.press(screen.getByTestId('quit'))
+    passTime(ROLL_SWIPE_MS + 50)
+    expect(screen.getByTestId('results-best').props.children).toBe(`ベスト ${first}点`)
+  })
 })

@@ -374,6 +374,21 @@ describe('RunRunner ending', () => {
     expect(onAgain).toHaveBeenCalledTimes(1)
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
+
+  // Review: leaving writes progress and goes home, so a second way out (✕,
+  // then おわる while the write is pending) must not go home twice.
+  it.each([
+    ['✕ then おわる', ['quit', 'run-done']],
+    ['おわる twice', ['run-done', 'run-done']],
+  ] as const)('leaves the results once, on %s', (_how, presses) => {
+    const { onLeave } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    finishRoll()
+    for (const testID of presses) fireEvent.press(screen.getByTestId(testID))
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('RunRunner quitting', () => {
