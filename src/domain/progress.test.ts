@@ -103,6 +103,11 @@ describe('points and best runs', () => {
     expect(earnPoints(earnPoints(emptyProgress(), 242), 46).points).toBe(288)
   })
 
+  it('leave the points alone for a non-finite or non-positive amount', () => {
+    const progress = earnPoints(emptyProgress(), 50)
+    for (const bad of [NaN, Infinity, -10, 0]) expect(earnPoints(progress, bad).points).toBe(50)
+  })
+
   it('keep a best run only when it is beaten', () => {
     const first = recordBestRun(emptyProgress(), 'add:2', 1_200)
     expect(first.bestRuns).toEqual({ 'add:2': 1_200 })

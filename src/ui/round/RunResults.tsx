@@ -22,6 +22,7 @@ export function RunResults({
   longestCombo,
   highestLevel,
   pointsBefore,
+  revealed,
   onAgain,
   onDone,
 }: {
@@ -31,6 +32,10 @@ export function RunResults({
   longestCombo: number
   highestLevel: FadeLevel
   pointsBefore: number
+  // False while a card is still swiping over the results: the rank-up stamp,
+  // its pulse and the bar's fill wait for it, so they are seen and felt
+  // together (spec (runs) §5).
+  revealed: boolean
   onAgain: () => void
   onDone: () => void
 }) {
@@ -40,8 +45,8 @@ export function RunResults({
   const rank = rankOf(after)
   const crossed = rank > rankOf(pointsBefore)
   useEffect(() => {
-    if (crossed) feel.rankUp()
-  }, [crossed])
+    if (revealed && crossed) feel.rankUp()
+  }, [revealed, crossed])
 
   return (
     <View testID="run-results" style={styles.results}>
@@ -71,13 +76,18 @@ export function RunResults({
           </Text>
         </View>
         <View style={styles.rank}>
-          <Seal testID="results-rank-seal" state="stamped" text={strings.rankSeal(rank)} size={64} animateIn={crossed} />
+          {crossed && !revealed ? (
+            // The same box, so nothing moves when the seal is pressed down.
+            <View style={styles.sealPlaceholder} />
+          ) : (
+            <Seal testID="results-rank-seal" state="stamped" text={strings.rankSeal(rank)} size={64} animateIn={crossed} />
+          )}
           <View style={styles.rankText}>
             <Text testID="results-rank-name" style={styles.rankName}>
               {crossed ? strings.rankUp(rank) : strings.rankName(rank)}
             </Text>
             {/* A rank crossed fills its new bar from empty. */}
-            <RankBar from={crossed ? 0 : rankProgress(pointsBefore)} to={rankProgress(after)} />
+            <RankBar from={crossed ? 0 : rankProgress(pointsBefore)} to={revealed ? rankProgress(after) : crossed ? 0 : rankProgress(pointsBefore)} />
           </View>
         </View>
       </View>
@@ -99,6 +109,7 @@ const styles = StyleSheet.create({
   facts: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.lg, marginTop: space.md },
   fact: { fontSize: fontSizes.small, color: colors.ink },
   rank: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', gap: space.md, marginTop: space.xl },
+  sealPlaceholder: { width: 64, height: 64 },
   rankText: { flex: 1, gap: space.xs },
   rankName: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   buttons: { gap: space.sm },

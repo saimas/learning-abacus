@@ -278,6 +278,7 @@ export function RunRunner({
         longestCombo={run.longestCombo}
         highestLevel={run.highestLevel}
         pointsBefore={pointsBefore}
+        revealed={leaving === null}
         onAgain={onAgain}
         onDone={leave}
       />

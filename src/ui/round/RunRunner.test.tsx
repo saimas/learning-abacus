@@ -313,6 +313,31 @@ describe('RunRunner following the level', () => {
 })
 
 describe('RunRunner ending', () => {
+  // Spec (runs) §5: the rank-up pulse is felt once the results are uncovered,
+  // not while the answered card still swipes over them.
+  it('pulses a rank crossed only once the results are uncovered', () => {
+    renderRun({ pointsBefore: 990 })
+    answerBeads(81)
+    finishRightAnswerRoll()
+    for (const wrong of [1, 2]) {
+      answerBeads(wrong)
+      moveOnFromMiss()
+    }
+    answerBeads(3)
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('review-next'))
+    passUntilSwiping()
+    expect(screen.getByTestId('card-leaving')).toBeTruthy()
+    expect(screen.getByTestId('results-score').props.children).not.toBe('0')
+    expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success)
+    finishRoll()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    const successes = (Haptics.notificationAsync as jest.Mock).mock.calls.filter(
+      ([type]) => type === Haptics.NotificationFeedbackType.Success,
+    )
+    expect(successes).toHaveLength(1)
+  })
+
   // Spec (runs) §2: the third miss ends the run; after its review, つぎへ
   // brings the results.
   it('ends after the third miss, with the results', () => {

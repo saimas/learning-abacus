@@ -204,6 +204,19 @@ describe('Round screen', () => {
     expect(screen.getByTestId('run-level').props.children).toBe('レベル 2/6')
   })
 
+  // The route passes the record's live level, not the one at mount.
+  it('lays the next card at the level five right answers earn, with its banner', async () => {
+    mockParams.current = { kind: 'add:2' }
+    renderRound()
+    await waitFor(() => expect(screen.getByTestId('prompt')).toBeTruthy())
+    for (let i = 0; i < 5; i++) {
+      answerSum(true)
+      passTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 50)
+    }
+    expect(screen.getByTestId('run-level').props.children).toBe('レベル 1/6')
+    expect(screen.getByTestId('level-banner', { includeHiddenElements: true })).toBeTruthy()
+  })
+
   it('adds the points earned and keeps the run as the best once it ends', async () => {
     mockParams.current = { kind: 'add:2' }
     confirmQuits()

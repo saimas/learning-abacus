@@ -11,10 +11,12 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
-function renderResults(overrides: Partial<Parameters<typeof RunResults>[0]> = {}) {
-  const onAgain = jest.fn()
-  const onDone = jest.fn()
-  render(
+function resultsElement(
+  overrides: Partial<Parameters<typeof RunResults>[0]> = {},
+  onAgain = jest.fn(),
+  onDone = jest.fn(),
+) {
+  return (
     <RunResults
       score={1_240}
       best={undefined}
@@ -22,11 +24,18 @@ function renderResults(overrides: Partial<Parameters<typeof RunResults>[0]> = {}
       longestCombo={8}
       highestLevel={4}
       pointsBefore={100}
+      revealed
       onAgain={onAgain}
       onDone={onDone}
       {...overrides}
-    />,
+    />
   )
+}
+
+function renderResults(overrides: Partial<Parameters<typeof RunResults>[0]> = {}) {
+  const onAgain = jest.fn()
+  const onDone = jest.fn()
+  render(resultsElement(overrides, onAgain, onDone))
   return { onAgain, onDone }
 }
 
@@ -59,6 +68,24 @@ describe('RunResults', () => {
     renderResults({ pointsBefore: 900, score: 200 })
     expect(screen.getByTestId('results-rank-name').props.children).toBe('練習9級に上がりました！')
     expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success)
+  })
+
+  // Spec (runs) §5: covered by the card swiping off, the stamp and its pulse
+  // wait to be seen.
+  it('holds the stamp and its pulse until revealed', () => {
+    const overrides = { pointsBefore: 900, score: 200 }
+    const { rerender } = render(resultsElement({ ...overrides, revealed: false }))
+    expect(screen.queryByTestId('results-rank-seal')).toBeNull()
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled()
+    rerender(resultsElement({ ...overrides, revealed: true }))
+    expect(screen.getByTestId('results-rank-seal')).toBeTruthy()
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1)
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success)
+  })
+
+  it('shows the seal of a rank not crossed even before it is revealed', () => {
+    renderResults({ pointsBefore: 100, score: 200, revealed: false })
+    expect(screen.getByTestId('results-rank-seal')).toBeTruthy()
   })
 
   it('names the rank, unstamped, when none is crossed', () => {

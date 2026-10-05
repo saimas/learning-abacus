@@ -81,7 +81,9 @@ export function markLessonSeen(progress: Progress, id: LessonId): Progress {
 
 // Points are added as each answer earns them, and never taken away.
 export function earnPoints(progress: Progress, points: number): Progress {
-  return points === 0 ? progress : { ...progress, points: progress.points + points }
+  // A NaN total would save as null and load as 0, losing the lifetime points.
+  if (!Number.isFinite(points) || points <= 0) return progress
+  return { ...progress, points: progress.points + points }
 }
 
 // A run's score replaces its kind's best only when it beats it.

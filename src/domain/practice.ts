@@ -18,7 +18,8 @@ export type PracticeRecord = {
 // answer given after 手順を見る (spec (core rounds) §5): the learner had the
 // steps in front of them, so it is not evidence of fluency and must not move
 // the record's fade either way. `fade` is the level the answer was made at:
-// a round holds its level, so the record can move on before the round ends.
+// a run lays each card at the record's current level (spec (runs) §2), so it
+// matches the record's unless the answer was made before the record moved.
 export type PracticeAttempt = {
   id: PracticeId
   correct: boolean
@@ -37,9 +38,9 @@ export function newPracticeRecord(now: number): PracticeRecord {
 // 2026-09-30: fingers keep moving the beads however faded they are).
 //
 // An answer made at another level than the record's (`playedAt`) moves
-// nothing: the record moved on earlier in the same round, which is still
-// played at the old level. So a round moves the record one level at most,
-// and no level is skipped.
+// nothing. A run lays each card at the record's current level (spec (runs)
+// §2), so `playedAt` always matches; the guard is a safety net for an answer
+// made at a level the record has left, so no level is skipped.
 export function applyPracticeAttempt(
   record: PracticeRecord,
   correct: boolean,

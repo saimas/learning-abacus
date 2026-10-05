@@ -34,18 +34,19 @@ are generated fresh every time. Seven fade levels (F0-F6) map to five renderings
 dimmed, ghost outline, empty frame, then nothing — with the lowest three differing only in
 coaching. Five right answers in a row promote a level; two misses in a row demote one. A run
 follows the record as it moves: a level earned on one answer shows from the next problem on, so
-none is skipped, and each run starts the streaks afresh. F6
-means the beads are gone entirely: the learner works from the soroban in their head.
+none is skipped, and each run starts the streaks afresh. F6 means the beads are gone entirely: the
+learner works from the soroban in their head.
 
-At every level the learner answers by tapping beads and pressing こたえる, untimed. As the beads
-fade they still move where they would be, invisible or not, so the fingers keep working the
-soroban (the owner, 2026-09-30); the number they read shows once the answer is in. A run's
-bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
+At every level the learner answers by tapping beads and pressing こたえる, with no time limit
+(speed earns a bonus). As the beads fade they still move where they would be, invisible or not, so
+the fingers keep working the soroban (the owner, 2026-09-30); the number they read shows once the
+answer is in. A run's bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
 
 ## けたの練習
 
 Home's grid has a row per operation and a column per size, each cell coloured by its stage. A
-tap starts a run: problems keep coming until the third miss, then the results. Every size is open from the start.
+tap starts a run: problems keep coming until the third miss, then the results. Every size is open
+from the start.
 
 | | 1けた | 2けた | 3けた |
 |---|---|---|---|
@@ -83,7 +84,7 @@ tap starts a run: problems keep coming until the third miss, then the results. E
   operation's lessons by 桁数. 1けた ＋ − are taught move by move (そのまま, 五の合成, 十の繰上,
   十の繰上と五の分解, and the − ones); every other size has one worked example. A lesson walks its
   example on the soroban step by step, then やってみよう asks one like it (recorded nowhere).
-  The first round of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
+  The first run of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
   ✕ leaves any lesson at any point, and every lesson done gets a ✓.
 
 ## Runs, points and rank
