@@ -458,6 +458,12 @@ export const ja = {
   rankTop: '最高位です',
   rankLabel: (rank: number, toNext: number) => `練習${rankGrade(rank)}、${toNext === 0 ? '最高位です' : rankToNext(toNext)}`,
 
+  // Spec (runs) §5: the run's bar, and what a miss leaves (said with the ✕).
+  runScore: (score: number) => `${formatPoints(score)}点`,
+  runCombo: (combo: number, factor: number) => `${combo}れんぞく ×${factor}`,
+  runBarLabel: (lives: number, level: FadeLevel, score: number) =>
+    `ライフ ${lives}、レベル ${level}/${MAX_FADE}、${formatPoints(score)}点`,
+  livesLeft: (lives: number) => (lives === 0 ? 'ライフなし' : `のこりライフ ${lives}`),
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',

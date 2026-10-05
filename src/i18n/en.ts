@@ -445,6 +445,11 @@ export const en: Strings = {
   rankTop: 'Top rank',
   rankLabel: (rank, toNext) => `Practice ${rankGrade(rank)}, ${toNext === 0 ? 'top rank' : rankToNext(toNext)}`,
 
+  runScore: (score) => `${formatPoints(score)} pts`,
+  runCombo: (combo, factor) => `${combo} in a row ×${factor}`,
+  runBarLabel: (lives, level, score) =>
+    `${lives} ${lives === 1 ? 'life' : 'lives'}, level ${level}/${MAX_FADE}, ${formatPoints(score)} points`,
+  livesLeft: (lives) => (lives === 0 ? 'no lives left' : `${lives} ${lives === 1 ? 'life' : 'lives'} left`),
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',

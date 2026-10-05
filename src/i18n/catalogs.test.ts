@@ -512,3 +512,24 @@ describe('ranks', () => {
     expect(en.rankLabel(19, 0)).toBe('Practice 10th dan, top rank')
   })
 })
+
+// Spec (runs) §5: the run's bar.
+describe('the run\'s bar', () => {
+  it('counts points', () => {
+    expect([ja.runScore(1_240), en.runScore(1_240)]).toEqual(['1,240点', '1,240 pts'])
+  })
+
+  it('names the combo and its factor', () => {
+    expect([ja.runCombo(12, 2), en.runCombo(5, 1.5)]).toEqual(['12れんぞく ×2', '5 in a row ×1.5'])
+  })
+
+  it('reads the bar as one line', () => {
+    expect(ja.runBarLabel(2, 3, 1_240)).toBe('ライフ 2、レベル 3/6、1,240点')
+    expect(en.runBarLabel(1, 3, 1_240)).toBe('1 life, level 3/6, 1,240 points')
+  })
+
+  it('says what a miss leaves', () => {
+    expect([ja.livesLeft(2), ja.livesLeft(0)]).toEqual(['のこりライフ 2', 'ライフなし'])
+    expect([en.livesLeft(2), en.livesLeft(1), en.livesLeft(0)]).toEqual(['2 lives left', '1 life left', 'no lives left'])
+  })
+})
