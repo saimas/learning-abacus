@@ -3,6 +3,7 @@ import { describeSteps } from '@/domain/explain'
 import { lessonById, type Lesson } from '@/domain/lessons'
 import type { MitoriProblem, StepSection } from '@/domain/problem'
 import { en } from './en'
+import { formatPoints } from './format'
 import { ja } from './ja'
 import { LOCALES } from './locale'
 
@@ -461,5 +462,53 @@ describe('lesson strings', () => {
     expect(ja.lessonResult({ op: 'sub', digits: 1, a: 13, b: 5 }, 8)).toBe('13−5 = 8')
     expect([ja.lessonTry, ja.lessonAgain, ja.lessonStartRound]).toEqual(['やってみよう', 'もう一問', '練習をはじめる'])
     expect([en.lessonTry, en.lessonAgain, en.lessonStartRound]).toEqual(['Try one', 'Another', 'Start practising'])
+  })
+})
+
+describe('formatPoints', () => {
+  it('separates thousands', () => {
+    expect([0, 999, 1_000, 1_491_600].map(formatPoints)).toEqual(['0', '999', '1,000', '1,491,600'])
+  })
+})
+
+// Spec (runs) §4: 練習 marks the ranks as the app's own.
+describe('ranks', () => {
+  it('names each rank as the app’s own 級 or 段', () => {
+    expect([0, 1, 9, 10, 11, 19].map(ja.rankName)).toEqual([
+      '練習10級',
+      '練習9級',
+      '練習1級',
+      '練習初段',
+      '練習二段',
+      '練習十段',
+    ])
+    expect([0, 7, 8, 9, 10, 11, 12, 19].map(en.rankName)).toEqual([
+      'Practice 10th kyu',
+      'Practice 3rd kyu',
+      'Practice 2nd kyu',
+      'Practice 1st kyu',
+      'Practice 1st dan',
+      'Practice 2nd dan',
+      'Practice 3rd dan',
+      'Practice 10th dan',
+    ])
+  })
+
+  it('splits a rank over two lines for its seal', () => {
+    expect([ja.rankSeal(0), ja.rankSeal(10)]).toEqual(['練習\n10級', '練習\n初段'])
+    expect([en.rankSeal(0), en.rankSeal(10)]).toEqual(['10th\nkyu', '1st\ndan'])
+  })
+
+  it('counts the points to the next rank', () => {
+    expect(ja.rankToNext(1_900)).toBe('次まで あと1,900点')
+    expect(en.rankToNext(1_900)).toBe('1,900 points to the next rank')
+    expect([ja.rankTop, en.rankTop]).toEqual(['最高位です', 'Top rank'])
+  })
+
+  it('reads the badge as one line', () => {
+    expect(ja.rankLabel(2, 1_900)).toBe('練習8級、次まで あと1,900点')
+    expect(ja.rankLabel(19, 0)).toBe('練習十段、最高位です')
+    expect(en.rankLabel(2, 1_900)).toBe('Practice 8th kyu, 1,900 points to the next rank')
+    expect(en.rankLabel(19, 0)).toBe('Practice 10th dan, top rank')
   })
 })
