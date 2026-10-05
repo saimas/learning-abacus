@@ -1,5 +1,5 @@
 import { answerOf, problemSections, problemStates, problemSteps, rodsFor, startOf, type Problem } from './problem'
-import { changedBeads, type PlacedBead, type Soroban } from './soroban'
+import { changedBeads, readValue, type PlacedBead, type Soroban } from './soroban'
 
 // Spec (multi-digit ＋ −) §4: what one problem puts on the soroban. The
 // words that go with it (the prompt, the correction) are the i18n
@@ -8,12 +8,13 @@ export type Exercise = {
   rods: number
   start: number
   expected: number
-  // What the soroban reads when the question is done, where that is not
-  // `expected`. Spec (division) §2: 商除法 leaves the quotient on the rods
-  // followed by N + 1 zeros (1692 ÷ 36 ends at 47000), while `expected`
-  // stays the quotient itself (47). Absent everywhere else, since the beads
-  // end at the answer.
-  expectedBeads?: number
+  // The place of the rod the answer's ones are read from, where that is not
+  // the rightmost rod (0). Spec (division) §2: 商除法 leaves the quotient
+  // N + 1 rods left of the dividend's ones rod (1692 ÷ 36 ends with 47 on
+  // the two highest of five rods, zeros below), and reads its ones there.
+  // The owner (2026-10-05): 36 ÷ 9 answered right showed 400. Absent
+  // everywhere else.
+  onesPlace?: number
   // The soroban at the start, then after each step, for the replay.
   states: Soroban[]
   // Where each operation begins in `states`, ascending from 0: a section of
@@ -43,10 +44,18 @@ export function exerciseForProblem(problem: Problem): Exercise {
     rods: rodsFor(problem),
     start: startOf(problem),
     expected,
-    ...(problem.op === 'div' ? { expectedBeads: expected * 10 ** (problem.digits + 1) } : {}),
+    ...(problem.op === 'div' ? { onesPlace: problem.digits + 1 } : {}),
     states: problemStates(problem),
     groupStarts,
   }
+}
+
+// What the beads read as an answer: the soroban's value, its ones on the rod
+// at `onesPlace`. A ÷ quotient left where 商除法 leaves it reads as itself;
+// set a rod too low it reads as a tenth of it, and a dividend not all taken
+// away reads as decimals, so a miss still shows where the beads went.
+export function answerReading(exercise: Exercise, soroban: Soroban): number {
+  return readValue(soroban) / 10 ** (exercise.onesPlace ?? 0)
 }
 
 // `group` is every bead the current operation has moved so far, `latest`

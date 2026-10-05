@@ -27,19 +27,12 @@ import { colors, fonts } from '@/ui/theme'
 export function ProblemCorrectionCard({
   problem,
   expected,
-  expectedBeads,
   activeGroup,
   showAnswer = true,
   given,
 }: {
   problem: Problem
   expected: number
-  // Set only by a caller drawing this in bead mode, and only for a ÷ problem
-  // (Exercise.expectedBeads): the final soroban reading (spec (division) §2's
-  // quotient followed by zeros) that the beads themselves were checked
-  // against, which is not `expected` (the quotient) once N > 0. Undefined
-  // everywhere else, so the answer line reads exactly as it always has.
-  expectedBeads?: number
   activeGroup?: number
   showAnswer?: boolean
   // What the learner's beads read, set only for a miss on the beads once the
@@ -56,20 +49,13 @@ export function ProblemCorrectionCard({
   const sections = problemSections(problem)
   // The section the learner has stepped into, or -1 when not stepping.
   const activeSection = activeGroup === undefined ? -1 : sections.findIndex((section) => section.groups.includes(activeGroup))
-  const answer =
-    expectedBeads === undefined
-      ? strings.correctionAnswer(expected)
-      : strings.correctionAnswerOnBeads(expected, expectedBeads)
+  const answer = strings.correctionAnswer(expected)
 
   return (
     <View testID="correction">
       {showAnswer ? (
         <Text testID="correction-answer" style={styles.answer}>
-          {given === undefined
-            ? answer
-            : expectedBeads === undefined
-              ? strings.correctionWithGiven(answer, given)
-              : strings.correctionWithGivenOnBeads(answer, given)}
+          {given === undefined ? answer : strings.correctionWithGiven(answer, given)}
         </Text>
       ) : null}
       {sections.flatMap((section, sectionIndex) => {

@@ -71,7 +71,8 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   moves coloured together. An answer given after opening it counts "with help": it is tallied but
   does not move the fade ladder.
 - **After an answer**, on the beads, the number they read shows under the soroban (and, once a
-  miss's steps take the soroban over, beside the answer: 「こたえは 81　あなたの答え 80」). A right
+  miss's steps take the soroban over, beside the answer: 「こたえは 81　あなたの答え 80」). A ÷ is
+  read with its ones on the quotient's ones rod, N + 1 rods left of the dividend's. A right
   one is stamped with a 〇 where it stands; then the next problem is laid in its place underneath
   and the answered card is swiped off to the left over it, so the new problem never moves (with
   Reduce Motion on, the answered card fades away in place). A miss's つぎへ moves on the same way,

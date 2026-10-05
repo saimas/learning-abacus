@@ -50,9 +50,6 @@ export function ProblemQuestion({
         <ProblemCorrectionCard
           problem={problem}
           expected={exercise.expected}
-          // A ÷ answer on the beads is checked against the final soroban
-          // reading, so the review's answer line names it too.
-          expectedBeads={exercise.expectedBeads}
           activeGroup={groupIndexOf(activeStep)}
           showAnswer={showAnswer}
           given={given}
