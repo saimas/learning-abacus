@@ -451,6 +451,15 @@ export const en: Strings = {
     `${lives} ${lives === 1 ? 'life' : 'lives'}, level ${level}/${MAX_FADE}, ${formatPoints(score)} points`,
   livesLeft: (lives) => (lives === 0 ? 'no lives left' : `${lives} ${lives === 1 ? 'life' : 'lives'} left`),
 
+  resultsScore: 'Score',
+  newBest: 'New best!',
+  bestScore: (best) => `Best ${formatPoints(best)}`,
+  resultsRight: (right) => `${right} right`,
+  resultsCombo: (combo) => `Longest combo ${combo}`,
+  resultsLevel: (level) => `Highest level ${level}`,
+  rankUp: (rank) => `Up to Practice ${rankGrade(rank)}!`,
+  runAgain: 'Again',
+
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',
   check: 'Check',

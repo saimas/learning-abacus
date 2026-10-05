@@ -465,6 +465,16 @@ export const ja = {
     `ライフ ${lives}、レベル ${level}/${MAX_FADE}、${formatPoints(score)}点`,
   livesLeft: (lives: number) => (lives === 0 ? 'ライフなし' : `のこりライフ ${lives}`),
 
+  // Spec (runs) §5: the results.
+  resultsScore: 'スコア',
+  newBest: '自己ベスト！',
+  bestScore: (best: number) => `ベスト ${formatPoints(best)}点`,
+  resultsRight: (right: number) => `正解 ${right}`,
+  resultsCombo: (combo: number) => `最大れんぞく ${combo}`,
+  resultsLevel: (level: FadeLevel) => `最高レベル ${level}`,
+  rankUp: (rank: number) => `練習${rankGrade(rank)}に上がりました！`,
+  runAgain: 'もう一回',
+
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',
   check: 'たしかめる',

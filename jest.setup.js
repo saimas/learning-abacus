@@ -30,3 +30,12 @@ jest.mock('react-native-svg', () => {
   const elements = Object.fromEntries(names.map((name) => [name, element(name)]))
   return { __esModule: true, default: elements.Svg, ...elements }
 })
+
+// expo-haptics calls into a native module Jest does not have. Tests read
+// these mocks to check what a moment felt like (src/ui/feel.ts).
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}))

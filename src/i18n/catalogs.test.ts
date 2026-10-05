@@ -533,3 +533,22 @@ describe('the run\'s bar', () => {
     expect([en.livesLeft(2), en.livesLeft(1), en.livesLeft(0)]).toEqual(['2 lives left', '1 life left', 'no lives left'])
   })
 })
+
+// Spec (runs) §5: the results.
+describe('a run’s results', () => {
+  it('name the score, the best and three facts', () => {
+    expect([ja.resultsScore, ja.newBest, ja.bestScore(3_420)]).toEqual(['スコア', '自己ベスト！', 'ベスト 3,420点'])
+    expect([en.resultsScore, en.newBest, en.bestScore(3_420)]).toEqual(['Score', 'New best!', 'Best 3,420'])
+    expect([ja.resultsRight(14), ja.resultsCombo(8), ja.resultsLevel(4)]).toEqual(['正解 14', '最大れんぞく 8', '最高レベル 4'])
+    expect([en.resultsRight(14), en.resultsCombo(8), en.resultsLevel(4)]).toEqual([
+      '14 right',
+      'Longest combo 8',
+      'Highest level 4',
+    ])
+  })
+
+  it('stamp a rank crossed and offer another run', () => {
+    expect([ja.rankUp(1), en.rankUp(10)]).toEqual(['練習9級に上がりました！', 'Up to Practice 1st dan!'])
+    expect([ja.runAgain, en.runAgain]).toEqual(['もう一回', 'Again'])
+  })
+})
