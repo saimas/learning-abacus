@@ -27,7 +27,6 @@ export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =
 // in the string catalogues.
 export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×', div: '÷', mitori: '±' }
 
-export const ROUND_LENGTH = 10
 // Typing the answer costs time the arithmetic does not, and a 4-digit answer
 // costs more of it than a 2-digit one. A first estimate, like the per-move
 // targets it is added to.

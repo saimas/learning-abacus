@@ -390,7 +390,6 @@ export const ja = {
   resetAll: 'すべての進捗を消す',
   resetConfirm: '本当にすべての進捗を消しますか？',
 
-  sessionResult: (answered: number, correct: number) => `${answered}問中 ${correct}問正解`,
   done: 'おわる',
   answer: 'こたえる',
   correctionAnswer,
@@ -439,8 +438,6 @@ export const ja = {
   productLine,
   quotientLine,
   subtractLine,
-  roundCount: (index: number, total: number) => `${index} / ${total}`,
-  roundComplete: 'けたの練習おわり',
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],

@@ -385,7 +385,6 @@ export const en: Strings = {
   resetAll: 'Reset all progress',
   resetConfirm: 'Really erase all progress?',
 
-  sessionResult: (answered, correct) => `${answered} answered, ${correct} correct`,
   done: 'Done',
   answer: 'Answer',
   correctionAnswer,
@@ -430,8 +429,6 @@ export const en: Strings = {
   productLine,
   quotientLine,
   subtractLine,
-  roundCount: (index, total) => `${index} / ${total}`,
-  roundComplete: 'Practice complete',
   roundSection: 'Bigger numbers',
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],

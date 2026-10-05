@@ -1,14 +1,18 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
+import * as Haptics from 'expo-haptics'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
+import type { FadeLevel } from '@/domain/fade'
 import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
+import { BEAD_EASE_MS } from '@/ui/abacus/Rod'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
 import { colors } from '@/ui/theme'
-import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RoundRunner } from './RoundRunner'
+import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RunRunner } from './RunRunner'
 
 beforeEach(() => {
   jest.useFakeTimers()
+  jest.clearAllMocks()
 })
 
 afterEach(() => {
@@ -21,23 +25,58 @@ const problems: Problem[] = [
   { op: 'add', digits: 2, a: 10, b: 11 },
 ]
 
-function renderRound(overrides: Partial<Parameters<typeof RoundRunner>[0]> = {}) {
+// Draws `list` in order, then its last again: a run never runs dry.
+function drawFrom(list: readonly Problem[]) {
+  return (shown: readonly Problem[]): Problem => {
+    const problem = list[Math.min(shown.length, list.length - 1)]
+    if (problem === undefined) throw new Error('nothing to draw')
+    return problem
+  }
+}
+
+type RunOverrides = Partial<Parameters<typeof RunRunner>[0]> & { problems?: Problem[] }
+
+// `relevel` re-renders with the record's level moved, as the provider does
+// once an answer is recorded.
+function renderRun(overrides: RunOverrides = {}) {
+  const { problems: list = problems, ...props } = overrides
   const onAttempt = jest.fn()
-  const onFinish = jest.fn()
+  const onPoints = jest.fn()
+  const onEnd = jest.fn()
+  const onAgain = jest.fn()
+  const onLeave = jest.fn()
+  // Confirms at once, as pressing やめる does.
+  const askQuit = jest.fn((confirmed: () => void) => confirmed())
   let clock = 0
-  render(
-    <RoundRunner
+  const now = () => (clock += 1_000)
+  const element = (level: FadeLevel) => (
+    <RunRunner
       kind={{ op: 'add', digits: 2 }}
-      problems={problems}
-      fade={0}
       calibrationMs={900}
+      draw={drawFrom(list)}
+      pointsBefore={0}
+      best={undefined}
       onAttempt={onAttempt}
-      onFinish={onFinish}
-      now={() => (clock += 1_000)}
-      {...overrides}
-    />,
+      onPoints={onPoints}
+      onEnd={onEnd}
+      onAgain={onAgain}
+      onLeave={onLeave}
+      askQuit={askQuit}
+      now={now}
+      {...props}
+      level={level}
+    />
   )
-  return { onAttempt, onFinish }
+  render(element(props.level ?? 0))
+  return {
+    onAttempt,
+    onPoints,
+    onEnd,
+    onAgain,
+    onLeave,
+    askQuit: props.askQuit ?? askQuit,
+    relevel: (level: FadeLevel) => screen.rerender(element(level)),
+  }
 }
 
 function answerBeads(value: number) {
@@ -61,6 +100,13 @@ function finishRoll() {
   passTime(ROLL_SWIPE_MS + 50)
 }
 
+// A miss's review, then つぎへ, then the swipe to the next card.
+function moveOnFromMiss() {
+  act(() => jest.advanceTimersByTime(500))
+  fireEvent.press(screen.getByTestId('review-next'))
+  finishRoll()
+}
+
 // Frames until the answered card is on its way off, over the next (at most
 // a second of them).
 function passUntilSwiping() {
@@ -78,109 +124,329 @@ function movedBy(testID: string) {
   return styleOf(testID).transform?.find((t) => 'translateX' in t)?.translateX ?? 0
 }
 
-describe('RoundRunner', () => {
-  // The owner (2026-09-30): the round shows the level it is played at.
-  it.each([[0, 'レベル 0/6'], [3, 'レベル 3/6']] as const)('shows level %p in its bar', (fade, label) => {
-    renderRound({ fade })
-    expect(screen.getByTestId('round-level').props.children).toBe(label)
+// The beads' opacity on the card on show.
+function beadOpacities() {
+  return within(screen.getByTestId('card'))
+    .getAllByTestId('fade-layer')
+    .map((layer) => StyleSheet.flatten(layer.props.style).opacity)
+}
+
+// The points float and the level banner are hidden from VoiceOver, which
+// the queries skip unless asked.
+const hidden = { includeHiddenElements: true }
+
+describe('RunRunner', () => {
+  // The owner (2026-09-30): the bar shows the level the problem is played at.
+  it.each([[0, 'レベル 0/6'], [3, 'レベル 3/6']] as const)('shows level %p in its bar', (level, label) => {
+    renderRun({ level })
+    expect(screen.getByTestId('run-level').props.children).toBe(label)
   })
 
-  it('plays the problems in order, counting them', () => {
-    renderRound()
+  it('starts with three lives and nothing scored', () => {
+    renderRun()
+    expect(screen.getAllByTestId('life')).toHaveLength(3)
+    expect(screen.getByTestId('run-score').props.children).toBe('0点')
+    expect(screen.queryByTestId('run-combo')).toBeNull()
+  })
+
+  it('draws each problem as the last goes, given those shown so far', () => {
+    const draw = jest.fn(drawFrom(problems))
+    renderRun({ draw })
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
-    expect(screen.getByTestId('round-count').props.children).toBe('1 / 3')
     answerBeads(81)
     finishRightAnswerRoll()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
-    expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
+    expect(draw).toHaveBeenLastCalledWith([problems[0]])
   })
 
-  // The level goes with each answer: the round holds it, and the record
-  // counts only answers made at its own level (practice.ts).
-  it.each([0, 4] as const)('records each answer against the kind, untimed on the beads, at level %p', (fade) => {
-    const { onAttempt } = renderRound({ fade })
+  // Spec (runs) §3: the record still gets no pace, so levels move on
+  // accuracy alone.
+  it.each([0, 4] as const)('records each answer against the kind at its level, %p, with no pace', (level) => {
+    const { onAttempt } = renderRun({ level })
     answerBeads(81)
-    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade })
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade: level })
   })
 
-  // Spec (core rounds) §4–§5: 手順を見る opens the problem's steps without
-  // the answer, and an answer after it is recorded as with help.
-  it('records an answer after 手順を見る as with help, for that problem only', () => {
-    const { onAttempt } = renderRound()
+  // 23 + 58's base is 36; answered within its target at F0, early in a
+  // combo: 36 × 1.5.
+  it('scores a right answer, adds it to the bar and floats it up', () => {
+    const { onPoints } = renderRun()
+    answerBeads(81)
+    expect(onPoints).toHaveBeenCalledWith(54)
+    expect(screen.getByTestId('run-score').props.children).toBe('54点')
+    expect(screen.getByTestId('points-float', hidden).props.children).toBe('+54')
+    finishRightAnswerRoll()
+    expect(screen.queryByTestId('points-float', hidden)).toBeNull()
+  })
+
+  it('builds a combo from two right answers in a row, and a miss ends it', () => {
+    renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    expect(screen.queryByTestId('run-combo')).toBeNull()
+    answerBeads(100)
+    finishRightAnswerRoll()
+    expect(screen.getByTestId('run-combo').props.children).toBe('2れんぞく ×1')
+    answerBeads(20)
+    expect(screen.queryByTestId('run-combo')).toBeNull()
+  })
+
+  it('takes a life for a miss and says how many are left', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      const { onPoints } = renderRun()
+      announce.mockClear()
+      answerBeads(80)
+      expect(screen.getAllByTestId('life')).toHaveLength(2)
+      expect(screen.getAllByTestId('life-lost')).toHaveLength(1)
+      expect(onPoints).not.toHaveBeenCalled()
+      expect(announce).toHaveBeenCalledWith('ちがいます のこりライフ 2 こたえは 81')
+    } finally {
+      announce.mockRestore()
+    }
+  })
+
+  // Spec (core rounds) §4–§5: 手順を見る opens the steps without the answer,
+  // and an answer after it is with help: recorded so, scoring nothing.
+  it('records an answer after 手順を見る as with help, scoring nothing, for that problem only', () => {
+    const { onAttempt, onPoints } = renderRun()
     fireEvent.press(screen.getByTestId('steps-open'))
     expect(screen.getByTestId('correction-column-1')).toBeTruthy()
     expect(screen.queryByTestId('correction-answer')).toBeNull()
     fireEvent.press(screen.getByTestId('steps-close'))
     answerBeads(81)
     expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: true, fade: 0 })
+    expect(onPoints).not.toHaveBeenCalled()
+    expect(screen.getAllByTestId('life')).toHaveLength(3)
 
     // The next problem starts afresh.
     finishRightAnswerRoll()
     answerBeads(100)
     expect(onAttempt).toHaveBeenLastCalledWith({ id: 'add:2', correct: true, pace: null, assisted: false, fade: 0 })
+    expect(onPoints).toHaveBeenCalledTimes(1)
   })
 
   it('reviews a miss, then moves on without repeating it', () => {
-    renderRound()
+    renderRun()
     answerBeads(80)
     expect(screen.getByTestId('correction')).toBeTruthy()
-    act(() => jest.advanceTimersByTime(500))
-    fireEvent.press(screen.getByTestId('review-next'))
-    finishRoll()
+    moveOnFromMiss()
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 
   // Spec (core rounds) §3: each ▶ plays one bead move, and the line of the
   // column that move belongs to lights up (groupOfStep).
   it('steps through a missed problem, lighting the column each move belongs to', () => {
-    renderRound()
+    renderRun()
     answerBeads(80)
     const count = () => screen.getByTestId('step-count').props.children
-    // Tens first, then ones, as the card lists them.
     const lit = () =>
       [1, 0].filter(
         (place) =>
           StyleSheet.flatten(screen.getByTestId(`correction-column-${place}`).props.style)?.color === colors.accent,
       )
-    // Open at the start, so the first ▶ plays the first move.
     expect(count()).toBe('0 / 3')
     expect(lit()).toEqual([])
-
-    // 23 + 58: +5 on the tens rod, then the ones' 8 as +10 − 2.
     fireEvent.press(screen.getByTestId('step-next'))
     expect(count()).toBe('1 / 3')
     expect(lit()).toEqual([1])
     fireEvent.press(screen.getByTestId('step-next'))
-    expect(count()).toBe('2 / 3')
     expect(lit()).toEqual([0])
-    fireEvent.press(screen.getByTestId('step-next'))
-    expect(count()).toBe('3 / 3')
-    expect(lit()).toEqual([0])
-
-    fireEvent.press(screen.getByTestId('step-back'))
-    fireEvent.press(screen.getByTestId('step-back'))
-    expect(count()).toBe('1 / 3')
-    expect(lit()).toEqual([1])
   })
 
-  it('ends with the summary after the last problem', () => {
-    const { onFinish } = renderRound()
-    for (const answer of [81, 100, 21]) {
-      answerBeads(answer)
+  it('taps lightly on a right answer and buzzes on a miss', () => {
+    renderRun()
+    answerBeads(81)
+    expect(Haptics.impactAsync).toHaveBeenCalledWith(Haptics.ImpactFeedbackStyle.Light)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Warning)
+  })
+})
+
+// Spec (runs) §2: the run follows the record's level as it moves.
+describe('RunRunner following the level', () => {
+  it('lays the next problem at the level the record has moved to, with a banner and a pulse', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      const { relevel, onAttempt } = renderRun({ level: 0 })
+      answerBeads(81)
+      relevel(1)
+      announce.mockClear()
       finishRightAnswerRoll()
+      expect(screen.getByTestId('run-level').props.children).toBe('レベル 1/6')
+      expect(screen.getByTestId('level-banner', hidden)).toBeTruthy()
+      expect(announce).toHaveBeenCalledWith('レベル 1')
+      expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success)
+      answerBeads(100)
+      expect(onAttempt).toHaveBeenLastCalledWith(expect.objectContaining({ fade: 1 }))
+    } finally {
+      announce.mockRestore()
     }
-    expect(screen.getByTestId('summary-text').props.children).toBe('けたの練習おわり')
-    expect(screen.getByTestId('summary-result').props.children).toBe('3問中 3問正解')
-    fireEvent.press(screen.getByTestId('finish-button'))
-    expect(onFinish).toHaveBeenCalledTimes(1)
+  })
+
+  // Spec (runs) §5: F2 → F3 is the first new look; the beads start at the
+  // old one underneath and ease to the new once uncovered.
+  it('eases the beads to a new look once the card is uncovered', () => {
+    const { relevel } = renderRun({ level: 2 })
+    answerBeads(81)
+    relevel(3)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    expect(beadOpacities().every((opacity) => opacity === 1)).toBe(true)
+    finishRoll()
+    passTime(BEAD_EASE_MS + 100)
+    expect(beadOpacities().every((opacity) => opacity === 0.35)).toBe(true)
+  })
+
+  // Review focus: a demotion shows its banner, and the beads come back at once.
+  it('drops a level with a banner and no easing', () => {
+    const { relevel } = renderRun({ level: 3 })
+    answerBeads(80)
+    relevel(2)
+    moveOnFromMiss()
+    expect(screen.getByTestId('run-level').props.children).toBe('レベル 2/6')
+    expect(screen.getByTestId('level-banner', hidden)).toBeTruthy()
+    expect(beadOpacities().every((opacity) => opacity === 1)).toBe(true)
+    expect(Haptics.notificationAsync).not.toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success)
+  })
+})
+
+describe('RunRunner ending', () => {
+  // Spec (runs) §2: the third miss ends the run; after its review, つぎへ
+  // brings the results.
+  it('ends after the third miss, with the results', () => {
+    const { onEnd } = renderRun()
+    for (const wrong of [80, 99, 20]) {
+      answerBeads(wrong)
+      moveOnFromMiss()
+    }
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+    expect(screen.getByTestId('results-score').props.children).toBe('0')
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    expect(onEnd).toHaveBeenCalledWith(0)
+  })
+
+  // Review focus: a second つぎへ on the third miss lays one results card.
+  it('ends once however often つぎへ is pressed on the third miss', () => {
+    const { onEnd } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    answerBeads(99)
+    moveOnFromMiss()
+    answerBeads(20)
+    moveOnFromMiss()
+    answerBeads(20)
+    act(() => jest.advanceTimersByTime(500))
+    const next = screen.getByTestId('review-next')
+    fireEvent.press(next)
+    fireEvent.press(next)
+    passTime(2_000)
+    expect(screen.getByTestId('results-score').props.children).toBe('54')
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    expect(onEnd).toHaveBeenCalledWith(54)
+  })
+
+  it('swipes the last card off over the results', () => {
+    renderRun()
+    for (const wrong of [80, 99]) {
+      answerBeads(wrong)
+      moveOnFromMiss()
+    }
+    answerBeads(20)
+    act(() => jest.advanceTimersByTime(500))
+    fireEvent.press(screen.getByTestId('review-next'))
+    passUntilSwiping()
+    expect(within(screen.getByTestId('card')).getByTestId('run-results')).toBeTruthy()
+    expect(within(screen.getByTestId('card-leaving')).getByTestId('prompt').props.children).toBe('10に11をたす。')
+    finishRoll()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+  })
+
+  it('starts again or leaves from the results', () => {
+    const { onAgain, onLeave } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    finishRoll()
+    fireEvent.press(screen.getByTestId('run-again'))
+    fireEvent.press(screen.getByTestId('run-done'))
+    expect(onAgain).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('RunRunner quitting', () => {
+  it('asks, then leaves at once with nothing answered', () => {
+    const { askQuit, onLeave, onEnd } = renderRun()
+    fireEvent.press(screen.getByTestId('quit'))
+    expect(askQuit).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(onEnd).not.toHaveBeenCalled()
+  })
+
+  it('asks, then shows the results with the points so far', () => {
+    const { onEnd, onLeave } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    finishRoll()
+    expect(screen.getByTestId('results-score').props.children).toBe('54')
+    expect(onEnd).toHaveBeenCalledWith(54)
+    expect(onLeave).not.toHaveBeenCalled()
+  })
+
+  it('stays when the learner keeps going', () => {
+    renderRun({ askQuit: jest.fn() })
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    passTime(1_000)
+    expect(screen.queryByTestId('run-results')).toBeNull()
+    expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
+  })
+
+  // Review focus: ✕ confirmed while a card moves still ends on the results, once.
+  it('goes to the results once when ✕ is confirmed during the 〇’s hold', () => {
+    const { onEnd } = renderRun()
+    answerBeads(81)
+    fireEvent.press(screen.getByTestId('quit'))
+    passTime(ROLL_HOLD_MS + ROLL_SWIPE_MS + 200)
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    expect(onEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it('goes to the results once when ✕ is confirmed mid-swipe', () => {
+    const { onEnd } = renderRun()
+    answerBeads(81)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    fireEvent.press(screen.getByTestId('quit'))
+    passTime(2 * ROLL_SWIPE_MS + 200)
+    expect(screen.getByTestId('run-results')).toBeTruthy()
+    expect(screen.queryByTestId('card-leaving')).toBeNull()
+    expect(onEnd).toHaveBeenCalledTimes(1)
+  })
+
+  // On the results, with nothing left to lose, ✕ just leaves.
+  it('leaves from the results without asking', () => {
+    const { askQuit, onLeave } = renderRun()
+    answerBeads(81)
+    finishRightAnswerRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    finishRoll()
+    fireEvent.press(screen.getByTestId('quit'))
+    expect(askQuit).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
   })
 })
 
 // The owner's request (2026-09-23): a × problem shows its two numbers on
 // beads under the product soroban, which 両落とし starts empty, and stepping
 // through a miss points at the two digits of each 九九 in turn.
-describe('RoundRunner with ×', () => {
-  const multiply: Partial<Parameters<typeof RoundRunner>[0]> = {
+describe('RunRunner with ×', () => {
+  const multiply: RunOverrides = {
     kind: { op: 'mul', digits: 2 },
     problems: [{ op: 'mul', digits: 2, a: 12, b: 34 }],
   }
@@ -191,7 +457,7 @@ describe('RoundRunner with ×', () => {
     [0, 1].filter((i) => within(screen.getByTestId(`operand-${name}`)).queryByTestId(`rod-highlight-${i}`) !== null)
 
   it('shows the two numbers under the soroban', () => {
-    renderRound(multiply)
+    renderRun(multiply)
     expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('12 × 34')
     expect([lit('a'), lit('b')]).toEqual([[], []])
     // The owner's request (2026-09-24): 手順を見る sits where the steps
@@ -204,12 +470,12 @@ describe('RoundRunner with ×', () => {
   })
 
   it('shows no operand board for ＋', () => {
-    renderRound()
+    renderRun()
     expect(screen.queryByTestId('operand-board')).toBeNull()
   })
 
   it('moves the highlight to the digits of each 九九 as a miss is stepped through', () => {
-    renderRound(multiply)
+    renderRun(multiply)
     setBeads(onProduct, 407, 4)
     fireEvent.press(screen.getByTestId('submit'))
     // The panel opens at the start, with no 九九 yet.
@@ -239,7 +505,7 @@ describe('RoundRunner with ×', () => {
   it('scrolls the line of the 九九 stepped to into view below the controls', () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo')
     try {
-      renderRound(multiply)
+      renderRun(multiply)
       setBeads(onProduct, 407, 4)
       fireEvent.press(screen.getByTestId('submit'))
       const layout = (testID: string, y: number, height: number) =>
@@ -286,7 +552,7 @@ describe('RoundRunner with ×', () => {
       .spyOn(reactNative, 'useWindowDimensions')
       .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
     restoreWindow = () => spy.mockRestore()
-    renderRound(multiply)
+    renderRun(multiply)
     const padding = (container: string) =>
       StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
     expect(padding('soroban-wrap')).toBeCloseTo(FRAME_PADDING * product)
@@ -298,8 +564,8 @@ describe('RoundRunner with ×', () => {
 // Spec (division) §3: a ÷ problem shows its divisor on a board under the
 // soroban, which holds the dividend, and stepping through a miss points at
 // the divisor digit of each 九九 taken off.
-describe('RoundRunner with ÷', () => {
-  const divide: Partial<Parameters<typeof RoundRunner>[0]> = {
+describe('RunRunner with ÷', () => {
+  const divide: RunOverrides = {
     kind: { op: 'div', digits: 2 },
     problems: [{ op: 'div', digits: 2, a: 1692, b: 36 }],
   }
@@ -310,7 +576,7 @@ describe('RoundRunner with ÷', () => {
     [0, 1].filter((i) => within(screen.getByTestId('operand-b')).queryByTestId(`rod-highlight-${i}`) !== null)
 
   it('shows the divisor under the soroban, which starts at the dividend', () => {
-    renderRound(divide)
+    renderRun(divide)
     expect(screen.getByTestId('prompt').props.children).toBe('1692を36でわる。')
     expect(screen.getByTestId('operand-board').props.accessibilityLabel).toBe('わる数 36')
     expect(screen.queryByTestId('operand-a')).toBeNull()
@@ -319,16 +585,16 @@ describe('RoundRunner with ÷', () => {
   })
 
   it('takes the quotient left where 商除法 leaves it, with zeros below it', () => {
-    const { onAttempt } = renderRound(divide)
+    const { onAttempt } = renderRun(divide)
     setBeads(onSoroban, 47000, 5)
     fireEvent.press(screen.getByTestId('submit'))
     expect(onAttempt).toHaveBeenCalledWith({ id: 'div:2', correct: true, pace: null, assisted: false, fade: 0 })
     finishRightAnswerRoll()
-    expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
+    expect(screen.getByTestId('prompt').props.children).toBe('1692を36でわる。')
   })
 
   it('moves the highlight to the divisor digit of each 九九 as a miss is stepped through', () => {
-    renderRound(divide)
+    renderRun(divide)
     // 47 on the lowest rods is not where 商除法 leaves the quotient.
     setBeads(onSoroban, 47, 5)
     fireEvent.press(screen.getByTestId('submit'))
@@ -379,7 +645,7 @@ describe('RoundRunner with ÷', () => {
       .spyOn(reactNative, 'useWindowDimensions')
       .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
     restoreWindow = () => spy.mockRestore()
-    renderRound({ kind: { op: 'div', digits: 3 }, problems: [{ op: 'div', digits: 3, a: 202032, b: 976 }] })
+    renderRun({ kind: { op: 'div', digits: 3 }, problems: [{ op: 'div', digits: 3, a: 202032, b: 976 }] })
     const padding = (container: string) =>
       StyleSheet.flatten(within(screen.getByTestId(container)).getByTestId('abacus-frame').props.style).padding
     expect(onSoroban('rod-6')).toBeTruthy()
@@ -390,9 +656,9 @@ describe('RoundRunner with ÷', () => {
 
 // Spec (見取算) §2: the problem is a column above the soroban, and stepping
 // through a miss highlights the number each move belongs to.
-describe('RoundRunner with 見取算', () => {
+describe('RunRunner with 見取算', () => {
   const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 30, -23, 61, -19] }
-  const mitoriRound: Partial<Parameters<typeof RoundRunner>[0]> = { kind: { op: 'mitori', digits: 2 }, problems: [column] }
+  const mitoriRound: RunOverrides = { kind: { op: 'mitori', digits: 2 }, problems: [column] }
   const lit = () =>
     [0, 1, 2, 3, 4].filter((row) => {
       const number = within(screen.getByTestId(`term-${row}`)).getByText(String(Math.abs(column.terms[row] ?? 0)))
@@ -403,7 +669,7 @@ describe('RoundRunner with 見取算', () => {
     problemSteps(column).reduce((n, g) => (g.kind === 'column' && g.term === term ? n + g.steps.length : n), 0)
 
   it('shows the column, read as one sentence, and the soroban starting at the first number', () => {
-    renderRound(mitoriRound)
+    renderRun(mitoriRound)
     expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
     expect(screen.getByTestId('rod-1').props.accessibilityValue.text).toBe('4')
     expect(screen.getByTestId('rod-2').props.accessibilityValue.text).toBe('7')
@@ -411,13 +677,13 @@ describe('RoundRunner with 見取算', () => {
   })
 
   it('takes the total on the beads', () => {
-    const { onAttempt } = renderRound(mitoriRound)
+    const { onAttempt } = renderRun(mitoriRound)
     answerBeads(96)
     expect(onAttempt).toHaveBeenCalledWith({ id: 'mitori:2', correct: true, pace: null, assisted: false, fade: 0 })
   })
 
   it('highlights the number, and its line, of each move stepped through', () => {
-    renderRound(mitoriRound)
+    renderRun(mitoriRound)
     answerBeads(95)
     expect(lit()).toEqual([])
     fireEvent.press(screen.getByTestId('step-next'))
@@ -434,7 +700,7 @@ describe('RoundRunner with 見取算', () => {
   // which +39's. A number's beads stay coloured across its rods, and its
   // heading and lines are shaded together, until the next number begins.
   it('keeps a number coloured and shaded as one, across its rods', () => {
-    renderRound(mitoriRound)
+    renderRun(mitoriRound)
     answerBeads(95)
     const tinted = () => tintedBeads(screen.getByTestId('soroban-wrap'), 3)
     const shaded = (testID: string) =>
@@ -453,7 +719,7 @@ describe('RoundRunner with 見取算', () => {
   // The owner (2026-09-30): every level is answered on the beads, so the
   // column stays above the soroban however faded its beads are.
   it('shows the column above the soroban at a faded level too', () => {
-    renderRound({ ...mitoriRound, fade: 3 })
+    renderRun({ ...mitoriRound, level: 3 })
     expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('47、たす30、ひく23、たす61、ひく19。')
     expect(screen.getByTestId('term-4')).toBeTruthy()
     const drawn = screen.root
@@ -464,10 +730,10 @@ describe('RoundRunner with 見取算', () => {
 
   // Review focus: 3けた can total four digits, and the beads must take them.
   it('takes a four-digit 3けた total on the beads', () => {
-    const { onAttempt } = renderRound({
+    const { onAttempt } = renderRun({
       kind: { op: 'mitori', digits: 3 },
       problems: [{ op: 'mitori', digits: 3, terms: [999, 999, 999, -999, 999] }],
-      fade: 3,
+      level: 3,
     })
     setBeads(screen.getByTestId, 2997, 4)
     fireEvent.press(screen.getByTestId('submit'))
@@ -475,7 +741,7 @@ describe('RoundRunner with 見取算', () => {
   })
 
   it('draws a two-number problem’s prompt as text, with no column', () => {
-    renderRound()
+    renderRun()
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
     expect(screen.queryByTestId('term-0')).toBeNull()
   })
@@ -497,7 +763,7 @@ describe('RoundRunner with 見取算', () => {
         .spyOn(reactNative, 'useWindowDimensions')
         .mockReturnValue({ width, height, scale: 2, fontScale: 1 })
       restoreWindow = () => spy.mockRestore()
-      renderRound(mitoriRound)
+      renderRun(mitoriRound)
       const frame = within(screen.getByTestId('soroban-wrap')).getByTestId('abacus-frame')
       expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
     })
@@ -509,9 +775,9 @@ describe('RoundRunner with 見取算', () => {
 // underneath, still, and the answered card is swiped off over it, so there
 // is nothing for the eye to chase and no blank between them (the owner:
 // sliding "makes human eye to chase it"; fading "is still distracting").
-describe('RoundRunner swiping from problem to problem', () => {
+describe('RunRunner swiping from problem to problem', () => {
   it('holds a right answer under its 〇, then swipes it off over the next problem', () => {
-    const { onAttempt } = renderRound()
+    const { onAttempt } = renderRun()
     answerBeads(81)
     // Recorded at once; the answered problem stays, stamped, and cannot be
     // answered again.
@@ -519,7 +785,6 @@ describe('RoundRunner swiping from problem to problem', () => {
     expect(screen.getByTestId('prompt').props.children).toBe('23に58をたす。')
     expect(screen.getByTestId('maru')).toBeTruthy()
     expect(screen.getByTestId('roll-blocker')).toBeTruthy()
-    expect(screen.getByTestId('round-count').props.children).toBe('1 / 3')
     // Nothing underneath yet while the 〇 is held.
     passTime(ROLL_HOLD_MS - 50)
     expect(screen.getAllByTestId('prompt')).toHaveLength(1)
@@ -530,7 +795,6 @@ describe('RoundRunner swiping from problem to problem', () => {
     const leaving = within(screen.getByTestId('card-leaving'))
     expect(leaving.getByTestId('prompt').props.children).toBe('23に58をたす。')
     expect(leaving.getByTestId('maru')).toBeTruthy()
-    expect(screen.getByTestId('round-count').props.children).toBe('2 / 3')
     expect(screen.getByTestId('roll-blocker')).toBeTruthy()
     finishRoll()
     expect(screen.queryByTestId('card-leaving')).toBeNull()
@@ -541,7 +805,7 @@ describe('RoundRunner swiping from problem to problem', () => {
 
   it('leaves the next problem still as the answered card swipes fully off to the left', () => {
     const timing = jest.spyOn(Animated, 'timing')
-    renderRound()
+    renderRun()
     answerBeads(81)
     passTime(ROLL_HOLD_MS)
     passUntilSwiping()
@@ -567,7 +831,7 @@ describe('RoundRunner swiping from problem to problem', () => {
       }
       return timing(value, config)
     })
-    renderRound()
+    renderRun()
     answerBeads(81)
     finishRightAnswerRoll()
     spy.mockRestore()
@@ -589,7 +853,7 @@ describe('RoundRunner swiping from problem to problem', () => {
           }),
       }
     })
-    renderRound()
+    renderRun()
     answerBeads(81)
     finishRightAnswerRoll()
     answerBeads(100)
@@ -601,7 +865,7 @@ describe('RoundRunner swiping from problem to problem', () => {
   })
 
   it('swipes to the next problem after a miss’s つぎへ', () => {
-    renderRound()
+    renderRun()
     answerBeads(80)
     act(() => jest.advanceTimersByTime(500))
     fireEvent.press(screen.getByTestId('review-next'))
@@ -614,7 +878,7 @@ describe('RoundRunner swiping from problem to problem', () => {
   // drawn, and reach it after the swipe has started. It must not stop the
   // swipe and leave the answered card over the next for good.
   it('moves on once when つぎへ is pressed again as the swipe starts', () => {
-    renderRound()
+    renderRun()
     answerBeads(80)
     act(() => jest.advanceTimersByTime(500))
     const next = screen.getByTestId('review-next')
@@ -627,38 +891,9 @@ describe('RoundRunner swiping from problem to problem', () => {
     expect(screen.getByTestId('prompt').props.children).toBe('46に54をたす。')
   })
 
-  it('swipes the last card off over the summary, the count staying put', () => {
-    const { onFinish } = renderRound({ problems: [{ op: 'add', digits: 2, a: 23, b: 58 }] })
-    answerBeads(81)
-    expect(screen.queryByTestId('summary-text')).toBeNull()
-    passTime(ROLL_HOLD_MS)
-    passUntilSwiping()
-    expect(within(screen.getByTestId('card')).getByTestId('summary-result').props.children).toBe('1問中 1問正解')
-    expect(within(screen.getByTestId('card-leaving')).getByTestId('prompt').props.children).toBe('23に58をたす。')
-    finishRoll()
-    expect(screen.queryByTestId('card-leaving')).toBeNull()
-    expect(screen.getByTestId('summary-result').props.children).toBe('1問中 1問正解')
-    expect(screen.getByTestId('round-count').props.children).toBe('1 / 1')
-    fireEvent.press(screen.getByTestId('finish-button'))
-    expect(onFinish).toHaveBeenCalledTimes(1)
-  })
-
-  // The count bar stays on the summary so nothing jumps as the last card
-  // goes; there, with nothing left to lose, its ✕ just finishes.
-  it('lets the summary’s ✕ finish the round without asking', () => {
-    const onQuit = jest.fn()
-    const { onFinish } = renderRound({ problems: [{ op: 'add', digits: 2, a: 23, b: 58 }], onQuit })
-    answerBeads(81)
-    finishRightAnswerRoll()
-    fireEvent.press(screen.getByTestId('quit'))
-    fireEvent.press(screen.getByTestId('finish-button'))
-    expect(onFinish).toHaveBeenCalledTimes(1)
-    expect(onQuit).not.toHaveBeenCalled()
-  })
-
   // Review focus: leaving mid-roll keeps the answer and fires nothing later.
   it('keeps the answer and fires nothing once unmounted during the hold', () => {
-    const { onAttempt } = renderRound()
+    const { onAttempt } = renderRun()
     answerBeads(81)
     expect(onAttempt).toHaveBeenCalledTimes(1)
     screen.unmount()
@@ -667,7 +902,7 @@ describe('RoundRunner swiping from problem to problem', () => {
   })
 
   it('fires nothing once unmounted mid-swipe', () => {
-    const { onAttempt } = renderRound()
+    const { onAttempt } = renderRun()
     answerBeads(81)
     passTime(ROLL_HOLD_MS)
     passUntilSwiping()
@@ -699,7 +934,7 @@ describe('RoundRunner swiping from problem to problem', () => {
     // The animated opacity the leaving card is drawn with (its host view gets
     // only the number).
     const leavingOpacity = () => StyleSheet.flatten(screen.UNSAFE_getAllByProps({ testID: 'card-leaving' })[0]?.props.style).opacity
-    renderRound()
+    renderRun()
     await act(async () => {})
     answerBeads(81)
     passTime(ROLL_HOLD_MS)
