@@ -57,7 +57,7 @@ points = round(base × level factor × combo factor × speed factor)
 | combo factor | By the combo counting this answer: 1–4 ×1, 5–9 ×1.5, 10–19 ×2, 20 and up ×3. |
 | speed factor | `t = answer time / (problemTargetMs × BEAD_SPEED_FACTOR)`. ×1.5 when t ≤ 1, ×1 when t ≥ 2, and `1.5 − 0.5 × (t − 1)` between. |
 
-Worked example: 47 + 85 (base 40) at F3, the 12th right answer in a row, answered within its target: 40 × 1.75 × 2 × 1.5 = **210**.
+Worked example: 47 + 85 (base 46) at F3, the 12th right answer in a row, answered within its target: 46 × 1.75 × 2 × 1.5 = 241.5, rounded to **242**.
 
 Why: a base from the time target makes every kind earn about the same per minute, so 1けた ＋ is not the way to farm points and a slow 3けた ÷ is not punished. The level factor is the biggest lever and rewards exactly what the app trains, the beads fading. Speed only ever adds.
 
@@ -93,7 +93,7 @@ Existing players start at 0 points: 1.0 has only just been released.
 **The run's bar** (in `RoundTrack`'s place): ✕, the three life beads, the level (「レベル 3/6」, as now) and the score. Under it, the combo once it is 2 or more: 「12れんぞく ×2」 (en "12 in a row ×2"), with a pulse as it grows. The prompt, the soroban, the boards and 手順を見る stay where they are.
 
 **Moments.**
-- 〇: the points earned float up from the 〇 (「+210」) during the hold, then the card swipes off as now.
+- 〇: the points earned float up from the 〇 (「+242」) during the hold, then the card swipes off as now.
 - A promotion: a short 「レベル 4」 banner on the next card. Where the level's look changes (F2→F3 and up), that card's beads start at the old look and ease to the new one once the card is uncovered, so the fade is seen happening.
 - ✕: a life bead drops from the bar and the combo goes; then the review as now.
 - A demotion: the same banner with the lower level; the beads come back without easing.
@@ -139,7 +139,7 @@ Both are checked on load like `practices`: a missing or invalid `points` reads a
 
 ## 7. Testing
 
-- `score.test.ts`: the worked example (210); each factor's steps and bounds (combo 4/5/9/10/19/20; speed at t = 1, 1.5, 2 and beyond); the base for a few kinds.
+- `score.test.ts`: the worked example (242); each factor's steps and bounds (combo 4/5/9/10/19/20; speed at t = 1, 1.5, 2 and beyond); the base for a few kinds.
 - `rank.test.ts`: the thresholds (1,000, 2,400, …, the last), `rankOf` at and around each, the bar's progress, and a total past the last rank.
 - `run.test.ts`: the third miss ends a run; a miss resets the combo; a right answer with help keeps the combo and scores 0; a wrong answer with help costs a life; the score sums the points; longest combo and highest level; no problem repeats within 10, for the smallest kinds too.
 - `practice.test.ts` and `progress.test.ts`: a run's start clears both streaks and keeps the level; points add up; a best run is replaced only by a higher score; stored values are checked on load.
