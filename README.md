@@ -6,7 +6,7 @@ fixed rule set and ships inside the app bundle, so the app is fully functional o
 network calls at runtime. Progress is stored on-device only.
 
 The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, and 見取算 (a column of
-five), in rounds of ten, started from the grid on Home. The learner works each problem on the
+five), in endless runs, started from the grid on Home. The learner works each problem on the
 soroban first; the beads fade as the answers keep coming right, until they cannot be seen at all
 and the fingers still move them.
 
@@ -32,19 +32,21 @@ Every problem's steps are these moves: 手順を見る explains each one by its 
 Each kind of problem (for example 2-digit addition, `add:2`) keeps one record, since its problems
 are generated fresh every time. Seven fade levels (F0-F6) map to five renderings — solid beads,
 dimmed, ghost outline, empty frame, then nothing — with the lowest three differing only in
-coaching. Five right answers in a row promote a level; two misses in a row demote one. A round
-keeps the level it started at, and moves the record one level at most, so none is skipped. F6
-means the beads are gone entirely: the learner works from the soroban in their head.
+coaching. Five right answers in a row promote a level; two misses in a row demote one. A run
+follows the record as it moves: a level earned on one answer shows from the next problem on, so
+none is skipped, and each run starts the streaks afresh. F6 means the beads are gone entirely: the
+learner works from the soroban in their head.
 
-At every level the learner answers by tapping beads and pressing こたえる, untimed. As the beads
-fade they still move where they would be, invisible or not, so the fingers keep working the
-soroban (the owner, 2026-09-30); the number they read shows once the answer is in. Each round's
-bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
+At every level the learner answers by tapping beads and pressing こたえる, with no time limit
+(speed earns a bonus). As the beads fade they still move where they would be, invisible or not, so
+the fingers keep working the soroban (the owner, 2026-09-30); the number they read shows once the
+answer is in. A run's bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
 
 ## けたの練習
 
 Home's grid has a row per operation and a column per size, each cell coloured by its stage. A
-tap starts a round of ten problems, then a summary. Every size is open from the start.
+tap starts a run: problems keep coming until the third miss, then the results. Every size is open
+from the start.
 
 | | 1けた | 2けた | 3けた |
 |---|---|---|---|
@@ -76,20 +78,36 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   one is stamped with a 〇 where it stands; then the next problem is laid in its place underneath
   and the answered card is swiped off to the left over it, so the new problem never moves (with
   Reduce Motion on, the answered card fades away in place). A miss's つぎへ moves on the same way,
-  and the last card goes over the summary.
+  and the last card goes over the results.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
 - **やりかた**: a tutorial of its own, from Home's four tiles (＋ − × ÷), each opening that
   operation's lessons by 桁数. 1けた ＋ − are taught move by move (そのまま, 五の合成, 十の繰上,
   十の繰上と五の分解, and the − ones); every other size has one worked example. A lesson walks its
   example on the soroban step by step, then やってみよう asks one like it (recorded nowhere).
-  The first round of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
+  The first run of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
   ✕ leaves any lesson at any point, and every lesson done gets a ✓.
+
+## Runs, points and rank
+
+A run has three lives: each miss costs one, and the third ends it. Right answers in a row build a
+combo, and the fade ladder moves mid-run, so a hot streak dims the beads in front of the learner
+(they ease to each new look). Each right answer without help scores
+`base × level × combo × speed`: the base is 10 points per second of the problem's time target, the
+level adds 25% per fade level, the combo ×1.5 / ×2 / ×3 from 5 / 10 / 20 in a row, and an answer
+within twice its target up to ×1.5 (slow costs nothing). The results show the score against the
+kind's best, the right answers, the longest combo and the highest level, and the lifetime points
+fill a rank bar: twenty ranks, 練習10級 to 練習十段, marked 練習 so they are not taken for 珠算検定
+grades. A run is felt as well as seen: a tap on 〇, a pulse on a level or rank gained, a buzz on ✕.
+戻る in the run's bar goes back to the problem before, as far back as the learner likes: it starts
+afresh and counts like any other.
 
 ## Screens
 
 - **Tutorial** — on first launch, reading the soroban: what number is on each rod.
-- **Home** — the days-practised seal, the けたの練習 grid, and a row of four やりかた tiles (＋ − × ÷).
-- **Round** — full-screen practice. ✕ asks before leaving and keeps what was answered.
+- **Home** — the days-practised seal, the rank and its bar, the けたの練習 grid, and a row of four
+  やりかた tiles (＋ − × ÷).
+- **Round** — full-screen practice: a run, its bar (lives, level, score, combo) and its results. ✕
+  asks before leaving and keeps what was earned.
 - **Progress** — days practised and the けたの練習 table, each cell coloured by its stage.
 - **Settings** — days practised, the language toggle (Japanese by default, or English), and a
   guarded reset (two presses; the first only arms it) that erases all stored progress.
@@ -103,7 +121,8 @@ tap starts a round of ten problems, then a summary. Every size is open from the 
   both numbers on the soroban.
 - Time targets tuned to the learner from rounds (they use the calibration 基礎の練習 measured
   before it was removed on 2026-09-28, or the default).
-- 読上算 audio, 検定 mock exams, drag or swipe bead gestures, landscape, and any backend or sync.
+- Sound, 読上算 audio, 検定 mock exams, drag or swipe bead gestures, landscape, and any backend or
+  sync (so no leaderboards).
 
 ## Prerequisites
 

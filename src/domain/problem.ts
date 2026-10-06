@@ -27,7 +27,6 @@ export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =
 // in the string catalogues.
 export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×', div: '÷', mitori: '±' }
 
-export const ROUND_LENGTH = 10
 // Typing the answer costs time the arithmetic does not, and a 4-digit answer
 // costs more of it than a 2-digit one. A first estimate, like the per-move
 // targets it is added to.
@@ -48,6 +47,11 @@ export const MITORI_TERMS = 5
 
 export function practiceId(kind: PracticeKind): PracticeId {
   return `${kind.op}:${kind.digits}`
+}
+
+// What makes two problems of one kind the same problem.
+export function problemKey(problem: Problem): string {
+  return problem.op === 'mitori' ? problem.terms.join(',') : `${problem.a},${problem.b}`
 }
 
 // For values from outside the app's own code, such as a route parameter.
@@ -125,7 +129,7 @@ export function generateProblems(kind: PracticeKind, count: number, random: () =
   for (let tries = 0; problems.length < count && tries < count * 1000; tries++) {
     const problem = kind.op === 'mitori' ? drawMitori(kind.digits, random) : drawPair(kind.op, kind.digits, random)
     if (problem === null) continue
-    const key = problem.op === 'mitori' ? problem.terms.join(',') : `${problem.a},${problem.b}`
+    const key = problemKey(problem)
     if (seen.has(key)) continue
     seen.add(key)
     problems.push(problem)

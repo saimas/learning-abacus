@@ -57,6 +57,8 @@ export function QuestionView({
   onSubmit,
   onMoveOn,
   afterAnswer,
+  easeFade,
+  missNote,
 }: {
   exercise: Exercise
   fade: FadeLevel
@@ -87,6 +89,10 @@ export function QuestionView({
   onSubmit: (submission: Submission) => void
   onMoveOn: (t: number) => void
   afterAnswer?: AfterAnswer
+  // Spec (runs) §5: the beads ease to a new level instead of jumping
+  // (Abacus), and a run's word on what a miss leaves, said with the ✕.
+  easeFade?: boolean
+  missNote?: string
 }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
@@ -175,7 +181,8 @@ export function QuestionView({
       // Folding it into this same announcement is the only way VoiceOver
       // ever hears it; a second announceForAccessibility call right after
       // this one would just cut the first off before it finishes.
-      AccessibilityInfo.announceForAccessibility(cardShown ? `${strings.wrong} ${answerLine}` : strings.wrong)
+      const wrong = missNote === undefined ? strings.wrong : `${strings.wrong} ${missNote}`
+      AccessibilityInfo.announceForAccessibility(cardShown ? `${wrong} ${answerLine}` : wrong)
     }
     onSubmit({ correct, latencyMs, t, assisted: assisted.current })
   }
@@ -385,6 +392,7 @@ export function QuestionView({
         <Abacus
           soroban={stepper.soroban ?? shownBeads}
           fade={shownFade}
+          easeFade={easeFade}
           scale={beadScale}
           tintedBeads={tintedBeads}
           onTapBead={

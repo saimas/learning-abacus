@@ -273,4 +273,19 @@ describe('Home', () => {
     await waitFor(() => expect(getByTestId('seal-outline')).toBeTruthy())
     expect(getByTestId('today-status').props.children).toBe('今日の練習はまだです')
   })
+
+  // Spec (runs) §5: the rank and the bar to the next rank, under the seal.
+  it('shows the learner’s rank and the points to the next', async () => {
+    mockLoad.mockResolvedValue(learner({ points: 2_500 }))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('rank-name').props.children).toBe('練習8級'))
+    expect(getByTestId('rank-next').props.children).toBe('次まで あと1,900点')
+  })
+
+  it('starts every learner at 練習10級', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('rank-name').props.children).toBe('練習10級'))
+    expect(getByTestId('rank-next').props.children).toBe('次まで あと1,000点')
+  })
 })

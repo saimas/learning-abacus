@@ -167,3 +167,34 @@ describe('saveProgress', () => {
     expect(mockSetItem).toHaveBeenCalledWith(STORAGE_KEY, JSON.stringify(progress))
   })
 })
+
+// Spec (runs) §6, review focus: a document saved by 1.0 has neither field.
+describe('points and best runs', () => {
+  it('loads a document from before runs with none', async () => {
+    const { points: _points, bestRuns: _bestRuns, ...old } = emptyProgress()
+    mockGetItem.mockResolvedValue(JSON.stringify(old))
+    const loaded = await loadProgress()
+    expect(loaded.points).toBe(0)
+    expect(loaded.bestRuns).toEqual({})
+  })
+
+  it('keeps stored points and best runs', async () => {
+    mockGetItem.mockResolvedValue(JSON.stringify({ ...emptyProgress(), points: 4_200, bestRuns: { 'add:2': 900 } }))
+    const loaded = await loadProgress()
+    expect(loaded.points).toBe(4_200)
+    expect(loaded.bestRuns).toEqual({ 'add:2': 900 })
+  })
+
+  it('drops points and best runs it cannot trust', async () => {
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({
+        ...emptyProgress(),
+        points: -5,
+        bestRuns: { 'add:2': 900, 'pow:1': 10, 'sub:1': 1.5, 'mul:1': -1, 'div:1': '7' },
+      }),
+    )
+    const loaded = await loadProgress()
+    expect(loaded.points).toBe(0)
+    expect(loaded.bestRuns).toEqual({ 'add:2': 900 })
+  })
+})

@@ -7,6 +7,7 @@ import { useStrings } from '@/i18n'
 import { IconButton } from '@/ui/kit/IconButton'
 import { Screen } from '@/ui/kit/Screen'
 import { Seal, type SealState } from '@/ui/kit/Seal'
+import { RankBadge } from '@/ui/rank/RankBadge'
 import { PracticeTable } from '@/ui/progress/PracticeTable'
 import { useProgress } from '@/ui/ProgressProvider'
 import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
@@ -111,6 +112,7 @@ export default function Home() {
             {practisedToday ? <Text style={styles.muted}>{strings.seeYouTomorrow}</Text> : null}
           </View>
         </View>
+        <RankBadge points={progress.points} />
 
         <PracticeTable progress={progress} onChoose={startRound} />
         {/* Spec (howto tutorial) §3: each operation's lessons, from its own

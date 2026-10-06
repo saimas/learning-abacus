@@ -203,6 +203,34 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(onMoveOn).toHaveBeenCalledWith(1_500)
   })
 
+
+  // Spec (runs) §5: a run says how many lives a miss leaves, in the same
+  // announcement, since a second one would cut the first off.
+  it('names what a miss leaves alongside the ✕', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      renderView({ missNote: 'のこりライフ 2' })
+      setBeads(screen.getByTestId, 800, 4)
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('submit'))
+      expect(announce).toHaveBeenCalledWith('ちがいます のこりライフ 2 こたえは 857')
+    } finally {
+      announce.mockRestore()
+    }
+  })
+
+  it('names it at a silent level too, where the answer waits to be asked for', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      renderView({ fade: 2, coaching: 'silent', missNote: 'のこりライフ 1' })
+      setBeads(screen.getByTestId, 800, 4)
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('submit'))
+      expect(announce).toHaveBeenCalledWith('ちがいます のこりライフ 1')
+    } finally {
+      announce.mockRestore()
+    }
+  })
 })
 
 // Spec (core rounds) §4: 手順を見る opens the same step panel before an

@@ -18,6 +18,8 @@ export function ProblemQuestion({
   onSubmit,
   onMoveOn,
   afterAnswer,
+  easeFade,
+  missNote,
 }: {
   problem: Problem
   fade: FadeLevel
@@ -26,6 +28,8 @@ export function ProblemQuestion({
   onSubmit: (submission: Submission) => void
   onMoveOn: () => void
   afterAnswer?: AfterAnswer
+  easeFade?: boolean
+  missNote?: string
 }) {
   const strings = useStrings()
   const exercise = exerciseForProblem(problem)
@@ -84,6 +88,8 @@ export function ProblemQuestion({
       onSubmit={onSubmit}
       onMoveOn={() => onMoveOn()}
       afterAnswer={afterAnswer}
+      easeFade={easeFade}
+      missNote={missNote}
     />
   )
 }

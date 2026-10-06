@@ -1,5 +1,5 @@
 import type { FadeLevel } from './fade'
-import { applyPracticeAttempt, newPracticeRecord, type PracticeRecord } from './practice'
+import { applyPracticeAttempt, freshStreaks, newPracticeRecord, type PracticeRecord } from './practice'
 import type { PracticeId } from './problem'
 import type { LessonId } from './lessons'
 
@@ -22,6 +22,10 @@ export type Progress = {
   // bump; it takes over the two walkthrough flags that came before it (see
   // progressStore).
   lessonsSeen: LessonId[]
+  // Spec (runs) §4, §6: the lifetime points, which the rank is derived from,
+  // and each kind's best run. Added without a schema bump.
+  points: number
+  bestRuns: Partial<Record<PracticeId, number>>
 }
 
 export function emptyProgress(): Progress {
@@ -33,6 +37,8 @@ export function emptyProgress(): Progress {
     tutorialDone: false,
     practices: {},
     lessonsSeen: [],
+    points: 0,
+    bestRuns: {},
   }
 }
 
@@ -71,4 +77,25 @@ export function recordPracticeAttempt(
 export function markLessonSeen(progress: Progress, id: LessonId): Progress {
   if (progress.lessonsSeen.includes(id)) return progress
   return { ...progress, lessonsSeen: [...progress.lessonsSeen, id] }
+}
+
+// Points are added as each answer earns them, and never taken away.
+export function earnPoints(progress: Progress, points: number): Progress {
+  // A NaN total would save as null and load as 0, losing the lifetime points.
+  if (!Number.isFinite(points) || points <= 0) return progress
+  return { ...progress, points: progress.points + points }
+}
+
+// A run's score replaces its kind's best only when it beats it.
+export function recordBestRun(progress: Progress, id: PracticeId, score: number): Progress {
+  const best = progress.bestRuns[id]
+  if (score <= 0 || (best !== undefined && score <= best)) return progress
+  return { ...progress, bestRuns: { ...progress.bestRuns, [id]: score } }
+}
+
+// Spec (runs) §2: a run starts its kind's streaks afresh (freshStreaks).
+export function startRunRecord(progress: Progress, id: PracticeId): Progress {
+  const record = progress.practices[id]
+  if (record === undefined) return progress
+  return { ...progress, practices: { ...progress.practices, [id]: freshStreaks(record) } }
 }

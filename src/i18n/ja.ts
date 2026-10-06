@@ -16,6 +16,7 @@ import {
 import type { PracticeStage } from '@/domain/practice'
 import type { WalkStep } from '@/domain/divisionWalk'
 import { techniqueOf, type Lesson, type TechniqueOperation } from '@/domain/lessons'
+import { formatPoints } from './format'
 
 // The curriculum spec's own vocabulary, not a translation of the English.
 // `both` names the two substitutions in the order they are performed: a
@@ -337,6 +338,17 @@ function breakdown(value: number): string {
   return `五珠と一珠${earth}つで 5 + ${earth}`
 }
 
+// Spec (runs) §4: 練習 marks the ranks as the app's own, so they are not
+// taken for 珠算検定 grades. Rank 0 is 10級, rank 9 is 1級, rank 10 初段.
+const DAN = ['初', '二', '三', '四', '五', '六', '七', '八', '九', '十']
+function rankGrade(rank: number): string {
+  return rank < 10 ? `${10 - rank}級` : `${DAN[rank - 10] ?? ''}段`
+}
+
+function rankToNext(points: number): string {
+  return `次まで あと${formatPoints(points)}点`
+}
+
 export const ja = {
   loading: '読み込み中…',
   loadingProgress: '進捗を読み込み中…',
@@ -378,7 +390,6 @@ export const ja = {
   resetAll: 'すべての進捗を消す',
   resetConfirm: '本当にすべての進捗を消しますか？',
 
-  sessionResult: (answered: number, correct: number) => `${answered}問中 ${correct}問正解`,
   done: 'おわる',
   answer: 'こたえる',
   correctionAnswer,
@@ -427,8 +438,6 @@ export const ja = {
   productLine,
   quotientLine,
   subtractLine,
-  roundCount: (index: number, total: number) => `${index} / ${total}`,
-  roundComplete: 'けたの練習おわり',
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
@@ -439,7 +448,34 @@ export const ja = {
   // 0–6, in the grid and, out of the top one, during a round.
   levelName: (level: FadeLevel) => `レベル ${level}`,
   roundLevel: (level: FadeLevel) => `レベル ${level}/${MAX_FADE}`,
+  // Spec (runs) §4–§5: the rank, as Home and the results show it.
+  rankName: (rank: number) => `練習${rankGrade(rank)}`,
+  rankSeal: (rank: number) => `練習\n${rankGrade(rank)}`,
+  rankToNext,
+  rankTop: '最高位です',
+  rankLabel: (rank: number, toNext: number) => `練習${rankGrade(rank)}、${toNext === 0 ? '最高位です' : rankToNext(toNext)}`,
 
+  // Spec (runs) §5: the run's bar, and what a miss leaves (said with the ✕).
+  runScore: (score: number) => `${formatPoints(score)}点`,
+  runCombo: (combo: number, factor: number) => `${combo}れんぞく ×${factor}`,
+  runBarLabel: (lives: number, level: FadeLevel, score: number) =>
+    `ライフ ${lives}、レベル ${level}/${MAX_FADE}、${formatPoints(score)}点`,
+  livesLeft: (lives: number) => (lives === 0 ? 'ライフなし' : `のこりライフ ${lives}`),
+
+  // Spec (runs) §5: the results.
+  resultsScore: 'スコア',
+  newBest: '自己ベスト！',
+  bestScore: (best: number) => `ベスト ${formatPoints(best)}点`,
+  resultsRight: (right: number) => `正解 ${right}`,
+  resultsCombo: (combo: number) => `最大れんぞく ${combo}`,
+  resultsLevel: (level: FadeLevel) => `最高レベル ${level}`,
+  rankUp: (rank: number) => `練習${rankGrade(rank)}に上がりました！`,
+  runAgain: 'もう一回',
+
+  // Spec (runs) §5 (the owner, 2026-10-06): 戻る in the run's bar, and what
+  // VoiceOver says it does: show the problem before afresh.
+  goBack: '戻る',
+  goBackLabel: '前の問題にもどる',
 
   readingIndex: (index: number, total: number) => `${total}問中 ${index}問目`,
   readingPrompt: 'このけたはいくつですか？',

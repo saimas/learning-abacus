@@ -29,6 +29,21 @@ function asLessonsSeen(stored: Record<string, unknown>): LessonId[] {
   return [...new Set([...kept, ...carried])]
 }
 
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+// Spec (runs) §6: a best run kept only for a kind it knows, with a score it
+// can trust.
+function asBestRuns(value: unknown): Progress['bestRuns'] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+  const best: Progress['bestRuns'] = {}
+  for (const [id, score] of Object.entries(value)) {
+    if (isPracticeId(id) && isCount(score)) best[id] = score
+  }
+  return best
+}
+
 export async function loadProgress(): Promise<Progress> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY)
@@ -62,6 +77,9 @@ export async function loadProgress(): Promise<Progress> {
       // simply has none.
       practices: asPractices(candidate.practices),
       lessonsSeen: asLessonsSeen(parsed as Record<string, unknown>),
+      // Added without a schema bump (spec (runs) §6): a 1.0 document has neither.
+      points: isCount(candidate.points) ? candidate.points : base.points,
+      bestRuns: asBestRuns(candidate.bestRuns),
     }
   } catch {
     return emptyProgress()

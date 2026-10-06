@@ -313,3 +313,62 @@ describe('ProgressProvider', () => {
     expect(saved?.practices['add:1']).toBeDefined()
   })
 })
+
+describe('ProgressProvider runs', () => {
+  async function renderApi() {
+    let api: ReturnType<typeof useProgress> | null = null
+    function Capture() {
+      // eslint-disable-next-line react-hooks/globals -- test-only probe: captures the hook's return value for assertions outside the render tree.
+      api = useProgress()
+      return null
+    }
+    render(
+      <ProgressProvider>
+        <Capture />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(api?.hydrated).toBe(true))
+    return () => {
+      if (api === null) throw new Error('no provider')
+      return api
+    }
+  }
+
+  it('adds points as they are earned, without writing', async () => {
+    mockLoad.mockResolvedValue(emptyProgress())
+    const api = await renderApi()
+    act(() => api().earn(242))
+    act(() => api().earn(46))
+    expect(api().progress.points).toBe(288)
+    expect(mockSave).not.toHaveBeenCalled()
+  })
+
+  it('starts a run with the kind’s streaks afresh, its level kept', async () => {
+    mockLoad.mockResolvedValue({
+      ...emptyProgress(),
+      practices: { 'add:2': { fade: 2, consecutiveCorrect: 3, consecutiveWrong: 1, lastPractisedAt: 5 } },
+    })
+    const api = await renderApi()
+    act(() => api().beginRun('add:2'))
+    expect(api().progress.practices['add:2']).toEqual({
+      fade: 2,
+      consecutiveCorrect: 0,
+      consecutiveWrong: 0,
+      lastPractisedAt: 5,
+    })
+  })
+
+  it('keeps a better run as the best, and writes it as the run ends', async () => {
+    mockLoad.mockResolvedValue({ ...emptyProgress(), bestRuns: { 'add:2': 500 } })
+    const api = await renderApi()
+    await act(async () => {
+      await api().endRun('add:2', 800)
+    })
+    expect(api().progress.bestRuns).toEqual({ 'add:2': 800 })
+    expect(mockSave).toHaveBeenLastCalledWith(expect.objectContaining({ bestRuns: { 'add:2': 800 } }))
+    await act(async () => {
+      await api().endRun('add:2', 300)
+    })
+    expect(api().progress.bestRuns).toEqual({ 'add:2': 800 })
+  })
+})

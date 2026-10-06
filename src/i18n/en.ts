@@ -15,6 +15,7 @@ import {
 import type { PracticeStage } from '@/domain/practice'
 import type { WalkStep } from '@/domain/divisionWalk'
 import { techniqueOf, type Lesson, type TechniqueOperation } from '@/domain/lessons'
+import { formatPoints } from './format'
 import type { Strings, WalkCaption } from './ja'
 
 // A rod's name by its place, 0 being the ones rod, in a sentence and as a
@@ -334,6 +335,19 @@ function breakdown(value: number): string {
   return `the heaven bead and ${beads}, 5 + ${earth}`
 }
 
+// 1st to 10th: no rank needs 11th to 13th.
+function ordinal(n: number): string {
+  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+}
+
+function rankGrade(rank: number): string {
+  return rank < 10 ? `${ordinal(10 - rank)} kyu` : `${ordinal(rank - 9)} dan`
+}
+
+function rankToNext(points: number): string {
+  return `${formatPoints(points)} points to the next rank`
+}
+
 export const en: Strings = {
   loading: 'Loading…',
   loadingProgress: 'Loading your progress…',
@@ -371,7 +385,6 @@ export const en: Strings = {
   resetAll: 'Reset all progress',
   resetConfirm: 'Really erase all progress?',
 
-  sessionResult: (answered, correct) => `${answered} answered, ${correct} correct`,
   done: 'Done',
   answer: 'Answer',
   correctionAnswer,
@@ -416,8 +429,6 @@ export const en: Strings = {
   productLine,
   quotientLine,
   subtractLine,
-  roundCount: (index, total) => `${index} / ${total}`,
-  roundComplete: 'Practice complete',
   roundSection: 'Bigger numbers',
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
@@ -425,7 +436,29 @@ export const en: Strings = {
     `${roundName(kind)}, ${PRACTICE_STAGE[stage]}${level === undefined ? '' : `, level ${level}`}`,
   levelName: (level) => `Level ${level}`,
   roundLevel: (level) => `Level ${level}/${MAX_FADE}`,
+  rankName: (rank) => `Practice ${rankGrade(rank)}`,
+  rankSeal: (rank) => rankGrade(rank).replace(' ', '\n'),
+  rankToNext,
+  rankTop: 'Top rank',
+  rankLabel: (rank, toNext) => `Practice ${rankGrade(rank)}, ${toNext === 0 ? 'top rank' : rankToNext(toNext)}`,
 
+  runScore: (score) => `${formatPoints(score)} pts`,
+  runCombo: (combo, factor) => `${combo} in a row ×${factor}`,
+  runBarLabel: (lives, level, score) =>
+    `${lives} ${lives === 1 ? 'life' : 'lives'}, level ${level}/${MAX_FADE}, ${formatPoints(score)} points`,
+  livesLeft: (lives) => (lives === 0 ? 'no lives left' : `${lives} ${lives === 1 ? 'life' : 'lives'} left`),
+
+  resultsScore: 'Score',
+  newBest: 'New best!',
+  bestScore: (best) => `Best ${formatPoints(best)}`,
+  resultsRight: (right) => `${right} right`,
+  resultsCombo: (combo) => `Longest combo ${combo}`,
+  resultsLevel: (level) => `Highest level ${level}`,
+  rankUp: (rank) => `Up to Practice ${rankGrade(rank)}!`,
+  runAgain: 'Again',
+
+  goBack: 'Back',
+  goBackLabel: 'Back to the previous problem',
 
   readingIndex: (index, total) => `Rod ${index} of ${total}`,
   readingPrompt: 'What number is on this rod?',

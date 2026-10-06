@@ -3,13 +3,17 @@ import { AppState } from 'react-native'
 import type { PracticeAttempt } from '@/domain/practice'
 import {
   dayKey,
+  earnPoints,
   emptyProgress,
   markDayPracticed,
   markLessonSeen,
+  recordBestRun,
   recordPracticeAttempt,
+  startRunRecord,
   type Progress,
 } from '@/domain/progress'
 import { loadProgress, saveProgress } from '@/storage/progressStore'
+import type { PracticeId } from '@/domain/problem'
 import type { LessonId } from '@/domain/lessons'
 
 type ProgressApi = {
@@ -17,6 +21,11 @@ type ProgressApi = {
   hydrated: boolean
   practise: (attempt: PracticeAttempt) => void
   flush: () => Promise<void>
+  // Spec (runs) §6: points as each answer earns them, a run's fresh start,
+  // and its end, which keeps a best run and writes everything.
+  earn: (points: number) => void
+  beginRun: (id: PracticeId) => void
+  endRun: (id: PracticeId, score: number) => Promise<void>
   reset: () => Promise<void>
   completeTutorial: () => Promise<void>
   completeLesson: (id: LessonId) => Promise<void>
@@ -84,6 +93,28 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     await saveProgress(latest.current)
   }, [])
 
+  const earn = useCallback((points: number) => {
+    const next = earnPoints(latest.current, points)
+    if (next === latest.current) return
+    latest.current = next
+    setProgress(next)
+  }, [])
+
+  const beginRun = useCallback((id: PracticeId) => {
+    const next = startRunRecord(latest.current, id)
+    if (next === latest.current) return
+    latest.current = next
+    setProgress(next)
+  }, [])
+
+  // Written at once, as flush is when a round ends.
+  const endRun = useCallback(async (id: PracticeId, score: number) => {
+    const next = recordBestRun(latest.current, id, score)
+    latest.current = next
+    setProgress(next)
+    await saveProgress(next)
+  }, [])
+
   const reset = useCallback(async () => {
     const fresh = emptyProgress()
     latest.current = fresh
@@ -115,6 +146,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         hydrated,
         practise,
         flush,
+        earn,
+        beginRun,
+        endRun,
         reset,
         completeTutorial,
         completeLesson,

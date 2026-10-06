@@ -1,5 +1,6 @@
 import {
   applyPracticeAttempt,
+  freshStreaks,
   isPracticeRecord,
   newPracticeRecord,
   practiceStage,
@@ -82,5 +83,17 @@ describe('practiceStage', () => {
     expect(practiceStage({ ...newPracticeRecord(0), fade: 2 })).toBe('beads')
     expect(practiceStage({ ...newPracticeRecord(0), fade: 3 })).toBe('fading')
     expect(practiceStage({ ...newPracticeRecord(0), fade: 6 })).toBe('mental')
+  })
+})
+
+describe('freshStreaks', () => {
+  // Spec (runs) §2: a run starts its kind's streaks afresh, keeping its level.
+  it('clears both streaks and keeps the level and date', () => {
+    expect(freshStreaks({ fade: 3, consecutiveCorrect: 2, consecutiveWrong: 1, lastPractisedAt: 5 })).toEqual({
+      fade: 3,
+      consecutiveCorrect: 0,
+      consecutiveWrong: 0,
+      lastPractisedAt: 5,
+    })
   })
 })

@@ -58,7 +58,7 @@ export function LessonScreen({ lesson }: { lesson: Lesson }) {
 
   return (
     <Screen>
-      {/* The same ✕, at the same place, as a round's (RoundTrack). */}
+      {/* The same ✕, at the same place, as a run's (RunBar). */}
       <View style={styles.bar}>
         <Pressable
           testID="intro-exit"
