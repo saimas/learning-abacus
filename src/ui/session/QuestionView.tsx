@@ -36,11 +36,12 @@ export type Submission = {
 export type AfterAnswer = { leaveLabel: string; onLeave: () => void; againLabel: string }
 
 // What a problem drawn in the prompt's place (renderPrompt) is drawn for,
-// besides the step on show: whether the step panel is open, and a
-// フラッシュ暗算 problem's number on show (spec (flash) §4), by its index in
-// the problem's terms, or null (between numbers, after the flash, or no
-// flash at all).
-export type PromptState = { panelOpen: boolean; flashShown: number | null }
+// besides the step on show: whether the step panel is open; a フラッシュ暗算
+// problem's number on show (spec (flash) §4), by its index in the problem's
+// terms, or null (between numbers, after the flash, or no flash at all); and
+// whether its flash is over with no answer in yet (spec (home menu) §4),
+// when the prompt's place says what is left to do.
+export type PromptState = { panelOpen: boolean; flashShown: number | null; flashAnswering: boolean }
 
 // A missed question held on screen until つぎへ: only whether its step panel
 // is open needs keeping — open at once where coaching still speaks (F0–F1),
@@ -400,7 +401,13 @@ export function QuestionView({
         {prompt}
       </Text>
     ) : (
-      renderPrompt(activeStep, { panelOpen, flashShown: flashPlay.frame?.shown ?? null })
+      renderPrompt(activeStep, {
+        panelOpen,
+        flashShown: flashPlay.frame?.shown ?? null,
+        // Ended by its last number or by 手順を見る, and over once a 〇 or ✕
+        // is in. Before the card is uncovered no flash has ended.
+        flashAnswering: flashEndedAt !== null && !answered,
+      })
     )
 
   // Layout A: the soroban takes the place a keypad would, enlarged and within

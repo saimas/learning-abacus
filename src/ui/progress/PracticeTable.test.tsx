@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { render, screen } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { newPracticeRecord } from '@/domain/practice'
 import { emptyProgress } from '@/domain/progress'
-import { colors } from '@/ui/theme'
+import { cellColors, colors } from '@/ui/theme'
 import { PracticeTable } from './PracticeTable'
 
 // Extract text color from a cell's child Text element
@@ -97,21 +97,38 @@ describe('PracticeTable', () => {
     expect(textColorOf('practice-cell-add:2')).toBe(colors.ink)
     expect(textColorOf('practice-cell-sub:2')).toBe(colors.paper)
   })
+
+  // Review focus: the stage colours moved to stageColor.ts, shared with Home
+  // and the operation pages (spec (home menu) §2–3); the progress screen's
+  // table must look as before (§5).
+  it('colours each cell by its stage', () => {
+    const progress = {
+      ...emptyProgress(),
+      practices: {
+        'add:1': { ...newPracticeRecord(0), fade: 1 as const },
+        'add:2': { ...newPracticeRecord(0), fade: 3 as const },
+        'add:3': { ...newPracticeRecord(0), fade: 6 as const },
+      },
+    }
+    render(<PracticeTable progress={progress} />)
+    const background = (id: string) =>
+      StyleSheet.flatten(screen.getByTestId(`practice-cell-${id}`).props.style).backgroundColor
+    expect(['sub:1', 'add:1', 'add:2', 'add:3'].map(background)).toEqual([
+      cellColors.unseen,
+      cellColors.learning,
+      cellColors.reflex,
+      cellColors.mental,
+    ])
+  })
 })
 
-// Spec (core rounds) §6: Home uses the table itself as the practice grid.
-describe('PracticeTable with onChoose', () => {
-  it('makes every cell a button that reports its kind', () => {
-    const onChoose = jest.fn()
-    render(<PracticeTable progress={emptyProgress()} onChoose={onChoose} />)
-    const cell = screen.getByTestId('practice-cell-sub:2')
-    expect(cell.props.accessibilityRole).toBe('button')
-    fireEvent.press(cell)
-    expect(onChoose).toHaveBeenCalledWith({ op: 'sub', digits: 2 })
-  })
-
-  it('is not a button when onChoose is not given', () => {
+// Spec (home menu) §5: the progress screen's table, read-only. Runs start
+// from each operation's page now, not from this table on Home.
+describe('PracticeTable cells', () => {
+  it('are never buttons', () => {
     render(<PracticeTable progress={emptyProgress()} />)
-    expect(screen.getByTestId('practice-cell-sub:2').props.accessibilityRole).not.toBe('button')
+    for (const cell of screen.getAllByTestId(/^practice-cell-/)) {
+      expect(cell.props.accessibilityRole).not.toBe('button')
+    }
   })
 })

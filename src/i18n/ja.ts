@@ -105,6 +105,12 @@ function roundName(kind: PracticeKind): string {
   return `${kind.digits}けたの${OP_NAME[kind.op]}`
 }
 
+// A grid cell as VoiceOver reads it, with its level once practised. An
+// operation's card reads the same, then its best (spec (home menu) §3).
+function practiceCellLabel(kind: PracticeKind, stage: PracticeStage, level?: FadeLevel): string {
+  return `${roundName(kind)}、${PRACTICE_STAGE[stage]}${level === undefined ? '' : `、レベル ${level}`}`
+}
+
 // Declared as a function rather than inline on the object: a member
 // referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
 // circular, which TypeScript rejects.
@@ -376,15 +382,18 @@ export const ja = {
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
-  // The heading over Home's lesson buttons (spec (howto tutorial) §3).
-  homeHowToSection: 'やりかた',
-  // Spec (howto tutorial) §3: Home's four tiles, each a symbol over its
-  // name, and each operation's page title, which VoiceOver reads for its
-  // tile too.
-  howToSymbol: (op: PairOperation) => HOW_TO_SYMBOL[op],
-  howToName: (op: PairOperation) => OP_NAME[op],
+  // Spec (home menu) §2: Home's menu: its heading, each operation's button,
+  // and the button as VoiceOver reads it, with the highest level among the
+  // operation's sizes, or まだ while none has been played.
+  practiceMenu: '練習',
+  menuName: (op: Operation) => OP_NAME[op],
+  menuLabel: (op: Operation, level: FadeLevel | undefined) =>
+    `${OP_NAME[op]}、${level === undefined ? PRACTICE_STAGE.unseen : `レベル ${level}`}`,
+  // Spec (howto tutorial) §3: an operation's lessons page title, which
+  // VoiceOver also reads for the やりかた button that opens it (spec (home
+  // menu) §3).
   howToTitle: (op: PairOperation) => `${OP_NAME[op]}のやりかた`,
-  // A lesson: its title, its row on the operation page (and what VoiceOver
+  // A lesson: its title, its row on the やりかた page (and what VoiceOver
   // reads for the row, done or not), its words and its result.
   lessonTitle: (lesson: Lesson) => {
     const move = techniqueOf(lesson)
@@ -455,6 +464,12 @@ export const ja = {
   // VoiceOver hears once the flash is over and the beads are the learner's.
   flashCounter: (index: number, total: number) => `${index}/${total}`,
   flashAnswer: 'こたえてください',
+  // Spec (home menu) §4: in the prompt's place once the flash is over, until
+  // the answer is in. The owner (2026-10-07) took こたえる and もどす for
+  // broken: nothing on screen said the fifth number was theirs to add. It
+  // breaks after 、: left to wrap, an iPhone 17 Pro split it inside ましょう
+  // and put ょう alone on the second line.
+  flashAddLast: '5つめの数を珠でたして、\nこたえましょう',
   columnLine,
   sectionHeading,
   productLine,
@@ -463,9 +478,17 @@ export const ja = {
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
-  // A grid cell as VoiceOver reads it, with its level once practised.
-  practiceCellLabel: (kind: PracticeKind, stage: PracticeStage, level?: FadeLevel) =>
-    `${roundName(kind)}、${PRACTICE_STAGE[stage]}${level === undefined ? '' : `、レベル ${level}`}`,
+  practiceCellLabel,
+  // Spec (home menu) §3: an operation's page: its title, a size's card as
+  // VoiceOver reads it, and the button to its lessons (＋ − × ÷ only).
+  operationName: (op: Operation) => OP_NAME[op],
+  practiceCardLabel: (
+    kind: PracticeKind,
+    stage: PracticeStage,
+    level: FadeLevel | undefined,
+    best: number | undefined,
+  ) => `${practiceCellLabel(kind, stage, level)}${best === undefined ? '' : `、ベスト ${formatPoints(best)}点`}`,
+  howToButton: 'やりかた',
   // The owner (2026-09-30): the level a kind is at, on the fade ladder's own
   // 0–6, in the grid and, out of the top one, during a round.
   levelName: (level: FadeLevel) => `レベル ${level}`,

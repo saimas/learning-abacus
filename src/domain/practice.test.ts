@@ -3,6 +3,7 @@ import {
   freshStreaks,
   isPracticeRecord,
   newPracticeRecord,
+  operationSummary,
   practiceStage,
   type PracticeRecord,
 } from './practice'
@@ -95,5 +96,32 @@ describe('freshStreaks', () => {
       consecutiveWrong: 0,
       lastPractisedAt: 5,
     })
+  })
+})
+
+// Spec (home menu) §2: an operation's button on Home shows the highest
+// level among its three sizes, or まだ, tinted by the most advanced stage.
+describe('operationSummary', () => {
+  it('has no level, and is unseen, until one of its sizes is played', () => {
+    expect(operationSummary({}, 'add')).toEqual({ level: undefined, stage: 'unseen' })
+  })
+
+  it('takes the highest level among the three sizes, and its stage', () => {
+    expect(operationSummary({ 'add:1': at(2), 'add:2': at(1), 'add:3': at(4) }, 'add')).toEqual({
+      level: 4,
+      stage: 'fading',
+    })
+    expect(operationSummary({ 'div:1': at(6), 'div:3': at(5) }, 'div')).toEqual({ level: 6, stage: 'mental' })
+  })
+
+  // The first answer makes a record at level 0: played, so not まだ.
+  it('counts a size played only at level 0', () => {
+    expect(operationSummary({ 'mitori:2': at(0) }, 'mitori')).toEqual({ level: 0, stage: 'beads' })
+  })
+
+  it('reads only its own operation\'s sizes', () => {
+    const practices = { 'sub:2': at(6), 'flash:1': at(3) }
+    expect(operationSummary(practices, 'add')).toEqual({ level: undefined, stage: 'unseen' })
+    expect(operationSummary(practices, 'flash')).toEqual({ level: 3, stage: 'fading' })
   })
 })

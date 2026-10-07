@@ -394,9 +394,11 @@ describe('division strings', () => {
     expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
   })
 
-  it('heads Home’s lesson buttons', () => {
-    expect(ja.homeHowToSection).toBe('やりかた')
-    expect(en.homeHowToSection).toBe('How it works')
+  // Spec (home menu) §2: the やりかた tiles left Home.
+  it('has no strings left for Home’s lesson tiles', () => {
+    for (const catalog of [ja, en]) {
+      for (const key of ['homeHowToSection', 'howToSymbol', 'howToName']) expect(catalog).not.toHaveProperty(key)
+    }
   })
 })
 
@@ -419,12 +421,7 @@ describe('lesson strings', () => {
     return found
   }
 
-  it('names Home’s four tiles and each operation’s page', () => {
-    const ops = ['add', 'sub', 'mul', 'div'] as const
-    expect(ops.map(ja.howToSymbol)).toEqual(['＋', '−', '×', '÷'])
-    expect(ops.map(ja.howToName)).toEqual(['たし算', 'ひき算', 'かけ算', 'わり算'])
-    expect(ops.map(en.howToSymbol)).toEqual(['+', '−', '×', '÷'])
-    expect(ops.map(en.howToName)).toEqual(['Add', 'Subtract', 'Multiply', 'Divide'])
+  it('titles each operation’s lessons page', () => {
     expect(ja.howToTitle('add')).toBe('たし算のやりかた')
     expect(en.howToTitle('div')).toBe('How division works')
   })
@@ -588,11 +585,59 @@ describe('フラッシュ暗算 strings', () => {
     expect([ja.flashAnswer, en.flashAnswer]).toEqual(['こたえてください', 'Your answer'])
   })
 
+  // Spec (home menu) §4: what the prompt's place says once the flash is over.
+  it('says what is left once the flash is over', () => {
+    expect([ja.flashAddLast, en.flashAddLast]).toEqual([
+      '5つめの数を珠でたして、\nこたえましょう',
+      'Add the fifth number on the beads, then answer',
+    ])
+  })
+
   // The column a flash shows with its steps reads as a 見取算 prompt does.
   it('reads a column of numbers as one sentence', () => {
     expect(ja.columnReading([47, 30, 23, 61, 19])).toBe('47、たす30、たす23、たす61、たす19。')
     expect(en.columnReading([47, 30, 23, 61, 19])).toBe('47 + 30 + 23 + 61 + 19')
     expect(ja.columnReading([47, 85, -23])).toBe('47、たす85、ひく23。')
     expect(en.columnReading([47, 85, -23])).toBe('47 + 85 − 23')
+  })
+})
+
+// Spec (home menu) §3: an operation's page.
+describe('an operation’s page', () => {
+  it('is titled with the operation’s name, and offers its lessons', () => {
+    expect([ja.operationName('add'), ja.operationName('flash')]).toEqual(['たし算', 'フラッシュ暗算'])
+    expect([en.operationName('add'), en.operationName('mitori')]).toEqual(['Addition', 'Columns'])
+    expect([ja.howToButton, en.howToButton]).toEqual(['やりかた', 'How it works'])
+  })
+
+  it('reads a card as the grid cell does, plus its best', () => {
+    expect(ja.practiceCardLabel({ op: 'add', digits: 1 }, 'beads', 2, 1_240)).toBe(
+      '1けたのたし算、珠で、レベル 2、ベスト 1,240点',
+    )
+    expect(ja.practiceCardLabel({ op: 'add', digits: 2 }, 'unseen', undefined, undefined)).toBe('2けたのたし算、まだ')
+    expect(en.practiceCardLabel({ op: 'add', digits: 1 }, 'beads', 2, 1_240)).toBe(
+      '1-digit addition, beads, level 2, best 1,240 points',
+    )
+    expect(en.practiceCardLabel({ op: 'mitori', digits: 3 }, 'mental', 6, undefined)).toBe(
+      '3-digit columns, mental, level 6',
+    )
+  })
+})
+
+// Spec (home menu) §2: Home's menu, and how VoiceOver reads its buttons.
+describe('Home’s menu', () => {
+  it('heads the menu and names each operation’s button', () => {
+    expect([ja.practiceMenu, en.practiceMenu]).toEqual(['練習', 'Practice'])
+    const ops = ['add', 'sub', 'mul', 'div', 'mitori', 'flash'] as const
+    expect(ops.map((op) => ja.menuName(op))).toEqual(['たし算', 'ひき算', 'かけ算', 'わり算', '見取算', 'フラッシュ暗算'])
+    expect(ops.map((op) => en.menuName(op))).toEqual(['Add', 'Subtract', 'Multiply', 'Divide', 'Columns', 'Flash'])
+  })
+
+  it('reads a button as its name and its level, or まだ', () => {
+    expect([ja.menuLabel('add', 4), ja.menuLabel('mitori', undefined)]).toEqual(['たし算、レベル 4', '見取算、まだ'])
+    expect([en.menuLabel('add', 4), en.menuLabel('mitori', undefined)]).toEqual([
+      'Add, level 4',
+      'Columns, not yet',
+    ])
   })
 })

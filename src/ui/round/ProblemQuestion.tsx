@@ -73,7 +73,9 @@ export function ProblemQuestion({
       // Spec (見取算) §2: a 見取算 problem is a column in the prompt's place,
       // lighting the number the move stepped to belongs to. Spec (flash) §2:
       // a フラッシュ暗算 problem flashes its numbers there, and shows them as
-      // that column once the step panel is open.
+      // that column once the step panel is open. Spec (home menu) §4: once
+      // its flash is over, until the answer is in, a line there says to add
+      // the fifth number on the beads.
       renderPrompt={
         problem.op === 'mitori'
           ? (activeStep) => (
@@ -84,13 +86,14 @@ export function ProblemQuestion({
             />
           )
           : problem.op === 'flash'
-            ? (activeStep, { panelOpen, flashShown }) => (
+            ? (activeStep, { panelOpen, flashShown, flashAnswering }) => (
               <FlashPrompt
                 terms={problem.terms}
                 label={strings.problemPrompt(problem)}
                 columnLabel={strings.columnReading(problem.terms)}
                 shown={flashShown}
                 columnShown={panelOpen}
+                answering={flashAnswering}
                 activeTerm={activeTermOf(activeStep)}
               />
             )

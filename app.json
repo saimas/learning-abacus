@@ -12,7 +12,7 @@
       "icon": "./assets/app.icon",
       "supportsTablet": false,
       "bundleIdentifier": "com.saimas.learningabacus",
-      "buildNumber": "37",
+      "buildNumber": "38",
       "config": {
         "usesNonExemptEncryption": false
       },

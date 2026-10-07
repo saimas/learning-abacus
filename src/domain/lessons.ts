@@ -8,6 +8,10 @@ import {
   type PracticeKind,
 } from './problem'
 
+// Spec (home menu) §3: the operations with lessons. 見取算 and フラッシュ暗算
+// have none, so they have no やりかた page or button.
+export const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
+
 // Spec (howto tutorial) §2: the やりかた section's lessons. 1けた ＋ and −
 // are taught by technique, one lesson per class of move; every other
 // operation and size has one worked example.
@@ -33,7 +37,7 @@ function workedLesson(op: PairOperation, digits: Digits, a: number, b: number): 
   return { id: `${op}:${digits}`, op, digits, example: { op, digits, a, b } }
 }
 
-// In the order an operation's page lists them, each example chosen for the
+// In the order the やりかた page lists them, each example chosen for the
 // moves it shows (spec §2). A 1けた subtraction never borrows (9 − 3 at
 // most), so the borrowing lessons take a 1けた number from a 2-digit one.
 export const LESSONS: readonly Lesson[] = [

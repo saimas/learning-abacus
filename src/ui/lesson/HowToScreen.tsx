@@ -1,5 +1,4 @@
-import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useRef } from 'react'
+import { router } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { lessonsFor, type Lesson } from '@/domain/lessons'
 import { DIGITS, type PairOperation } from '@/domain/problem'
@@ -7,6 +6,7 @@ import { useStrings } from '@/i18n'
 import { BackLink } from '@/ui/kit/BackLink'
 import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
+import { useOnePush } from '@/ui/useOnePush'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 
 // Spec (howto tutorial) §3: an operation's lessons, under their 桁数, each
@@ -14,19 +14,11 @@ import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 export function HowToScreen({ op }: { op: PairOperation }) {
   const { progress } = useProgress()
   const strings = useStrings()
-  // As Home's: a double tap must not stack a second lesson on the first. It
-  // clears when this page regains focus.
-  const leaving = useRef(false)
-  useFocusEffect(
-    useCallback(() => {
-      leaving.current = false
-    }, []),
-  )
+  // A double tap must not stack a second lesson on the first.
+  const onePush = useOnePush()
 
   const open = (lesson: Lesson) => {
-    if (leaving.current) return
-    leaving.current = true
-    router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } })
+    onePush(() => router.push({ pathname: '/lesson/[id]', params: { id: lesson.id } }))
   }
   const lessons = lessonsFor(op)
 

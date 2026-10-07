@@ -35,7 +35,7 @@ function swipeBack(name: string, params: Record<string, string> | undefined): un
 describe('RootLayout', () => {
   // Spec (multiplication) §4, (division) §3: opened with a round's kind, a
   // walkthrough leads into that round, so it is left only through its last
-  // button; opened from Home's link, it leads nowhere, so a swipe back is
+  // button; opened from the やりかた page, it leads nowhere, so a swipe back is
   // fine.
   it.each([['lesson/[id]', 'mul:2']])('lets a swipe leave a lesson only when it has no round to lead into', async (name, kind) => {
     render(<RootLayout />)
@@ -55,5 +55,13 @@ describe('RootLayout', () => {
     // Spec (howto tutorial) §3: the lesson screen took over the walkthroughs.
     expect(Object.keys(mockScreenOptions)).not.toContain('multiply-intro')
     expect(Object.keys(mockScreenOptions)).not.toContain('divide-intro')
+  })
+
+  // Spec (home menu) §3: an operation's page leads nowhere by itself, so an
+  // edge swipe back to Home is fine there, as on the やりかた pages.
+  it('lets a swipe leave an operation’s page', async () => {
+    render(<RootLayout />)
+    await act(async () => {})
+    expect(swipeBack('practice/[op]', { op: 'add' })).toBe(true)
   })
 })
