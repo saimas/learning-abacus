@@ -21,7 +21,7 @@ describe('Batsu', () => {
     expect(flat.height).toBe(140)
   })
 
-  it('crosses two vermilion strokes about 7% of its size', () => {
+  it('crosses two accent strokes about 7% of its size', () => {
     render(<Batsu size={110} />)
     const strokes = screen.getAllByTestId('batsu-stroke').map((stroke) => StyleSheet.flatten(stroke.props.style))
     expect(strokes).toHaveLength(2)

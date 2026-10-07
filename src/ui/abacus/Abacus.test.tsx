@@ -96,7 +96,7 @@ describe('highlighted rods', () => {
       'rod-highlight-0',
       'rod-highlight-2',
     ])
-    expect(StyleSheet.flatten(getByTestId('rod-highlight-2').props.style).backgroundColor).toBe(colors.accentSoft)
+    expect(StyleSheet.flatten(getByTestId('rod-highlight-2').props.style).backgroundColor).toBe(colors.rodHighlight)
   })
 
   it('puts the band around its rod, under the rod line and the beads', () => {

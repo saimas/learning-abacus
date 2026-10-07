@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native'
-import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native'
+import { StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
 import { colors } from '@/ui/theme'
 import { BackLink } from './BackLink'
 import { Button } from './Button'
@@ -25,6 +25,10 @@ function styleOf(element: { props: { style?: unknown } }) {
   return StyleSheet.flatten(element.props.style as StyleProp<ViewStyle>)
 }
 
+function textColorOf(element: { props: { style?: unknown } }) {
+  return StyleSheet.flatten(element.props.style as StyleProp<TextStyle>).color
+}
+
 describe('Screen', () => {
   it('puts its children on paper', () => {
     const { getByTestId, getByText } = render(
@@ -48,6 +52,8 @@ describe('Button', () => {
   it('fills a primary button with the pastel accent and outlines an outline button', () => {
     const primary = render(<Button testID="p" label="a" onPress={jest.fn()} />)
     expect(styleOf(primary.getByTestId('p')).backgroundColor).toBe(colors.accentFill)
+    // Dark text on the pastel: light text on it would not read.
+    expect(textColorOf(primary.getByText('a'))).toBe(colors.onAccent)
 
     const outline = render(<Button testID="o" label="a" variant="outline" onPress={jest.fn()} />)
     expect(styleOf(outline.getByTestId('o')).backgroundColor).toBeUndefined()
@@ -90,8 +96,9 @@ describe('Seal', () => {
   })
 
   it('fills in when stamped', () => {
-    const { getByTestId } = render(<Seal testID="s" text="済" state="stamped" />)
+    const { getByTestId, getByText } = render(<Seal testID="s" text="済" state="stamped" />)
     expect(styleOf(getByTestId('s')).backgroundColor).toBe(colors.accentFill)
+    expect(textColorOf(getByText('済'))).toBe(colors.onAccent)
   })
 
   it('draws an empty seal as a dashed ring with no text', () => {
