@@ -1222,12 +1222,14 @@ describe('RunRunner with フラッシュ暗算', () => {
   it('plays a problem gone back to afresh, its flash from the start, and stops the one left', () => {
     const swipes = holdSwipes()
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     try {
       renderRun(flashRun)
       onToTheSecond(swipes)
       advance(FLASH_LEAD_MS)
       expect(flashed()).toBe('12')
       announce.mockClear()
+      queued.mockClear()
       fireEvent.press(screen.getByTestId('go-back'))
       // The run's first problem, as if shown for the first time.
       expect([flashed(), rods()]).toEqual([null, '000'])
@@ -1238,8 +1240,10 @@ describe('RunRunner with フラッシュ暗算', () => {
       advance(FLASH_GAP_MS)
       expect([flashed(), rods()]).toEqual(['30', '047'])
       // Only the problem on show speaks: never 34, from the problem left.
-      expect(announce.mock.calls.map(([said]) => said)).toEqual(['47', '30'])
+      expect(queued.mock.calls.map(([said]) => said)).toEqual(['47'])
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['30'])
     } finally {
+      queued.mockRestore()
       announce.mockRestore()
       swipes.restore()
     }

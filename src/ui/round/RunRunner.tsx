@@ -114,8 +114,10 @@ export function RunRunner({
   // While a card is held under its 〇 or swiping off. A ✕ confirmed then
   // leaves the roll to bring the results in.
   const moving = useRef(false)
-  // When the problem on screen was uncovered, for its answer time. The first
-  // is shown when the run mounts.
+  // When the problem on screen was uncovered, for its answer time (a
+  // フラッシュ暗算 problem's answer time runs from its flash's end instead,
+  // Submission.flashEndedAt, spec (flash) §4). The first is shown when the
+  // run mounts.
   const [shownAt, setShownAt] = useState(() => now())
   // onEnd, once.
   const ended = useRef(false)
@@ -258,11 +260,10 @@ export function RunRunner({
   // at once, with no swipe. It starts afresh, as if shown for the first
   // time, and its clock with it (a フラッシュ暗算 problem plays its flash
   // again from the start, spec (flash) §4); nothing of the problem left is
-  // kept. Its
-  // answer counts like any other's (the owner's choice), and from it the run
-  // goes on to the problem after it. Offered only while nothing moves and
-  // the run goes on (`onBack`), and checked again here, as a second tap can
-  // land before the render that takes 戻る away.
+  // kept. Its answer counts like any other's (the owner's choice), and from
+  // it the run goes on to the problem after it. Offered only while nothing
+  // moves and the run goes on (`onBack`), and checked again here, as a
+  // second tap can land before the render that takes 戻る away.
   function goBack() {
     if (moving.current || runRef.current.ended) return
     const shown = cardsRef.current[indexRef.current]

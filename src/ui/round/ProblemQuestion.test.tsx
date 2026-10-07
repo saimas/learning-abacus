@@ -160,8 +160,10 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     expect(flashed()).toBe('47')
   })
 
-  // The answer is asked for in VoiceOver's queue, so it waits for the fifth
-  // number's reading instead of cutting it off.
+  // The first number and the answer go in VoiceOver's queue: the first so a
+  // 「レベル N」 spoken as the card arrives is not cut off, the answer so it
+  // waits for the fifth number's reading. Numbers 2 to 5 interrupt, so speech
+  // never drifts behind the screen.
   it('says each number as it appears, then asks for the answer', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
     const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
@@ -170,11 +172,12 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
       announce.mockClear()
       queued.mockClear()
       playThrough()
-      expect(announce.mock.calls.map(([said]) => said)).toEqual(['47', '30', '23', '61', '19'])
-      expect(queued.mock.calls).toEqual([['こたえてください', { queue: true }]])
-      expect(Math.min(...queued.mock.invocationCallOrder)).toBeGreaterThan(
-        Math.max(...announce.mock.invocationCallOrder),
-      )
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['30', '23', '61', '19'])
+      expect(queued.mock.calls).toEqual([
+        ['47', { queue: true }],
+        ['こたえてください', { queue: true }],
+      ])
+      expect(queued.mock.invocationCallOrder[1]).toBeGreaterThan(Math.max(...announce.mock.invocationCallOrder))
     } finally {
       queued.mockRestore()
       announce.mockRestore()

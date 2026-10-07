@@ -7,9 +7,8 @@ network calls at runtime. Progress is stored on-device only.
 
 The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, 見取算 (a column of five)
 and フラッシュ暗算 (five numbers flashed one at a time), in endless runs, started from the grid on
-Home. The learner works each problem on the
-soroban first; the beads fade as the answers keep coming right, until they cannot be seen at all
-and the fingers still move them.
+Home. The learner works each problem on the soroban first; the beads fade as the answers keep
+coming right, until they cannot be seen at all and the fingers still move them.
 
 ## The 180 single-rod moves
 
@@ -72,10 +71,11 @@ from the start.
   the card is uncovered, about one a second (the first after 0.6 s, each for 0.7 s, 0.3 s apart),
   with a counter (1/5). After each of the first four the beads jump to the running total; the
   fifth flashes alone, and the learner adds it on the beads and answers the total. Until the flash
-  ends the beads take no taps and こたえる is off; 手順を見る ends it at once and shows the five
-  numbers as 見取算's column, and 戻る plays it again from the start. The numbers cannot be
-  replayed. As the level rises the beads that follow along fade like any others, until the whole
-  running total is held in the head. Its points are timed from the end of the flash.
+  ends the beads take no taps and もどす and こたえる are off; 手順を見る ends it at once and shows
+  the five numbers as 見取算's column, and a flash problem gone back to with 戻る plays again from
+  the start. The numbers cannot be replayed. As the level rises the beads that follow along fade
+  like any others, until the whole running total is held in the head. Its points are timed from
+  the end of the flash.
 - **手順を見る** on every question opens the steps: ◀ ▶ play one bead move
   at a time and 最初から goes back to the start. The steps are grouped the way the learner thinks
   of them — the number added or taken off, each multiplicand digit, each quotient digit — each
@@ -126,8 +126,8 @@ afresh and counts like any other.
 
 - 暗算検定 practice as the exam sets it (50 columns of three to five 1-digit numbers in 12
   minutes), longer 見取算 columns than five, and フラッシュ暗算 of other lengths (3口, 10口), at
-  other speeds or with a replay. Complement technique itself sits below 珠算能力検定
-  10級, which grades by problem size, so the app earns no official grade yet.
+  other speeds or with a replay. Complement technique itself sits below 珠算能力検定 10級, which
+  grades by problem size, so the app earns no official grade yet.
 - Division with remainders, N × 1 and N ÷ 1 sizes, 帰除法, and the traditional × layout with
   both numbers on the soroban.
 - Time targets tuned to the learner from rounds (they use the calibration 基礎の練習 measured

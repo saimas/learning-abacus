@@ -149,14 +149,18 @@ export function QuestionView({
   // Spec (flash) §2, §4: the flash, until it runs out or 手順を見る ends
   // it. VoiceOver hears each number as it appears, then is asked for the
   // answer, queued so it waits for the fifth number's reading rather than
-  // cutting it off; 手順を見る's panel speaks for itself, so ending there
-  // says nothing.
+  // cutting it off. The first number is queued too, so a 「レベル N」
+  // announced as the card arrives is not cut off; numbers 2 to 5 interrupt,
+  // so speech never drifts behind the screen. 手順を見る's panel speaks for
+  // itself, so ending there says nothing.
   const flashPlay = useFlash({
     terms: flash?.terms,
     revealed: flash?.revealed ?? true,
     onShow: (index) => {
       const term = flash?.terms[index]
-      if (term !== undefined) AccessibilityInfo.announceForAccessibility(String(term))
+      if (term === undefined) return
+      if (index === 0) AccessibilityInfo.announceForAccessibilityWithOptions(String(term), { queue: true })
+      else AccessibilityInfo.announceForAccessibility(String(term))
     },
     onEnd: () => {
       setFlashEndedAt(now())

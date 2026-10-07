@@ -36,9 +36,9 @@ const FILLS = {
   latest: { id: 'bead-latest', highlight: colors.beadLatestHighlight, body: colors.accent, shade: colors.accentShadow },
 } as const
 
-// Slides rather than jumps when its place changes, unless told to jump. A new place mid-slide
-// stops the old slide and heads for the new one. The bead never takes
-// touches itself: its rod does. A tinted bead's testID says its tint
+// Slides rather than jumps when its place changes, unless told to jump. A
+// new place mid-slide stops the old slide and heads for the new one. The
+// bead never takes touches itself: its rod does. A tinted bead's testID says its tint
 // (`bead-earth-latest`); an untinted one keeps the plain `bead-earth`.
 export function Bead({
   kind,
