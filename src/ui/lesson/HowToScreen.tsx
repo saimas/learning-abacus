@@ -9,6 +9,10 @@ import { Screen } from '@/ui/kit/Screen'
 import { useProgress } from '@/ui/ProgressProvider'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 
+// Spec (home menu) §3: the operations with lessons. 見取算 and フラッシュ暗算
+// have none, so they have no やりかた page or button.
+export const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
+
 // Spec (howto tutorial) §3: an operation's lessons, under their 桁数, each
 // with a ✓ once done. A row opens its lesson.
 export function HowToScreen({ op }: { op: PairOperation }) {

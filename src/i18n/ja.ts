@@ -382,13 +382,16 @@ export const ja = {
   notYetToday: '今日の練習はまだです',
   practisedToday: '今日は練習しました',
   seeYouTomorrow: 'またあした。',
-  // The heading over Home's lesson buttons (spec (howto tutorial) §3).
-  homeHowToSection: 'やりかた',
-  // Spec (howto tutorial) §3: Home's four tiles, each a symbol over its
-  // name, and each operation's page title, which VoiceOver reads for its
-  // tile too.
-  howToSymbol: (op: PairOperation) => HOW_TO_SYMBOL[op],
-  howToName: (op: PairOperation) => OP_NAME[op],
+  // Spec (home menu) §2: Home's menu: its heading, each operation's button,
+  // and the button as VoiceOver reads it, with the highest level among the
+  // operation's sizes, or まだ while none has been played.
+  practiceMenu: '練習',
+  menuName: (op: Operation) => OP_NAME[op],
+  menuLabel: (op: Operation, level: FadeLevel | undefined) =>
+    `${OP_NAME[op]}、${level === undefined ? PRACTICE_STAGE.unseen : `レベル ${level}`}`,
+  // Spec (howto tutorial) §3: an operation's lessons page title, which
+  // VoiceOver also reads for the やりかた button that opens it (spec (home
+  // menu) §3).
   howToTitle: (op: PairOperation) => `${OP_NAME[op]}のやりかた`,
   // A lesson: its title, its row on the operation page (and what VoiceOver
   // reads for the row, done or not), its words and its result.

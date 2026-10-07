@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { practiceStage } from '@/domain/practice'
 import { DIGITS, OPERATION_SYMBOL, OPERATIONS, practiceId, type PracticeKind } from '@/domain/problem'
 import type { Progress } from '@/domain/progress'
@@ -6,17 +6,11 @@ import { useStrings } from '@/i18n'
 import { colors, fonts, fontSizes, space } from '@/ui/theme'
 import { STAGE_COLOR, stageInk } from './stageColor'
 
-// Spec (multi-digit ＋ −) §6: a row per operation, a column per size. With
-// onChoose, Home uses this table itself as the practice grid — each cell is
-// a button that starts that round. Without it (the progress screen) the
-// cells stay read-only, as before.
-export function PracticeTable({
-  progress,
-  onChoose,
-}: {
-  progress: Progress
-  onChoose?: (kind: PracticeKind) => void
-}) {
+// Spec (multi-digit ＋ −) §6: a row per operation, a column per size, each
+// cell in its stage's colour. The progress screen's table, read-only. Home
+// used it as its grid of buttons until it became a menu of operations, whose
+// pages start the runs now (spec (home menu) §2–3, §5).
+export function PracticeTable({ progress }: { progress: Progress }) {
   const strings = useStrings()
   return (
     <View testID="practice-table" style={styles.table}>
@@ -51,26 +45,6 @@ export function PracticeTable({
                 )}
               </>
             )
-            if (onChoose) {
-              return (
-                <Pressable
-                  key={digits}
-                  testID={testID}
-                  accessibilityRole="button"
-                  accessibilityLabel={label}
-                  onPress={() => onChoose(kind)}
-                  style={({ pressed }) => [
-                    styles.cellBox,
-                    styles.cell,
-                    styles.button,
-                    { backgroundColor: STAGE_COLOR[stage] },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  {text}
-                </Pressable>
-              )
-            }
             return (
               <View
                 key={digits}
@@ -99,9 +73,5 @@ const styles = StyleSheet.create({
   // At least 36 pt, and taller when a level's second line needs it at a
   // large text size.
   cell: { minHeight: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  // Home's grid cells are buttons, so they need a real touch target; the
-  // read-only progress-screen cells never get this style.
-  button: { minHeight: 48 },
-  pressed: { opacity: 0.85 },
   cellText: { fontSize: fontSizes.caption, color: colors.ink },
 })

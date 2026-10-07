@@ -1,45 +1,41 @@
 import { Link, Redirect, router, useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { practiceId, type PairOperation, type PracticeKind } from '@/domain/problem'
+import { operationSummary } from '@/domain/practice'
+import { OPERATION_SYMBOL, OPERATIONS, type Operation } from '@/domain/problem'
 import { dayKey } from '@/domain/progress'
 import { useStrings } from '@/i18n'
 import { IconButton } from '@/ui/kit/IconButton'
 import { Screen } from '@/ui/kit/Screen'
 import { Seal, type SealState } from '@/ui/kit/Seal'
+import { STAGE_COLOR, stageInk } from '@/ui/progress/stageColor'
 import { RankBadge } from '@/ui/rank/RankBadge'
-import { PracticeTable } from '@/ui/progress/PracticeTable'
+import { useOnePush } from '@/ui/useOnePush'
 import { useProgress } from '@/ui/ProgressProvider'
-import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
+import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 
-// Spec (core rounds) §6: Home is built around けたの練習 — the grid below is
-// the practice table itself, tap a cell to start that round — with the
-// walkthrough buttons under it and the days-practised seal above. Spec (roll)
-// §2: the single-move session (基礎の練習) and its card are gone.
+// Spec (home menu) §2: Home is a menu. The days-practised seal and the rank
+// stay on top; under 「練習」 each operation has a button, two to a row,
+// opening its page (app/practice/[op].tsx), where its sizes' runs start and
+// its lessons open. The grid and the やりかた row moved there, so Home fits
+// on one screen however many kinds are added (the owner, 2026-10-07: "It is
+// hard to see the menu as the contents grows"). Spec (roll) §2: the
+// single-move session (基礎の練習) and its card are gone.
 export default function Home() {
   const { progress, hydrated } = useProgress()
   const strings = useStrings()
   // Never read fresh from Date.now() during render: react-hooks/purity
   // forbids calling an impure function while rendering. Home stays mounted
-  // underneath /round, /progress and /settings, and iOS keeps a suspended
-  // app alive overnight, so a value captured only once at mount would still
-  // say yesterday the next morning. Instead it is refreshed from effects: on
-  // focus, and whenever the app comes back to the foreground.
+  // underneath the operation pages, /progress and /settings, and iOS keeps a
+  // suspended app alive overnight, so a value captured only once at mount
+  // would still say yesterday the next morning. Instead it is refreshed from
+  // effects: on focus, and whenever the app comes back to the foreground.
   const [today, setToday] = useState(() => dayKey(Date.now()))
 
-  // A grid cell or a やりかた button pushes straight to router.push. /round and a
-  // walkthrough opened for a round disable the swipe-back gesture
-  // (app/_layout.tsx), so a double tap that slips through lands the child in
-  // a second round or walkthrough on top of the first, only reachable by
-  // leaving it. A ref (not state) is enough: nothing needs to re-render
-  // while it is set, only read at the next press. It clears when Home
-  // regains focus, alongside refreshToday, since by then any push it was
-  // guarding has resolved.
-  const leaving = useRef(false)
+  const onePush = useOnePush()
 
   const refreshToday = useCallback(() => {
     setToday(dayKey(Date.now()))
-    leaving.current = false
   }, [])
 
   useFocusEffect(refreshToday)
@@ -70,19 +66,10 @@ export default function Home() {
   const seal: SealState =
     progress.daysPracticed === 0 ? 'empty' : practisedToday ? 'stamped' : 'outline'
 
-  // `leaving` guards both: a second push before the first has navigated away
-  // would otherwise stack a second round or walkthrough on top of the first.
-  const startRound = (kind: PracticeKind) => {
-    if (leaving.current) return
-    leaving.current = true
-    router.push({ pathname: '/round', params: { kind: practiceId(kind) } })
-  }
-  const openHowTo = (op: PairOperation) => {
-    if (leaving.current) return
-    leaving.current = true
-    router.push({ pathname: '/howto/[op]', params: { op } })
-  }
-
+  // useOnePush guards every button: two quick taps, on one button or on two,
+  // open one page.
+  const openOperation = (op: Operation) =>
+    onePush(() => router.push({ pathname: '/practice/[op]', params: { op } }))
 
   return (
     <Screen>
@@ -114,30 +101,47 @@ export default function Home() {
         </View>
         <RankBadge points={progress.points} />
 
-        <PracticeTable progress={progress} onChoose={startRound} />
-        {/* Spec (howto tutorial) §3: each operation's lessons, from its own
-            tile. The owner (2026-09-29) found small links hard to see, then
-            full-size buttons too big: one row of tiles in the grid cells'
-            tan, a symbol over its name, each a quarter of the width and still
-            well past the 44 pt tap size. */}
-        <Text style={styles.sectionTitle}>{strings.homeHowToSection}</Text>
-        <View testID="home-howto-row" style={styles.howTos}>
-          {HOW_TO_OPS.map((op) => (
-            <Pressable
-              key={op}
-              testID={`home-howto-${op}`}
-              accessibilityRole="button"
-              accessibilityLabel={strings.howToTitle(op)}
-              onPress={() => openHowTo(op)}
-              style={({ pressed }) => [styles.howTo, pressed && styles.pressed]}
-            >
-              <Text maxFontSizeMultiplier={HOW_TO_TEXT_CAP} style={styles.howToSymbol}>
-                {strings.howToSymbol(op)}
-              </Text>
-              <Text maxFontSizeMultiplier={HOW_TO_TEXT_CAP} style={styles.howToName}>
-                {strings.howToName(op)}
-              </Text>
-            </Pressable>
+        {/* Spec (home menu) §2: each button shows how far the learner has
+            got with its operation (the highest level among its sizes, or
+            まだ) and is tinted by the most advanced stage among them, in the
+            progress table's colours. */}
+        <Text style={styles.sectionTitle}>{strings.practiceMenu}</Text>
+        <View testID="home-ops" style={styles.menu}>
+          {MENU_ROWS.map((row, index) => (
+            <View key={index} testID={`home-ops-row-${index}`} style={styles.menuRow}>
+              {row.map((op) => {
+                const { level, stage } = operationSummary(progress.practices, op)
+                const ink = { color: stageInk(stage) }
+                return (
+                  <Pressable
+                    key={op}
+                    testID={`home-op-${op}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={strings.menuLabel(op, level)}
+                    onPress={() => openOperation(op)}
+                    style={({ pressed }) => [
+                      styles.op,
+                      { backgroundColor: STAGE_COLOR[stage] },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text maxFontSizeMultiplier={MENU_TEXT_CAP} style={[styles.opSymbol, ink]}>
+                      {OPERATION_SYMBOL[op]}
+                    </Text>
+                    <Text maxFontSizeMultiplier={MENU_TEXT_CAP} style={[styles.opName, ink]}>
+                      {strings.menuName(op)}
+                    </Text>
+                    <Text
+                      testID={`home-op-level-${op}`}
+                      maxFontSizeMultiplier={MENU_TEXT_CAP}
+                      style={[styles.opLevel, ink]}
+                    >
+                      {level === undefined ? strings.practiceStageName('unseen') : strings.levelName(level)}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -145,11 +149,18 @@ export default function Home() {
   )
 }
 
-// How far the tiles' words grow with the text size: at 1.4× "Subtract",
-// the longest name, still fits a quarter of a 375 pt phone's width.
-const HOW_TO_TEXT_CAP = 1.4
+// Spec (home menu) §2: two buttons to a row, in OPERATIONS order.
+const MENU_ROWS: readonly (readonly Operation[])[] = Array.from(
+  { length: Math.ceil(OPERATIONS.length / 2) },
+  (_, row) => OPERATIONS.slice(row * 2, row * 2 + 2),
+)
 
-const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
+// How far the buttons' words grow with the text size. At 1.4× 「フラッシュ暗算」,
+// the longest name, still fits half a 375 pt phone's width on one line, and
+// up to the largest standard text size the three rows, the seal and the
+// rank fit its 667 pt height. At the accessibility sizes the seal's and the
+// rank's words keep growing, and Home scrolls.
+const MENU_TEXT_CAP = 1.4
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'flex-end', gap: space.md },
@@ -157,33 +168,36 @@ const styles = StyleSheet.create({
   streakText: { flex: 1, gap: 2 },
   days: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   muted: { fontSize: fontSizes.small, color: colors.muted },
-  // flex: 1 on the ScrollView itself (not just its content) is what lets a
-  // small phone scroll down to the walkthrough buttons instead of the grid
-  // pushing them off the bottom of the screen.
+  // flex: 1 on the ScrollView itself (not just its content): past the text
+  // sizes Home is laid out for, it scrolls rather than cutting a row off.
   scroll: { flex: 1 },
   content: { paddingBottom: space.xl },
-  // The same heading as the grid's (PracticeTable).
+  // The same heading as the progress table's (PracticeTable).
   sectionTitle: {
-    marginTop: space.xl,
+    marginTop: space.lg,
     marginBottom: space.sm,
     fontFamily: fonts.display,
     fontSize: fontSizes.title,
     color: colors.ink,
   },
-  // One row of tiles, each an equal share of it.
-  howTos: { flexDirection: 'row', gap: space.sm },
-  howTo: {
+  menu: { gap: space.sm },
+  // Two buttons to a row, each an equal share of it.
+  menuRow: { flexDirection: 'row', gap: space.sm },
+  // A symbol over its name over its level, well past the 44 pt tap size.
+  // The narrow side padding leaves the name its half of the width.
+  op: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 72,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingVertical: space.sm,
-    borderRadius: 8,
-    backgroundColor: cellColors.unseen,
+    paddingHorizontal: space.xs,
+    borderRadius: radius.panel,
   },
-  // As the grid's cells.
+  // As the progress table's cells and an operation's cards.
   pressed: { opacity: 0.85 },
-  howToSymbol: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
-  howToName: { fontSize: fontSizes.small, color: colors.ink },
+  opSymbol: { fontFamily: fonts.display, fontSize: 22 },
+  opName: { fontSize: fontSizes.body, fontWeight: '600' },
+  opLevel: { fontSize: fontSizes.small },
 })

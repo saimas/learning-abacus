@@ -10,8 +10,8 @@ import { useProgress } from '@/ui/ProgressProvider'
 import { RunRunner } from '@/ui/round/RunRunner'
 import { confirmQuit } from '@/ui/session/confirmQuit'
 
-// Home is always underneath when the run was started from it. The replace
-// covers a cold deep link straight to /round.
+// The operation's page the run was started from (spec (home menu) §3) is
+// underneath. The replace covers a cold deep link straight to /round.
 function goHome() {
   if (router.canGoBack()) router.back()
   else router.replace('/')

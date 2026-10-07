@@ -70,10 +70,21 @@ function practiceCellLabel(kind: PracticeKind, stage: PracticeStage, level?: Fad
   return `${roundName(kind)}, ${PRACTICE_STAGE[stage]}${level === undefined ? '' : `, level ${level}`}`
 }
 
+// Spec (home menu) §2: Home's buttons name ＋ − × ÷ with a verb each, as the
+// やりかた tiles did ("Add, level 4"), and 見取算 and フラッシュ暗算 by their
+// kinds' names ("Columns, not yet").
+const MENU_NAME: Record<Operation, string> = {
+  add: 'Add',
+  sub: 'Subtract',
+  mul: 'Multiply',
+  div: 'Divide',
+  mitori: 'Columns',
+  flash: 'Flash',
+}
+
 // Spec (howto tutorial) §2–3: the lessons' names and words. English names
 // the moves plainly; Japanese keeps the curriculum's own terms.
 const HOW_TO_SYMBOL: Record<PairOperation, string> = { add: '+', sub: '−', mul: '×', div: '÷' }
-const HOW_TO_NAME: Record<PairOperation, string> = { add: 'Add', sub: 'Subtract', mul: 'Multiply', div: 'Divide' }
 const TECHNIQUE_NAME: Record<TechniqueOperation, Record<AtomClass, string>> = {
   add: { direct: 'Straight', five: 'Five complement', ten: 'Carry ten', both: 'Carry ten, five complement' },
   sub: { direct: 'Straight', five: 'Five complement', ten: 'Borrow ten', both: 'Borrow ten, five complement' },
@@ -370,9 +381,9 @@ export const en: Strings = {
   notYetToday: 'Not practised yet today',
   practisedToday: 'You practised today',
   seeYouTomorrow: 'See you tomorrow.',
-  homeHowToSection: 'How it works',
-  howToSymbol: (op) => HOW_TO_SYMBOL[op],
-  howToName: (op) => HOW_TO_NAME[op],
+  practiceMenu: 'Practice',
+  menuName: (op) => MENU_NAME[op],
+  menuLabel: (op, level) => `${MENU_NAME[op]}, ${level === undefined ? PRACTICE_STAGE.unseen : `level ${level}`}`,
   howToTitle: (op) => `How ${OP_NAME[op].toLowerCase()} works`,
   lessonTitle: (lesson) => {
     const move = techniqueOf(lesson)

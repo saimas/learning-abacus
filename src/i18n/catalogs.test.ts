@@ -394,9 +394,11 @@ describe('division strings', () => {
     expect(en.divisorBoardLabel(36)).toBe('Divisor 36')
   })
 
-  it('heads Home’s lesson buttons', () => {
-    expect(ja.homeHowToSection).toBe('やりかた')
-    expect(en.homeHowToSection).toBe('How it works')
+  // Spec (home menu) §2: the やりかた tiles left Home.
+  it('has no strings left for Home’s lesson tiles', () => {
+    for (const catalog of [ja, en]) {
+      for (const key of ['homeHowToSection', 'howToSymbol', 'howToName']) expect(catalog).not.toHaveProperty(key)
+    }
   })
 })
 
@@ -419,12 +421,7 @@ describe('lesson strings', () => {
     return found
   }
 
-  it('names Home’s four tiles and each operation’s page', () => {
-    const ops = ['add', 'sub', 'mul', 'div'] as const
-    expect(ops.map(ja.howToSymbol)).toEqual(['＋', '−', '×', '÷'])
-    expect(ops.map(ja.howToName)).toEqual(['たし算', 'ひき算', 'かけ算', 'わり算'])
-    expect(ops.map(en.howToSymbol)).toEqual(['+', '−', '×', '÷'])
-    expect(ops.map(en.howToName)).toEqual(['Add', 'Subtract', 'Multiply', 'Divide'])
+  it('titles each operation’s lessons page', () => {
     expect(ja.howToTitle('add')).toBe('たし算のやりかた')
     expect(en.howToTitle('div')).toBe('How division works')
   })
@@ -624,5 +621,23 @@ describe('an operation’s page', () => {
     expect(en.practiceCardLabel({ op: 'mitori', digits: 3 }, 'mental', 6, undefined)).toBe(
       '3-digit columns, mental, level 6',
     )
+  })
+})
+
+// Spec (home menu) §2: Home's menu, and how VoiceOver reads its buttons.
+describe('Home’s menu', () => {
+  it('heads the menu and names each operation’s button', () => {
+    expect([ja.practiceMenu, en.practiceMenu]).toEqual(['練習', 'Practice'])
+    const ops = ['add', 'sub', 'mul', 'div', 'mitori', 'flash'] as const
+    expect(ops.map((op) => ja.menuName(op))).toEqual(['たし算', 'ひき算', 'かけ算', 'わり算', '見取算', 'フラッシュ暗算'])
+    expect(ops.map((op) => en.menuName(op))).toEqual(['Add', 'Subtract', 'Multiply', 'Divide', 'Columns', 'Flash'])
+  })
+
+  it('reads a button as its name and its level, or まだ', () => {
+    expect([ja.menuLabel('add', 4), ja.menuLabel('mitori', undefined)]).toEqual(['たし算、レベル 4', '見取算、まだ'])
+    expect([en.menuLabel('add', 4), en.menuLabel('mitori', undefined)]).toEqual([
+      'Add, level 4',
+      'Columns, not yet',
+    ])
   })
 })

@@ -6,14 +6,11 @@ import { useStrings } from '@/i18n'
 import { BackLink } from '@/ui/kit/BackLink'
 import { Button } from '@/ui/kit/Button'
 import { Screen } from '@/ui/kit/Screen'
+import { HOW_TO_OPS } from '@/ui/lesson/HowToScreen'
 import { STAGE_COLOR, stageInk } from '@/ui/progress/stageColor'
 import { useProgress } from '@/ui/ProgressProvider'
 import { useOnePush } from '@/ui/useOnePush'
 import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
-
-// Spec (home menu) §3: the operations with lessons. 見取算 and フラッシュ暗算
-// have none, so their pages offer no やりかた.
-const HOW_TO_OPS: readonly PairOperation[] = ['add', 'sub', 'mul', 'div']
 
 // Spec (home menu) §3: an operation's page, opened from its button on Home.
 // A card per size, in its stage's colour, with its stage and level as the

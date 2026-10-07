@@ -70,4 +70,19 @@ describe('ProgressScreen', () => {
     await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
     expect(getByTestId('practice-cell-flash:3').props.accessibilityLabel).toBe('3けたのフラッシュ暗算、まだ')
   })
+
+  // Review focus, spec (home menu) §5: the grid left Home, not the progress
+  // screen: its whole table stays, every cell read-only.
+  it('still shows the whole table, read-only', async () => {
+    const { getByTestId, getAllByTestId, getByText } = render(
+      <ProgressProvider>
+        <ProgressScreen />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    expect(getByText('けたの練習')).toBeTruthy()
+    const cells = getAllByTestId(/^practice-cell-/)
+    expect(cells).toHaveLength(18)
+    for (const cell of cells) expect(cell.props.accessibilityRole).not.toBe('button')
+  })
 })
