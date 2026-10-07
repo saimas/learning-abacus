@@ -46,5 +46,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.panel,
     backgroundColor: colors.ink,
   },
-  bannerText: { fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.onAccent },
+  bannerText: { fontFamily: fonts.display, fontSize: fontSizes.title, color: colors.paper },
 })

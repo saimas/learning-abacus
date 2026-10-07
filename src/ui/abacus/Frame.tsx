@@ -57,7 +57,7 @@ export function DeckLines({
             left: g.deckPadding + index * g.rodWidth + inset,
             width: g.rodWidth - 2 * inset,
             borderRadius: HIGHLIGHT_RADIUS * scale,
-            backgroundColor: colors.accentSoft,
+            backgroundColor: colors.rodHighlight,
           }}
         />
       ))}
@@ -94,7 +94,7 @@ export function DeckLines({
           width: g.unitDot,
           height: g.unitDot,
           borderRadius: g.unitDot / 2,
-          backgroundColor: colors.paper,
+          backgroundColor: colors.unitDot,
         }}
       />
     </View>
