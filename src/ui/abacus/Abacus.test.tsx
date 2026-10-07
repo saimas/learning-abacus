@@ -330,7 +330,7 @@ describe('Abacus jumping', () => {
     try {
       render(<Abacus soroban={emptySoroban(1)} fade={0} jump />)
       screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} jump />)
-      const style = StyleSheet.flatten<{ top?: unknown }>(screen.getAllByTestId('bead-heaven')[0].props.style)
+      const style = StyleSheet.flatten<{ top?: unknown }>(screen.getAllByTestId('bead-heaven')[0]?.props.style)
       expect(typeof style.top).toBe('number')
       expect(style.top).toBe(BEAM_TOP - BEAD_HEIGHT)
     } finally {
