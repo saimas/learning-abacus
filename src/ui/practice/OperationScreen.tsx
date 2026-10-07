@@ -1,12 +1,12 @@
 import { router } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { HOW_TO_OPS } from '@/domain/lessons'
 import { practiceStage } from '@/domain/practice'
 import { DIGITS, practiceId, type Operation, type PairOperation, type PracticeKind } from '@/domain/problem'
 import { useStrings } from '@/i18n'
 import { BackLink } from '@/ui/kit/BackLink'
 import { Button } from '@/ui/kit/Button'
 import { Screen } from '@/ui/kit/Screen'
-import { HOW_TO_OPS } from '@/ui/lesson/HowToScreen'
 import { STAGE_COLOR, stageInk } from '@/ui/progress/stageColor'
 import { useProgress } from '@/ui/ProgressProvider'
 import { useOnePush } from '@/ui/useOnePush'
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     borderRadius: radius.card,
   },
-  // As the progress table's cells and Home's buttons.
+  // As Home's buttons.
   pressed: { opacity: 0.85 },
   size: { fontFamily: fonts.display, fontSize: fontSizes.title },
   // The stage, then its level beside it, wrapping at a large text size.

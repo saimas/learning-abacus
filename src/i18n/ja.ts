@@ -393,7 +393,7 @@ export const ja = {
   // VoiceOver also reads for the やりかた button that opens it (spec (home
   // menu) §3).
   howToTitle: (op: PairOperation) => `${OP_NAME[op]}のやりかた`,
-  // A lesson: its title, its row on the operation page (and what VoiceOver
+  // A lesson: its title, its row on the やりかた page (and what VoiceOver
   // reads for the row, done or not), its words and its result.
   lessonTitle: (lesson: Lesson) => {
     const move = techniqueOf(lesson)

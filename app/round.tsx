@@ -12,7 +12,7 @@ import { confirmQuit } from '@/ui/session/confirmQuit'
 
 // The operation's page the run was started from (spec (home menu) §3) is
 // underneath. The replace covers a cold deep link straight to /round.
-function goHome() {
+function leaveRun() {
   if (router.canGoBack()) router.back()
   else router.replace('/')
 }
@@ -68,7 +68,7 @@ export default function Round() {
   // Answers and points are already applied to progress one by one; this
   // only makes sure they are on disk before the screen goes.
   const leave = () => {
-    void flush().then(goHome)
+    void flush().then(leaveRun)
   }
 
   return (

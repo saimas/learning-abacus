@@ -1,5 +1,6 @@
 import { Redirect, useLocalSearchParams } from 'expo-router'
-import { HOW_TO_OPS, HowToScreen } from '@/ui/lesson/HowToScreen'
+import { HOW_TO_OPS } from '@/domain/lessons'
+import { HowToScreen } from '@/ui/lesson/HowToScreen'
 
 // Spec (howto tutorial) §3: /howto/add and so on. An operation it does not
 // know goes Home.

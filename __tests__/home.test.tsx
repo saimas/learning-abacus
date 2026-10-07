@@ -220,6 +220,14 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/practice/[op]', params: { op } })
   })
 
+  // Spec (home menu) §2: 「練習」 heads the menu, as the operation page's
+  // title heads its page.
+  it('marks the 練習 heading as a header', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByRole } = renderHome()
+    await waitFor(() => expect(getByRole('header', { name: '練習' })).toBeTruthy())
+  })
+
   // Review focus: a double tap that slipped through would stack a second
   // page on the first. useOnePush guards a second push before Home regains
   // focus.

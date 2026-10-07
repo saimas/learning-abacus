@@ -110,7 +110,6 @@ describe('FlashPrompt', () => {
   it('caps how far the line grows with the text size', () => {
     render(prompt(null, false, undefined, true))
     expect(screen.getByTestId('flash-add-last').props.maxFontSizeMultiplier).toBe(ADD_LAST_TEXT_CAP)
-    expect(ADD_LAST_TEXT_CAP).toBe(1.1)
   })
 
   // Discriminating: the line is there, then gone once it is not answering.

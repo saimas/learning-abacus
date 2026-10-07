@@ -6,7 +6,7 @@ import { colors } from '@/ui/theme'
 
 // Spec (howto tutorial) §3: opened with a round's kind, a lesson leads into
 // that round, so it is left only through its last button or ✕, as a round
-// is. Opened from an operation's page (no kind) it leads nowhere, so an edge
+// is. Opened from the やりかた page (no kind) it leads nowhere, so an edge
 // swipe back is fine.
 const walkthroughOptions = ({ route }: { route: { params?: object } }) => ({
   gestureEnabled: !(route.params as { kind?: string } | undefined)?.kind,

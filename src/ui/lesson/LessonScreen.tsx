@@ -10,7 +10,7 @@ import { useProgress } from '@/ui/ProgressProvider'
 import { LessonTry } from './LessonTry'
 import { LessonWalkthrough } from './LessonWalkthrough'
 
-// Spec (howto tutorial) §3: a lesson, opened from its operation's page, or
+// Spec (howto tutorial) §3: a lesson, opened from the やりかた page, or
 // with a round's `kind` before that round. Its ✕ leaves at any point. The
 // lesson counts as done when it is left, when やってみよう is reached, or
 // when 練習をはじめる starts the round (§4).

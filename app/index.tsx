@@ -105,7 +105,9 @@ export default function Home() {
             got with its operation (the highest level among its sizes, or
             まだ) and is tinted by the most advanced stage among them, in the
             progress table's colours. */}
-        <Text style={styles.sectionTitle}>{strings.practiceMenu}</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          {strings.practiceMenu}
+        </Text>
         <View testID="home-ops" style={styles.menu}>
           {MENU_ROWS.map((row, index) => (
             <View key={index} testID={`home-ops-row-${index}`} style={styles.menuRow}>
@@ -195,7 +197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xs,
     borderRadius: radius.panel,
   },
-  // As the progress table's cells and an operation's cards.
+  // As an operation's cards.
   pressed: { opacity: 0.85 },
   opSymbol: { fontFamily: fonts.display, fontSize: 22 },
   opName: { fontSize: fontSizes.body, fontWeight: '600' },
