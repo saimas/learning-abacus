@@ -433,6 +433,7 @@ export const en: Strings = {
   columnReading,
   flashCounter: (index, total) => `${index}/${total}`,
   flashAnswer: 'Your answer',
+  flashAddLast: 'Add the fifth number on the beads, then answer',
   columnLine,
   sectionHeading,
   productLine,

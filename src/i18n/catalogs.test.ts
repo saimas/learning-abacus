@@ -588,6 +588,14 @@ describe('フラッシュ暗算 strings', () => {
     expect([ja.flashAnswer, en.flashAnswer]).toEqual(['こたえてください', 'Your answer'])
   })
 
+  // Spec (home menu) §4: what the prompt's place says once the flash is over.
+  it('says what is left once the flash is over', () => {
+    expect([ja.flashAddLast, en.flashAddLast]).toEqual([
+      '5つめの数を珠でたして、こたえましょう',
+      'Add the fifth number on the beads, then answer',
+    ])
+  })
+
   // The column a flash shows with its steps reads as a 見取算 prompt does.
   it('reads a column of numbers as one sentence', () => {
     expect(ja.columnReading([47, 30, 23, 61, 19])).toBe('47、たす30、たす23、たす61、たす19。')

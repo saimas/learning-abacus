@@ -24,7 +24,7 @@ function windowOf(width: number, height: number) {
   restoreWindow = () => spy.mockRestore()
 }
 
-function prompt(shown: number | null, columnShown = false, activeTerm?: number) {
+function prompt(shown: number | null, columnShown = false, activeTerm?: number, answering = false) {
   return (
     <FlashPrompt
       terms={TERMS}
@@ -32,6 +32,7 @@ function prompt(shown: number | null, columnShown = false, activeTerm?: number) 
       columnLabel={COLUMN}
       shown={shown}
       columnShown={columnShown}
+      answering={answering}
       activeTerm={activeTerm}
     />
   )
@@ -89,6 +90,41 @@ describe('FlashPrompt', () => {
     render(prompt(1, true))
     expect(screen.queryByTestId('flash-number')).toBeNull()
     expect(screen.getByTestId('term-1')).toBeTruthy()
+  })
+
+  // Spec (home menu) §4: once the flash is over, until the answer is in, one
+  // line says what is left to do, over the column's held height.
+  it('says to add the fifth number on the beads while it waits for the answer', () => {
+    render(prompt(null, false, undefined, true))
+    expect(screen.getByTestId('flash-add-last').props.children).toBe('5つめの数を珠でたして、こたえましょう')
+    expect(screen.queryByTestId('flash-number')).toBeNull()
+    const box = screen.getByTestId('prompt')
+    expect(within(box).getByTestId('flash-column-space', hidden)).toBeTruthy()
+    // VoiceOver still reads the box as the problem's name; 「こたえてください」
+    // is announced (QuestionView).
+    expect(box.props.accessibilityLabel).toBe(LABEL)
+  })
+
+  // Discriminating: the line is there, then gone once it is not answering.
+  it('says nothing before the flash is over, nor once the answer is in', () => {
+    render(prompt(null))
+    expect(screen.queryByTestId('flash-add-last')).toBeNull()
+    screen.rerender(prompt(null, false, undefined, true))
+    expect(screen.getByTestId('flash-add-last')).toBeTruthy()
+    screen.rerender(prompt(null))
+    expect(screen.queryByTestId('flash-add-last')).toBeNull()
+  })
+
+  it('shows a number on show rather than the line, even when answering', () => {
+    render(prompt(2, false, undefined, true))
+    expect(screen.getByTestId('flash-number').props.children).toBe('23')
+    expect(screen.queryByTestId('flash-add-last')).toBeNull()
+  })
+
+  it('gives way to the column whenever the panel is open', () => {
+    render(prompt(null, true, undefined, true))
+    expect(screen.queryByTestId('flash-add-last')).toBeNull()
+    expect(screen.getByTestId('term-4')).toBeTruthy()
   })
 
   it('flashes large, and smaller on a short window', () => {

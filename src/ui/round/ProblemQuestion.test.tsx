@@ -52,6 +52,9 @@ const counter = () => screen.queryByTestId('flash-counter')?.props.children ?? n
 const beadsFree = () => screen.getByTestId('rod-2').props.accessibilityRole === 'adjustable'
 const disabled = (testID: string) => screen.getByTestId(testID).props.accessibilityState?.disabled === true
 const HINT = '珠をタップして動かします'
+// Spec (home menu) §4: the line in the prompt's place once the flash is over.
+const ADD_LAST = '5つめの数を珠でたして、こたえましょう'
+const addLast = () => screen.queryByTestId('flash-add-last')?.props.children ?? null
 
 type Options = { fade?: FadeLevel; revealed?: boolean }
 
@@ -227,7 +230,7 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
   })
 
   // Spec (flash) §2: the numbers are not seen again until the steps show them.
-  it('shows nothing in the prompt’s place once the flash is over, holding the column’s height', () => {
+  it('shows none of the numbers once the flash is over, holding the column’s height', () => {
     renderFlash()
     playThrough()
     expect(flashed()).toBeNull()
@@ -295,5 +298,79 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
       queued.mockRestore()
       announce.mockRestore()
     }
+  })
+
+  // Spec (home menu) §4: once the flash is over, until the answer is in, one
+  // line in the prompt's place says what is left to do. The owner
+  // (2026-10-07) took こたえる and もどす for broken without it.
+  it('says to add the fifth number on the beads once the flash is over, and not while it plays', () => {
+    renderFlash()
+    expect(addLast()).toBeNull()
+    advance(FLASH_LEAD_MS)
+    for (let k = 0; k < 4; k++) {
+      expect(addLast()).toBeNull()
+      advance(FLASH_SHOW_MS)
+      expect(addLast()).toBeNull()
+      advance(FLASH_GAP_MS)
+    }
+    // The fifth number, to its last moment.
+    advance(FLASH_SHOW_MS - 1)
+    expect([flashed(), addLast()]).toEqual(['19', null])
+    advance(1)
+    expect([flashed(), addLast()]).toEqual([null, ADD_LAST])
+    // In the box that holds the column's height, so the soroban stays put,
+    // and VoiceOver still reads the box as the problem's name.
+    const box = screen.getByTestId('prompt')
+    expect(within(box).getByTestId('flash-add-last')).toBeTruthy()
+    expect(within(box).getByTestId('flash-column-space', hidden)).toBeTruthy()
+    expect(box.props.accessibilityLabel).toBe('フラッシュ暗算、5口')
+  })
+
+  // Review focus: a card laid underneath has not flashed yet.
+  it('says nothing while its card lies underneath', () => {
+    const { rerender } = renderFlash({ revealed: false })
+    advance(10_000)
+    expect(addLast()).toBeNull()
+    rerender({ revealed: true })
+    expect(addLast()).toBeNull()
+    playThrough()
+    expect(addLast()).toBe(ADD_LAST)
+  })
+
+  // Review focus, spec (home menu) §4: it gives way to the column whenever
+  // the step panel is open, and is back once the panel closes.
+  it('gives way to the column while the step panel is open', () => {
+    renderFlash()
+    advance(FLASH_LEAD_MS)
+    // 手順を見る mid-flash ends the flash: the column, not the line.
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(addLast()).toBeNull()
+    expect(screen.getByTestId('term-4')).toBeTruthy()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(addLast()).toBe(ADD_LAST)
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(addLast()).toBeNull()
+  })
+
+  // Review focus: not once the answer is in, 〇 or ✕.
+  it('says nothing once the answer is right', () => {
+    const { onSubmit } = renderFlash()
+    playThrough()
+    setBeads(screen.getByTestId, 180, 3)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true }))
+    expect(addLast()).toBeNull()
+  })
+
+  // At level 0 a miss opens the panel with its ✕ (the column); at level 2
+  // coaching is silent and the panel waits for こたえを見る, so the prompt's
+  // place is the flash's own box again, and it must stay quiet.
+  it.each([0, 2] as const)('says nothing once the answer is wrong, at level %i', (fade) => {
+    const { onSubmit } = renderFlash({ fade })
+    playThrough()
+    setBeads(screen.getByTestId, 170, 3)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: false }))
+    expect(addLast()).toBeNull()
   })
 })

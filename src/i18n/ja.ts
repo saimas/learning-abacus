@@ -455,6 +455,10 @@ export const ja = {
   // VoiceOver hears once the flash is over and the beads are the learner's.
   flashCounter: (index: number, total: number) => `${index}/${total}`,
   flashAnswer: 'こたえてください',
+  // Spec (home menu) §4: in the prompt's place once the flash is over, until
+  // the answer is in. The owner (2026-10-07) took こたえる and もどす for
+  // broken: nothing on screen said the fifth number was theirs to add.
+  flashAddLast: '5つめの数を珠でたして、こたえましょう',
   columnLine,
   sectionHeading,
   productLine,
