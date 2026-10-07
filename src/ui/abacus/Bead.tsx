@@ -63,7 +63,8 @@ export function Bead({
   useEffect(() => {
     if (shown.current === top) return
     shown.current = top
-    // setValue also stops a slide still on its way.
+    // setValue also stops a slide still on its way, and keeps y where the
+    // bead is, so sliding resumes from the right place when jump ends.
     if (jump) {
       y.setValue(top)
       return
@@ -79,7 +80,10 @@ export function Bead({
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: y,
+        // Spec (flash) §2: a jump is drawn from the prop itself. A setValue
+        // outside an animation is not painted until React's next commit, so
+        // the beads would lag a flash frame; the render paints its own.
+        top: jump ? top : y,
         left: (g.rodWidth - g.beadWidth) / 2,
         width: g.beadWidth,
         height: g.beadHeight,

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
+import { Animated, StyleSheet } from 'react-native'
 import { emptySoroban, rodFor, setValue } from '@/domain/soroban'
 import { colors } from '@/ui/theme'
 import { Abacus, tintsFor } from './Abacus'
@@ -319,6 +319,23 @@ describe('Abacus jumping', () => {
     screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} jump />)
     expect(heavenTop()).toBe(BEAM_TOP - BEAD_HEIGHT)
     expect(heavenTop()).not.toBe(before)
+  })
+
+  // Spec (flash) §2: on the device a setValue outside an animation is not
+  // painted until React's next commit, so a jumping bead's place has to come
+  // from the render itself. Cutting setValue off proves it: the new place must
+  // still be there, as a plain number, right after the rerender.
+  it('holds the new place from the render alone, as a plain number, with jump', () => {
+    const setValueSpy = jest.spyOn(Animated.Value.prototype, 'setValue').mockImplementation(() => {})
+    try {
+      render(<Abacus soroban={emptySoroban(1)} fade={0} jump />)
+      screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} jump />)
+      const style = StyleSheet.flatten<{ top?: unknown }>(screen.getAllByTestId('bead-heaven')[0].props.style)
+      expect(typeof style.top).toBe('number')
+      expect(style.top).toBe(BEAM_TOP - BEAD_HEIGHT)
+    } finally {
+      setValueSpy.mockRestore()
+    }
   })
 
   it('slides them without it, as always', () => {
