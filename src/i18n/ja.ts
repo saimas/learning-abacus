@@ -85,7 +85,14 @@ const MULTIPLY_PLACEMENT: Record<Digits, string> = {
 // walkthrough's soroban.
 const PLACE_SHORT: readonly string[] = ['一', '十', '百', '千', '万', '十万', '百万']
 
-const OP_NAME: Record<Operation, string> = { add: 'たし算', sub: 'ひき算', mul: 'かけ算', div: 'わり算', mitori: '見取算' }
+const OP_NAME: Record<Operation, string> = {
+  add: 'たし算',
+  sub: 'ひき算',
+  mul: 'かけ算',
+  div: 'わり算',
+  mitori: '見取算',
+  flash: 'フラッシュ暗算',
+}
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
   unseen: 'まだ',
@@ -431,6 +438,9 @@ export const ja = {
         return `${problem.terms
           .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? 'ひく' : 'たす'}${Math.abs(term)}`))
           .join('、')}。`
+      // Spec (flash) §5: its count, never its numbers: they flash.
+      case 'flash':
+        return `フラッシュ暗算、${problem.terms.length}口`
     }
   },
   columnLine,

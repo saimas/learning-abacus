@@ -51,6 +51,7 @@ const OP_NAME: Record<Operation, string> = {
   mul: 'Multiplication',
   div: 'Division',
   mitori: 'Columns',
+  flash: 'Flash',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -420,6 +421,8 @@ export const en: Strings = {
         return problem.terms
           .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? '−' : '+'} ${Math.abs(term)}`))
           .join(' ')
+      case 'flash':
+        return `Flash, ${problem.terms.length} numbers`
       default:
         return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
     }

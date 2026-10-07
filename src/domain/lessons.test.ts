@@ -102,6 +102,7 @@ describe('the lesson catalogue', () => {
     expect(lessonById(['add:five'])).toBeNull()
     expect(isLessonId('div:3')).toBe(true)
     expect(isLessonId('mitori:2')).toBe(false)
+    expect(isLessonId('flash:2')).toBe(false)
   })
 
   // Spec §4: only × and ÷ rounds open a lesson first, their own 桁数's.
@@ -110,6 +111,8 @@ describe('the lesson catalogue', () => {
     expect(lessonForKind({ op: 'div', digits: 3 })?.id).toBe('div:3')
     expect(lessonForKind({ op: 'add', digits: 2 })).toBeNull()
     expect(lessonForKind({ op: 'mitori', digits: 2 })).toBeNull()
+    // Spec (flash) §2: no new technique, so no lesson.
+    expect(lessonForKind({ op: 'flash', digits: 2 })).toBeNull()
   })
 
   it('narrows a technique lesson to its move, and nothing else', () => {

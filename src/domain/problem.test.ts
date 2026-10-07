@@ -5,9 +5,11 @@ import {
   applyPlacedStep,
   DIVIDE_ESTIMATE_MS,
   divisorFirstDigit,
+  FLASH_TERMS,
   generateProblems,
   groupOfStep,
   isPracticeId,
+  isTermsProblem,
   MITORI_TERMS,
   MULTIPLY_RECALL_MS,
   OPERATION_SYMBOL,
@@ -23,6 +25,7 @@ import {
   startOf,
   TYPING_ALLOWANCE_MS,
   type Digits,
+  type FlashProblem,
   type MitoriProblem,
   type PairProblem,
   type Problem,
@@ -48,6 +51,10 @@ function problem(op: PairProblem['op'], a: number, b: number): PairProblem {
 
 function mitori(digits: Digits, terms: number[]): MitoriProblem {
   return { op: 'mitori', digits, terms }
+}
+
+function flash(digits: Digits, terms: number[]): FlashProblem {
+  return { op: 'flash', digits, terms }
 }
 
 // The column groups of a 見取算 problem, as "term:place:moved", in order.
@@ -134,12 +141,12 @@ describe('answerOf and rodsFor', () => {
 })
 
 describe('generateProblems', () => {
-  it.each(PRACTICE_KINDS.filter((kind) => kind.op !== 'mitori'))('gives 10 distinct problems of the right size for %o', (kind) => {
+  it.each(PRACTICE_KINDS.filter((kind) => kind.op !== 'mitori' && kind.op !== 'flash'))('gives 10 distinct problems of the right size for %o', (kind) => {
     const problems = generateProblems(kind, 10, seeded(7))
     expect(problems).toHaveLength(10)
-    expect(new Set(problems.map((p) => (p.op === 'mitori' ? p.terms.join(',') : `${p.a},${p.b}`))).size).toBe(10)
+    expect(new Set(problems.map((p) => (isTermsProblem(p) ? p.terms.join(',') : `${p.a},${p.b}`))).size).toBe(10)
     for (const p of problems) {
-      if (p.op === 'mitori') throw new Error('expected a two-number problem')
+      if (isTermsProblem(p)) throw new Error('expected a two-number problem')
       expect(p.op).toBe(kind.op)
       expect(p.digits).toBe(kind.digits)
       if (kind.op === 'div') {
@@ -356,7 +363,7 @@ describe('multiplication', () => {
 
   // ÷ written as its code point, since a look-alike would pass by eye.
   it('has a symbol for every operation', () => {
-    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×', div: '\u00F7', mitori: '±' })
+    expect(OPERATION_SYMBOL).toEqual({ add: '＋', sub: '−', mul: '×', div: '\u00F7', mitori: '±', flash: 'フ' })
   })
 })
 
@@ -632,7 +639,7 @@ describe('division', () => {
 
   it('works a large sample of 3けた problems down to their quotients', () => {
     const faults = generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(17)).flatMap((p) => {
-      if (p.op === 'mitori') throw new Error('expected a division')
+      if (isTermsProblem(p)) throw new Error('expected a division')
       return divisionFaults(p)
     })
     expect(faults).toEqual([])
@@ -770,6 +777,101 @@ describe('見取算', () => {
   })
 })
 
+// Spec (flash) §3: 見取算's shape, five numbers, every one added. The first
+// starts on the soroban for the steps; each later one is worked onto it,
+// one section a number.
+describe('フラッシュ暗算', () => {
+  const example = flash(2, [47, 30, 23, 61, 19])
+
+  it('adds up the five numbers, starting from the first on N + 1 rods', () => {
+    expect(answerOf(example)).toBe(180)
+    expect(startOf(example)).toBe(47)
+    expect(rodsFor(example)).toBe(3)
+    expect(rodsFor({ op: 'flash', digits: 3 })).toBe(4)
+  })
+
+  it('has a symbol of its own, and five numbers', () => {
+    expect(OPERATION_SYMBOL.flash).toBe('フ')
+    expect(FLASH_TERMS).toBe(5)
+  })
+
+  it('is a list of numbers, as 見取算 is, not a pair', () => {
+    expect(isTermsProblem(example)).toBe(true)
+    expect(isTermsProblem(mitori(2, [47, 30, -23, 61, -19]))).toBe(true)
+    expect(isTermsProblem(problem('add', 47, 85))).toBe(false)
+  })
+
+  it('works each later number onto the soroban as an addition, tagged with its number', () => {
+    const groups = problemSteps(example)
+    expect(groups.map((g) => (g.kind === 'column' ? `${g.term}:${g.place}` : g.kind))).toEqual([
+      '1:1',
+      '1:0',
+      '2:1',
+      '2:0',
+      '3:1',
+      '3:0',
+      '4:1',
+      '4:0',
+    ])
+    const directions = groups.flatMap((g) => (g.kind === 'column' && g.atom !== null ? [g.atom.direction] : []))
+    expect(directions.length).toBeGreaterThan(0)
+    expect(directions.every((direction) => direction === 'add')).toBe(true)
+    expectReplaysTo(example)
+  })
+
+  it('makes each later number a section, with the running total before and after it', () => {
+    expect(problemSections(example)).toEqual([
+      { kind: 'number', value: 30, before: 47, after: 77, groups: [0, 1] },
+      { kind: 'number', value: 23, before: 77, after: 100, groups: [2, 3] },
+      { kind: 'number', value: 61, before: 100, after: 161, groups: [4, 5] },
+      { kind: 'number', value: 19, before: 161, after: 180, groups: [6, 7] },
+    ])
+  })
+
+  it('reaches 4995 on four rods', () => {
+    expectReplaysTo(flash(3, [999, 999, 999, 999, 999]))
+  })
+
+  // Spec (flash) §3: as for 見取算, every move of the column, so points
+  // scale with the whole problem's work.
+  it("targets each digit move's time plus typing the total, as 見取算 does", () => {
+    const moves = problemSteps(example).reduce(
+      (sum, g) => (g.kind === 'column' && g.atom !== null ? sum + latencyTargetMs(classify(g.atom), 900) : sum),
+      0,
+    )
+    expect(problemTargetMs(example, 900)).toBe(moves + 3 * TYPING_ALLOWANCE_MS)
+  })
+
+  // Spec (flash) §3: five numbers, each from the size's range, all added,
+  // problems distinct by their terms.
+  it.each([1, 2, 3] as const)('generates five %i-digit numbers, all added, distinct by their terms', (digits) => {
+    const problems = generateProblems({ op: 'flash', digits }, 200, seeded(digits))
+    expect(problems).toHaveLength(200)
+    expect(new Set(problems.map(problemKey)).size).toBe(200)
+    for (const p of problems) {
+      if (p.op !== 'flash') throw new Error('expected a フラッシュ暗算 problem')
+      expect(p.digits).toBe(digits)
+      expect(p.terms).toHaveLength(FLASH_TERMS)
+      for (const term of p.terms) {
+        expect(term).toBeGreaterThanOrEqual(10 ** (digits - 1))
+        expect(term).toBeLessThanOrEqual(10 ** digits - 1)
+      }
+      expectReplaysTo(p)
+    }
+  })
+
+  it('draws from the whole of the size’s range', () => {
+    const terms = generateProblems({ op: 'flash', digits: 1 }, 200, seeded(3)).flatMap((p) => (isTermsProblem(p) ? p.terms : []))
+    expect(Math.min(...terms)).toBe(1)
+    expect(Math.max(...terms)).toBe(9)
+  })
+
+  it('generates the same numbers for the same seed', () => {
+    const kind = { op: 'flash', digits: 2 } as const
+    expect(generateProblems(kind, 10, seeded(5))).toEqual(generateProblems(kind, 10, seeded(5)))
+  })
+})
+
 // Spec (core rounds) §11, the owner (2026-09-27/28): 手順を見る groups a
 // problem's steps the way the learner thinks of them — one number added or
 // taken off (＋ −, 見取算), one multiplicand digit times the whole multiplier
@@ -844,5 +946,6 @@ describe('problemKey', () => {
   it('names a problem by its numbers', () => {
     expect(problemKey({ op: 'add', digits: 2, a: 47, b: 85 })).toBe('47,85')
     expect(problemKey({ op: 'mitori', digits: 1, terms: [7, 3, -2, 8, -4] })).toBe('7,3,-2,8,-4')
+    expect(problemKey(flash(1, [7, 3, 2, 8, 4]))).toBe('7,3,2,8,4')
   })
 })
