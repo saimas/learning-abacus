@@ -62,7 +62,26 @@ describe('PracticeTable', () => {
     expect(screen.getByText('±')).toBeTruthy()
     expect(screen.getByTestId('practice-cell-mitori:2').props.accessibilityLabel).toBe('2けたの見取算、まだ')
     const cells = screen.getAllByTestId(/^practice-cell-/).map((cell) => cell.props.testID as string)
-    expect(cells.slice(-3)).toEqual(['practice-cell-mitori:1', 'practice-cell-mitori:2', 'practice-cell-mitori:3'])
+    expect(cells.slice(12, 15)).toEqual(['practice-cell-mitori:1', 'practice-cell-mitori:2', 'practice-cell-mitori:3'])
+  })
+
+  // Spec (flash) §2: a sixth row, headed フ, under 見取算.
+  it('has a フ row for フラッシュ暗算 under 見取算', () => {
+    render(<PracticeTable progress={emptyProgress()} />)
+    expect(screen.getByText('フ')).toBeTruthy()
+    expect(screen.getByTestId('practice-cell-flash:2').props.accessibilityLabel).toBe('2けたのフラッシュ暗算、まだ')
+    const cells = screen.getAllByTestId(/^practice-cell-/).map((cell) => cell.props.testID as string)
+    expect(cells).toHaveLength(18)
+    expect(cells.slice(-3)).toEqual(['practice-cell-flash:1', 'practice-cell-flash:2', 'practice-cell-flash:3'])
+  })
+
+  it('colours and levels a フラッシュ暗算 cell like the others', () => {
+    const progress = { ...emptyProgress(), practices: { 'flash:3': { ...newPracticeRecord(0), fade: 4 as const } } }
+    render(<PracticeTable progress={progress} />)
+    expect(screen.getByTestId('practice-cell-flash:3').props.accessibilityLabel).toBe(
+      '3けたのフラッシュ暗算、うすい珠、レベル 4',
+    )
+    expect(screen.getByTestId('practice-level-flash:3').props.children).toBe('レベル 4')
   })
 
   it('uses ink text for fading stage and paper text for mental stage', () => {

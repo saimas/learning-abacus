@@ -136,6 +136,15 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'mitori:2' } })
   })
 
+  // Spec (flash) §2: the sixth row's cells start a フラッシュ暗算 run.
+  it('starts a フラッシュ暗算 run from its cell', async () => {
+    mockLoad.mockResolvedValue(learner({}))
+    const { getByTestId } = renderHome()
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    fireEvent.press(getByTestId('practice-cell-flash:2'))
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/round', params: { kind: 'flash:2' } })
+  })
+
   // The owner (2026-09-29): the full-size buttons were too big. One row of
   // tiles instead, each a symbol over its name, in the grid cells' tan.
   it('offers the four operations’ lessons as one row of tiles under a やりかた heading', async () => {

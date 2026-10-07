@@ -1,6 +1,7 @@
 import { ATOMS, classify, decompose, startValue, type Atom, type AtomClass } from './atoms'
 import {
   generateProblems,
+  isTermsProblem,
   type Digits,
   type PairOperation,
   type PairProblem,
@@ -69,8 +70,8 @@ export function isLessonId(value: unknown): value is LessonId {
   return lessonById(value) !== null
 }
 
-// Spec §4: the lesson a × or ÷ round opens first, its own 桁数's; ＋ and −
-// open none.
+// Spec §4: the lesson a × or ÷ round opens first, its own 桁数's; ＋, −,
+// 見取算 and フラッシュ暗算 (spec (flash) §2: no new technique) open none.
 export function lessonForKind(kind: PracticeKind): Lesson | null {
   if (kind.op !== 'mul' && kind.op !== 'div') return null
   return lessonById(`${kind.op}:${kind.digits}`)
@@ -116,7 +117,7 @@ export function tryProblem(lesson: Lesson, random: () => number, previous?: Pair
   }
   for (let tries = 0; tries < 20; tries++) {
     const [problem] = generateProblems({ op: lesson.op, digits: lesson.digits }, 1, random)
-    if (problem !== undefined && problem.op !== 'mitori' && !same(problem)) return problem
+    if (problem !== undefined && !isTermsProblem(problem) && !same(problem)) return problem
   }
   return lesson.example
 }

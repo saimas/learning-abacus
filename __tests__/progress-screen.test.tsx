@@ -59,4 +59,15 @@ describe('ProgressScreen', () => {
     )
     await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
   })
+
+  // Spec (flash) §2: the progress screen's table gains the same row.
+  it('shows a row for フラッシュ暗算', async () => {
+    const { getByTestId } = render(
+      <ProgressProvider>
+        <ProgressScreen />
+      </ProgressProvider>,
+    )
+    await waitFor(() => expect(getByTestId('practice-table')).toBeTruthy())
+    expect(getByTestId('practice-cell-flash:3').props.accessibilityLabel).toBe('3けたのフラッシュ暗算、まだ')
+  })
 })

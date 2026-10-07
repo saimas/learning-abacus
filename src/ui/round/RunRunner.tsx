@@ -114,8 +114,10 @@ export function RunRunner({
   // While a card is held under its 〇 or swiping off. A ✕ confirmed then
   // leaves the roll to bring the results in.
   const moving = useRef(false)
-  // When the problem on screen was uncovered, for its answer time. The first
-  // is shown when the run mounts.
+  // When the problem on screen was uncovered, for its answer time (a
+  // フラッシュ暗算 problem's answer time runs from its flash's end instead,
+  // Submission.flashEndedAt, spec (flash) §4). The first is shown when the
+  // run mounts.
   const [shownAt, setShownAt] = useState(() => now())
   // onEnd, once.
   const ended = useRef(false)
@@ -256,11 +258,12 @@ export function RunRunner({
   // problem when user go back"): the problem before the one on screen in the
   // run, laid again as a new card at the level as it stands, and put on top
   // at once, with no swipe. It starts afresh, as if shown for the first
-  // time, and its clock with it; nothing of the problem left is kept. Its
-  // answer counts like any other's (the owner's choice), and from it the run
-  // goes on to the problem after it. Offered only while nothing moves and
-  // the run goes on (`onBack`), and checked again here, as a second tap can
-  // land before the render that takes 戻る away.
+  // time, and its clock with it (a フラッシュ暗算 problem plays its flash
+  // again from the start, spec (flash) §4); nothing of the problem left is
+  // kept. Its answer counts like any other's (the owner's choice), and from
+  // it the run goes on to the problem after it. Offered only while nothing
+  // moves and the run goes on (`onBack`), and checked again here, as a
+  // second tap can land before the render that takes 戻る away.
   function goBack() {
     if (moving.current || runRef.current.ended) return
     const shown = cardsRef.current[indexRef.current]
@@ -276,7 +279,7 @@ export function RunRunner({
   }
 
   function question(at: number, card: RunCard) {
-    function submitted({ correct, assisted, t }: Submission) {
+    function submitted({ correct, assisted, t, flashEndedAt }: Submission) {
       // A card just left by 戻る, answered by a tap that landed before the
       // render that took it away: it is not the run's any more.
       if (at !== indexRef.current) return
@@ -284,7 +287,9 @@ export function RunRunner({
         problem: card.problem,
         level: card.level,
         calibrationMs,
-        answerMs: t - shownAt,
+        // Spec (flash) §4: a flash problem's clock runs from the end of its
+        // flash, not from the card being uncovered.
+        answerMs: t - (flashEndedAt ?? shownAt),
         correct,
         assisted,
       })
@@ -312,12 +317,17 @@ export function RunRunner({
 
     // Underneath the card going off, a new look is still the old one.
     const underneath = leaving !== null && at === index
+    // Spec (flash) §4: a flash plays only on the card on top, at rest: not
+    // underneath the card swiping off, and not on its way off itself (✕
+    // confirmed mid-flash), where it holds where it is and says nothing.
+    const revealed = leaving === null && at === index
     return (
       <ProblemQuestion
         problem={card.problem}
         fade={card.easeFrom !== undefined && underneath ? card.easeFrom : card.level}
         easeFade={card.easeFrom !== undefined && !reduceMotion}
         missNote={strings.livesLeft(run.lives - 1)}
+        revealed={revealed}
         shownAt={shownAt}
         now={now}
         onSubmit={submitted}

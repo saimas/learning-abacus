@@ -51,6 +51,7 @@ const OP_NAME: Record<Operation, string> = {
   mul: 'Multiplication',
   div: 'Division',
   mitori: 'Columns',
+  flash: 'Flash',
 }
 
 const PRACTICE_STAGE: Record<PracticeStage, string> = {
@@ -348,6 +349,11 @@ function rankToNext(points: number): string {
   return `${formatPoints(points)} points to the next rank`
 }
 
+// As ja's: the signs the column leaves unwritten, read aloud.
+function columnReading(terms: readonly number[]): string {
+  return terms.map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? '−' : '+'} ${Math.abs(term)}`)).join(' ')
+}
+
 export const en: Strings = {
   loading: 'Loading…',
   loadingProgress: 'Loading your progress…',
@@ -417,13 +423,16 @@ export const en: Strings = {
       case 'div':
         return `Divide ${problem.a} by ${problem.b}.`
       case 'mitori':
-        return problem.terms
-          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? '−' : '+'} ${Math.abs(term)}`))
-          .join(' ')
+        return columnReading(problem.terms)
+      case 'flash':
+        return `Flash, ${problem.terms.length} numbers`
       default:
         return `The soroban shows ${problem.a}. ${problem.op === 'add' ? 'Add' : 'Subtract'} ${problem.b}.`
     }
   },
+  columnReading,
+  flashCounter: (index, total) => `${index}/${total}`,
+  flashAnswer: 'Your answer',
   columnLine,
   sectionHeading,
   productLine,

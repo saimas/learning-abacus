@@ -5,10 +5,10 @@ soroban (暗算, anzan) from zero prior soroban knowledge. All learning material
 fixed rule set and ships inside the app bundle, so the app is fully functional offline and makes no
 network calls at runtime. Progress is stored on-device only.
 
-The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, and 見取算 (a column of
-five), in endless runs, started from the grid on Home. The learner works each problem on the
-soroban first; the beads fade as the answers keep coming right, until they cannot be seen at all
-and the fingers still move them.
+The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, 見取算 (a column of five)
+and フラッシュ暗算 (five numbers flashed one at a time), in endless runs, started from the grid on
+Home. The learner works each problem on the soroban first; the beads fade as the answers keep
+coming right, until they cannot be seen at all and the fingers still move them.
 
 ## The 180 single-rod moves
 
@@ -54,6 +54,7 @@ from the start.
 | × (両落とし) | 7 × 8 | 47 × 36 | 472 × 385 |
 | ÷ (商除法) | 56 ÷ 8 | 1692 ÷ 36 | 202032 ÷ 976 |
 | ± (見取算) | 7, 3, −2, 8, −4 | 47, 30, −23, 61, −19 | five 3-digit numbers |
+| フ (フラッシュ暗算) | 7, 3, 2, 8, 4, flashed | 47, 30, 23, 61, 19, flashed | five 3-digit numbers, flashed |
 
 - **＋ −**: the soroban opens with the first number set. Subtraction never goes negative.
 - **×**, 両落とし worked from the top: neither number is set. The learner builds the product only,
@@ -66,6 +67,15 @@ from the start.
   or two of the others are subtracted, and the running total never goes below 0. While stepping,
   the number being worked is highlighted, its bead moves stay coloured together, and the steps are
   grouped under a heading per number (「59をひく　77 → 18」).
+- **フ**, フラッシュ暗算: five numbers, all added, flash one at a time in the prompt's place once
+  the card is uncovered, about one a second (the first after 0.6 s, each for 0.7 s, 0.3 s apart),
+  with a counter (1/5). After each of the first four the beads jump to the running total; the
+  fifth flashes alone, and the learner adds it on the beads and answers the total. Until the flash
+  ends the beads take no taps and もどす and こたえる are off; 手順を見る ends it at once and shows
+  the five numbers as 見取算's column, and a flash problem gone back to with 戻る plays again from
+  the start. The numbers cannot be replayed. As the level rises the beads that follow along fade
+  like any others, until the whole running total is held in the head. Its points are timed from
+  the end of the flash.
 - **手順を見る** on every question opens the steps: ◀ ▶ play one bead move
   at a time and 最初から goes back to the start. The steps are grouped the way the learner thinks
   of them — the number added or taken off, each multiplicand digit, each quotient digit — each
@@ -115,8 +125,9 @@ afresh and counts like any other.
 ## Not in the app yet
 
 - 暗算検定 practice as the exam sets it (50 columns of three to five 1-digit numbers in 12
-  minutes), and longer 見取算 columns than five. Complement technique itself sits below 珠算能力検定
-  10級, which grades by problem size, so the app earns no official grade yet.
+  minutes), longer 見取算 columns than five, and フラッシュ暗算 of other lengths (3口, 10口), at
+  other speeds or with a replay. Complement technique itself sits below 珠算能力検定 10級, which
+  grades by problem size, so the app earns no official grade yet.
 - Division with remainders, N × 1 and N ÷ 1 sizes, 帰除法, and the traditional × layout with
   both numbers on the soroban.
 - Time targets tuned to the learner from rounds (they use the calibration 基礎の練習 measured

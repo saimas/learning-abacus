@@ -7,17 +7,23 @@ import { emptySoroban, readRod, readValue, rodFor, setValue, type Soroban } from
 // the size is the divisor's and the quotient's: a ÷ problem is a × problem
 // run backwards, a the dividend and b the divisor. 見取算 (spec: 見取算 §3) is
 // a column of numbers instead of two: its terms are signed, the first always
-// positive.
-export type Operation = 'add' | 'sub' | 'mul' | 'div' | 'mitori'
-export type PairOperation = Exclude<Operation, 'mitori'>
+// positive. フラッシュ暗算 (spec (flash) §3) has 見取算's shape, every number
+// added. It is a type of its own, so whatever means 見取算 alone (its signs,
+// its column prompt) still does, and what the two share takes TermsProblem.
+export type Operation = 'add' | 'sub' | 'mul' | 'div' | 'mitori' | 'flash'
+export type TermsOperation = 'mitori' | 'flash'
+export type PairOperation = Exclude<Operation, TermsOperation>
 export type Digits = 1 | 2 | 3
 export type PracticeKind = { op: Operation; digits: Digits }
 export type PracticeId = `${Operation}:${Digits}`
 export type PairProblem = { op: PairOperation; digits: Digits; a: number; b: number }
 export type MitoriProblem = { op: 'mitori'; digits: Digits; terms: number[] }
-export type Problem = PairProblem | MitoriProblem
+export type FlashProblem = { op: 'flash'; digits: Digits; terms: number[] }
+export type TermsProblem = MitoriProblem | FlashProblem
+export type Problem = PairProblem | TermsProblem
 
-export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div', 'mitori']
+// Spec (flash) §2: フラッシュ暗算 is the sixth row, under 見取算.
+export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div', 'mitori', 'flash']
 export const DIGITS: readonly Digits[] = [1, 2, 3]
 export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =>
   DIGITS.map((digits) => ({ op, digits })),
@@ -25,7 +31,15 @@ export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =
 
 // The same in every language, so it lives with the operations rather than
 // in the string catalogues.
-export const OPERATION_SYMBOL: Record<Operation, string> = { add: '＋', sub: '−', mul: '×', div: '÷', mitori: '±' }
+export const OPERATION_SYMBOL: Record<Operation, string> = {
+  add: '＋',
+  sub: '−',
+  mul: '×',
+  div: '÷',
+  mitori: '±',
+  // Spec (flash) §2: the sixth row's head.
+  flash: 'フ',
+}
 
 // Typing the answer costs time the arithmetic does not, and a 4-digit answer
 // costs more of it than a 2-digit one. A first estimate, like the per-move
@@ -45,13 +59,21 @@ export const DIVIDE_ESTIMATE_MS = 1500
 // column and 珠算検定 10級's 2けた5口.
 export const MITORI_TERMS = 5
 
+// Spec (flash) §1: five numbers at every size, classic フラッシュ暗算's 5口.
+export const FLASH_TERMS = 5
+
 export function practiceId(kind: PracticeKind): PracticeId {
   return `${kind.op}:${kind.digits}`
 }
 
+// A 見取算 or フラッシュ暗算 problem: a list of numbers rather than two.
+export function isTermsProblem(problem: Problem): problem is TermsProblem {
+  return problem.op === 'mitori' || problem.op === 'flash'
+}
+
 // What makes two problems of one kind the same problem.
 export function problemKey(problem: Problem): string {
-  return problem.op === 'mitori' ? problem.terms.join(',') : `${problem.a},${problem.b}`
+  return isTermsProblem(problem) ? problem.terms.join(',') : `${problem.a},${problem.b}`
 }
 
 // For values from outside the app's own code, such as a route parameter.
@@ -76,6 +98,7 @@ export function answerOf(problem: Problem): number {
     case 'div':
       return problem.a / problem.b
     case 'mitori':
+    case 'flash':
       return problem.terms.reduce((sum, term) => sum + term, 0)
   }
 }
@@ -98,12 +121,13 @@ export function rodsFor(kind: { op: Operation; digits: Digits }): number {
 }
 
 // What the soroban shows before the first step: a for ＋ − (and the dividend
-// for ÷), nothing for ×, and a 見取算 column's first number.
+// for ÷), nothing for ×, and a 見取算 or フラッシュ暗算 list's first number.
 export function startOf(problem: Problem): number {
   switch (problem.op) {
     case 'mul':
       return 0
     case 'mitori':
+    case 'flash':
       return problem.terms[0] ?? 0
     default:
       return problem.a
@@ -120,14 +144,20 @@ function randomInt(random: () => number, low: number, high: number): number {
 // soroban. A division (spec: division §1) is a multiplication run
 // backwards: it draws the quotient and the divisor, so it always comes out
 // exact, and the dividend is their product. A 見取算 column (spec: 見取算 §3)
-// is drawn whole and drawn again if it breaks its rules.
+// is drawn whole and drawn again if it breaks its rules. A フラッシュ暗算
+// list (spec (flash) §3) is five numbers, all added, never drawn again.
 export function generateProblems(kind: PracticeKind, count: number, random: () => number): Problem[] {
   const problems: Problem[] = []
   const seen = new Set<string>()
   // A bound, not an expectation: even 1-digit subtraction has 36 pairs, so
   // this only stops a broken `random` from spinning forever.
   for (let tries = 0; problems.length < count && tries < count * 1000; tries++) {
-    const problem = kind.op === 'mitori' ? drawMitori(kind.digits, random) : drawPair(kind.op, kind.digits, random)
+    const problem =
+      kind.op === 'mitori'
+        ? drawMitori(kind.digits, random)
+        : kind.op === 'flash'
+          ? drawFlash(kind.digits, random)
+          : drawPair(kind.op, kind.digits, random)
     if (problem === null) continue
     const key = problemKey(problem)
     if (seen.has(key)) continue
@@ -179,6 +209,16 @@ function drawMitori(digits: Digits, random: () => number): MitoriProblem | null 
     if (total < 0) return null
   }
   return total === 0 || total === terms[0] ? null : { op: 'mitori', digits, terms }
+}
+
+// Spec (flash) §3: five N-digit numbers, every one added. The running total
+// only grows, so the soroban can always show it, and the last number always
+// moves the beads off the first four's total the learner starts from, so
+// こたえる (QuestionView's `moved`) can always be pressed.
+function drawFlash(digits: Digits, random: () => number): FlashProblem {
+  const low = 10 ** (digits - 1)
+  const high = 10 ** digits - 1
+  return { op: 'flash', digits, terms: Array.from({ length: FLASH_TERMS }, () => randomInt(random, low, high)) }
 }
 
 // A rod step with its rod named outright, since a problem's steps land on
@@ -366,8 +406,9 @@ function columnSteps(problem: PairProblem, direction: Direction): StepGroup[] {
 // later one is worked onto it as a ＋ − problem's b is, added or subtracted
 // by its sign. The running total never goes below 0 (generateProblems), so
 // working a subtraction from its highest digit always finds something to
-// borrow from, as it does for a > b in ＋ −.
-function mitoriSteps(problem: MitoriProblem): StepGroup[] {
+// borrow from, as it does for a > b in ＋ −. Spec (flash) §3: a フラッシュ暗算
+// list's steps are the same column moves, every one an addition.
+function termSteps(problem: TermsProblem): StepGroup[] {
   let soroban = setValue(emptySoroban(rodsFor(problem)), startOf(problem))
   const groups: StepGroup[] = []
   problem.terms.forEach((term, index) => {
@@ -498,7 +539,8 @@ export function problemSteps(problem: Problem): StepGroup[] {
     case 'div':
       return quotientSteps(problem)
     case 'mitori':
-      return mitoriSteps(problem)
+    case 'flash':
+      return termSteps(problem)
     default:
       return columnSteps(problem, problem.op)
   }
@@ -584,11 +626,12 @@ export function problemSections(problem: Problem): StepSection[] {
   })
 }
 
-// The signed number a column group works: its 見取算 number, or a ＋ − problem's
-// b, taken off for −. Only those two kinds have column groups.
+// The signed number a column group works: its 見取算 or フラッシュ暗算 number,
+// or a ＋ − problem's b, taken off for −. Only those kinds have column groups.
 function numberOf(problem: Problem, term: number | undefined): number {
   switch (problem.op) {
     case 'mitori':
+    case 'flash':
       return problem.terms[term ?? 0] ?? 0
     case 'add':
       return problem.b

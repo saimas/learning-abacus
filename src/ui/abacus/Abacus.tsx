@@ -38,6 +38,7 @@ export function Abacus({
   onTapBead,
   onAdjustRod,
   easeFade = false,
+  jump = false,
 }: {
   soroban: Soroban
   fade: FadeLevel
@@ -48,6 +49,8 @@ export function Abacus({
   onAdjustRod?: (rodIndex: number, delta: number) => void
   // Spec (runs) §5: ease the beads to a new fade level instead of jumping.
   easeFade?: boolean
+  // Spec (flash) §2: the beads jump to a new value instead of sliding.
+  jump?: boolean
 }) {
   const strings = useStrings()
   const g = geometryFor(scale)
@@ -79,6 +82,7 @@ export function Abacus({
               label={strings.rodName(count - 1 - index)}
               beadOpacity={BEAD_OPACITY[visual]}
               easeOpacity={easeFade}
+              jump={jump}
               tints={tintedBeads?.filter((tinted) => tinted.rod === index)}
               onTapBead={onTapBead === undefined ? undefined : (bead) => onTapBead(index, bead)}
               onAdjust={onAdjustRod === undefined ? undefined : (delta) => onAdjustRod(index, delta)}

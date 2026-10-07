@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native'
-import { StyleSheet } from 'react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
+import { Animated, StyleSheet } from 'react-native'
 import { emptySoroban, rodFor, setValue } from '@/domain/soroban'
 import { colors } from '@/ui/theme'
 import { Abacus, tintsFor } from './Abacus'
+import { BEAD_SLIDE_MS } from './Bead'
 import { BEAD_HEIGHT, BEAD_MODE_SCALE, BEAM_TOP, EARTH_TOP, beadTops } from './geometry'
 
 function topOf(element: { props: { style?: unknown } } | undefined): number | undefined {
@@ -293,5 +294,56 @@ describe('interactive Abacus', () => {
     )
     const style = StyleSheet.flatten(getAllByTestId('bead-earth')[0]?.props.style)
     expect(style.width).toBeCloseTo(69)
+  })
+})
+
+// Spec (flash) §2: the flash's running totals jump onto the beads with no
+// slide; every other change slides as it always has.
+describe('Abacus jumping', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  const heavenTop = () => topOf(screen.getAllByTestId('bead-heaven')[0])
+  function passTime(ms: number) {
+    for (let t = 0; t < ms; t += 16) act(() => jest.advanceTimersByTime(Math.min(16, ms - t)))
+  }
+
+  it('puts the beads on a new value at once with jump', () => {
+    render(<Abacus soroban={emptySoroban(1)} fade={0} jump />)
+    const before = heavenTop()
+    screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} jump />)
+    expect(heavenTop()).toBe(BEAM_TOP - BEAD_HEIGHT)
+    expect(heavenTop()).not.toBe(before)
+  })
+
+  // Spec (flash) §2: on the device a setValue outside an animation is not
+  // painted until React's next commit, so a jumping bead's place has to come
+  // from the render itself. Cutting setValue off proves it: the new place must
+  // still be there, as a plain number, right after the rerender.
+  it('holds the new place from the render alone, as a plain number, with jump', () => {
+    const setValueSpy = jest.spyOn(Animated.Value.prototype, 'setValue').mockImplementation(() => {})
+    try {
+      render(<Abacus soroban={emptySoroban(1)} fade={0} jump />)
+      screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} jump />)
+      const style = StyleSheet.flatten<{ top?: unknown }>(screen.getAllByTestId('bead-heaven')[0]?.props.style)
+      expect(typeof style.top).toBe('number')
+      expect(style.top).toBe(BEAM_TOP - BEAD_HEIGHT)
+    } finally {
+      setValueSpy.mockRestore()
+    }
+  })
+
+  it('slides them without it, as always', () => {
+    render(<Abacus soroban={emptySoroban(1)} fade={0} />)
+    const before = heavenTop()
+    screen.rerender(<Abacus soroban={setValue(emptySoroban(1), 7)} fade={0} />)
+    expect(heavenTop()).toBe(before)
+    passTime(BEAD_SLIDE_MS + 50)
+    expect(heavenTop()).toBe(BEAM_TOP - BEAD_HEIGHT)
   })
 })

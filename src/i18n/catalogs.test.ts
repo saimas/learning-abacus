@@ -1,7 +1,7 @@
 import { ATOMS, atomId, classify, type Atom, type Direction } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
 import { lessonById, type Lesson } from '@/domain/lessons'
-import type { MitoriProblem, StepSection } from '@/domain/problem'
+import type { FlashProblem, MitoriProblem, StepSection } from '@/domain/problem'
 import { en } from './en'
 import { formatPoints } from './format'
 import { ja } from './ja'
@@ -182,6 +182,16 @@ describe('multi-digit strings', () => {
     const column: MitoriProblem = { op: 'mitori', digits: 2, terms: [47, 85, -23, 61, -19] }
     expect(ja.problemPrompt(column)).toBe('47、たす85、ひく23、たす61、ひく19。')
     expect(en.problemPrompt(column)).toBe('47 + 85 − 23 + 61 − 19')
+  })
+
+  // Spec (flash) §2, §5: the kind's name wherever operations are named, and
+  // its prompt as VoiceOver reads it: its count, never its numbers.
+  it('names フラッシュ暗算 and prompts it by its count', () => {
+    const numbers: FlashProblem = { op: 'flash', digits: 2, terms: [47, 30, 23, 61, 19] }
+    expect(ja.problemPrompt(numbers)).toBe('フラッシュ暗算、5口')
+    expect(en.problemPrompt(numbers)).toBe('Flash, 5 numbers')
+    expect(ja.practiceCellLabel({ op: 'flash', digits: 2 }, 'unseen')).toBe('2けたのフラッシュ暗算、まだ')
+    expect(en.practiceCellLabel({ op: 'flash', digits: 2 }, 'unseen')).toBe('2-digit flash, not yet')
   })
 
   it('reads a column as its rod and its move', () => {
@@ -565,5 +575,24 @@ describe('going back in a run', () => {
     for (const catalog of [ja, en]) {
       for (const key of ['lookBackLabel', 'lookBackReturn', 'lookBackToResults']) expect(catalog).not.toHaveProperty(key)
     }
+  })
+})
+
+// Spec (flash) §2, §5.
+describe('フラッシュ暗算 strings', () => {
+  it('counts the numbers as they flash', () => {
+    expect([ja.flashCounter(1, 5), en.flashCounter(5, 5)]).toEqual(['1/5', '5/5'])
+  })
+
+  it('asks for the answer once the flash is over', () => {
+    expect([ja.flashAnswer, en.flashAnswer]).toEqual(['こたえてください', 'Your answer'])
+  })
+
+  // The column a flash shows with its steps reads as a 見取算 prompt does.
+  it('reads a column of numbers as one sentence', () => {
+    expect(ja.columnReading([47, 30, 23, 61, 19])).toBe('47、たす30、たす23、たす61、たす19。')
+    expect(en.columnReading([47, 30, 23, 61, 19])).toBe('47 + 30 + 23 + 61 + 19')
+    expect(ja.columnReading([47, 85, -23])).toBe('47、たす85、ひく23。')
+    expect(en.columnReading([47, 85, -23])).toBe('47 + 85 − 23')
   })
 })

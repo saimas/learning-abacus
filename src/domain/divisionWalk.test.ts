@@ -1,5 +1,5 @@
 import { divisionWalk, walkFrames, walkStates, type WalkStep } from './divisionWalk'
-import { answerOf, generateProblems, problemStates, type Digits, type PairProblem } from './problem'
+import { answerOf, generateProblems, isTermsProblem, problemStates, type Digits, type PairProblem } from './problem'
 import { readValue } from './soroban'
 
 // A small seeded generator (mulberry32), so the 3けた sample is repeatable.
@@ -282,7 +282,7 @@ describe('divisionWalk', () => {
     for (let q = 10; q <= 99; q++) for (let d = 10; d <= 99; d++) faults.push(...walkFaults(division(q, d)))
     faults.push(
       ...generateProblems({ op: 'div', digits: 3 }, 10_000, seeded(23)).flatMap((p) => {
-        if (p.op === 'mitori') throw new Error('expected a division')
+        if (isTermsProblem(p)) throw new Error('expected a division')
         return walkFaults(p)
       }),
     )

@@ -11,13 +11,22 @@ import { colors, fonts, fontSizes, radius, space } from '@/ui/theme'
 import { Batsu } from './Batsu'
 import { Maru } from './Maru'
 import { ScrollingStepLines, STEP_CONTROLS_HEIGHT, StepControls } from './StepPanel'
+import { useFlash } from './useFlash'
 import { useStepper } from './useStepper'
 
 // latencyMs is null for an untimed attempt (answered with the beads). `t` is
 // the moment of the answer, which the runner uses as the next question's
 // start and to check its deadline. `assisted` says the learner looked at the
 // steps with 手順を見る before answering (spec (core rounds) §5).
-export type Submission = { correct: boolean; latencyMs: number | null; t: number; assisted: boolean }
+// `flashEndedAt` is when a フラッシュ暗算 problem's flash ended, which its
+// answer is timed from (spec (flash) §4); absent for every other question.
+export type Submission = {
+  correct: boolean
+  latencyMs: number | null
+  t: number
+  assisted: boolean
+  flashEndedAt?: number
+}
 
 // Outside a round (a lesson's やってみよう, spec (howto tutorial) §2): once
 // the question is answered, right or wrong, its bottom row offers leaving,
@@ -25,6 +34,13 @@ export type Submission = { correct: boolean; latencyMs: number | null; t: number
 // A round leaves it out: a right answer rolls on by itself, and a miss has
 // つぎへ.
 export type AfterAnswer = { leaveLabel: string; onLeave: () => void; againLabel: string }
+
+// What a problem drawn in the prompt's place (renderPrompt) is drawn for,
+// besides the step on show: whether the step panel is open, and a
+// フラッシュ暗算 problem's number on show (spec (flash) §4), by its index in
+// the problem's terms, or null (between numbers, after the flash, or no
+// flash at all).
+export type PromptState = { panelOpen: boolean; flashShown: number | null }
 
 // A missed question held on screen until つぎへ: only whether its step panel
 // is open needs keeping — open at once where coaching still speaks (F0–F1),
@@ -59,6 +75,7 @@ export function QuestionView({
   afterAnswer,
   easeFade,
   missNote,
+  flash,
 }: {
   exercise: Exercise
   fade: FadeLevel
@@ -80,10 +97,12 @@ export function QuestionView({
   // the soroban. Nothing for any other question.
   renderBeneath?: (activeStep: number | undefined) => ReactNode
   // Spec (見取算) §4: a problem drawn in place of the text prompt — a 見取算
-  // column — following the same `activeStep` as the step lines. `prompt`
-  // is not drawn when this is given. Drawn above the soroban, where the text
-  // prompt stands for every other question.
-  renderPrompt?: (activeStep: number | undefined) => ReactNode
+  // column, or a フラッシュ暗算 problem's flash (spec (flash) §2) — following
+  // the same `activeStep` as the step lines, and told whether the panel is
+  // open and which number is flashing (PromptState). `prompt` is not drawn
+  // when this is given. Drawn above the soroban, where the text prompt
+  // stands for every other question.
+  renderPrompt?: (activeStep: number | undefined, state: PromptState) => ReactNode
   shownAt: number
   now: () => number
   onSubmit: (submission: Submission) => void
@@ -93,6 +112,11 @@ export function QuestionView({
   // (Abacus), and a run's word on what a miss leaves, said with the ✕.
   easeFade?: boolean
   missNote?: string
+  // Spec (flash) §4: a フラッシュ暗算 problem's numbers, played in the
+  // prompt's place before the question can be answered (useFlash), and
+  // whether its card is uncovered, which the flash waits for. Absent for
+  // every other question, which is answered from the start.
+  flash?: { terms: readonly number[]; revealed: boolean }
 }) {
   const strings = useStrings()
   const { width, height } = useWindowDimensions()
@@ -119,9 +143,39 @@ export function QuestionView({
   // When the last press that つぎへ or こたえる can sit under landed (the
   // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
   const guardFrom = useRef<number | null>(null)
+  // Spec (flash) §4: when the flash ended, run to its end or ended by
+  // 手順を見る, which the answer is timed from (Submission).
+  const [flashEndedAt, setFlashEndedAt] = useState<number | null>(null)
+  // Spec (flash) §2, §4: the flash, until it runs out or 手順を見る ends
+  // it. VoiceOver hears each number as it appears, then is asked for the
+  // answer, queued so it waits for the fifth number's reading rather than
+  // cutting it off. The first number is queued too, so a 「レベル N」
+  // announced as the card arrives is not cut off; numbers 2 to 5 interrupt,
+  // so speech never drifts behind the screen. 手順を見る's panel speaks for
+  // itself, so ending there says nothing.
+  const flashPlay = useFlash({
+    terms: flash?.terms,
+    revealed: flash?.revealed ?? true,
+    onShow: (index) => {
+      const term = flash?.terms[index]
+      if (term === undefined) return
+      if (index === 0) AccessibilityInfo.announceForAccessibilityWithOptions(String(term), { queue: true })
+      else AccessibilityInfo.announceForAccessibility(String(term))
+    },
+    onEnd: () => {
+      setFlashEndedAt(now())
+      AccessibilityInfo.announceForAccessibilityWithOptions(strings.flashAnswer, { queue: true })
+    },
+  })
+  // While the numbers play the beads show the running total and take no
+  // taps, and もどす and こたえる are off (spec (flash) §2).
+  const playing = flashPlay.frame !== null
 
   const start = setValue(emptySoroban(exercise.rods), exercise.start)
   const shownBeads = beads ?? start
+  // Spec (flash) §2: the running total the flash has reached, which the
+  // beads jump to as each number goes; null once the flash is over.
+  const flashBeads = flashPlay.frame === null ? null : setValue(emptySoroban(exercise.rods), flashPlay.frame.total)
   // An untouched soroban is not an answer: a stray tap on こたえる must not
   // burn an attempt.
   const moved = readValue(shownBeads) !== exercise.start
@@ -184,7 +238,7 @@ export function QuestionView({
       const wrong = missNote === undefined ? strings.wrong : `${strings.wrong} ${missNote}`
       AccessibilityInfo.announceForAccessibility(cardShown ? `${wrong} ${answerLine}` : wrong)
     }
-    onSubmit({ correct, latencyMs, t, assisted: assisted.current })
+    onSubmit({ correct, latencyMs, t, assisted: assisted.current, ...(flashEndedAt === null ? {} : { flashEndedAt }) })
   }
 
   // Spec (core rounds) §4: the same step panel as after a miss, before the
@@ -196,6 +250,12 @@ export function QuestionView({
   // ready as soon as they are shown. Set in the same press that opens the
   // panel, so the controls appear at the start and VoiceOver hears no step.
   function openSteps() {
+    // Spec (flash) §4: 手順を見る ends a flash at once: the steps show every
+    // number, and the question is answered from here on.
+    if (playing) {
+      setFlashEndedAt(now())
+      flashPlay.stop()
+    }
     assisted.current = true
     stepper.restart()
     setStepsOpen(true)
@@ -340,7 +400,7 @@ export function QuestionView({
         {prompt}
       </Text>
     ) : (
-      renderPrompt(activeStep)
+      renderPrompt(activeStep, { panelOpen, flashShown: flashPlay.frame?.shown ?? null })
     )
 
   // Layout A: the soroban takes the place a keypad would, enlarged and within
@@ -349,9 +409,10 @@ export function QuestionView({
   // the step panel's lines below the controls scroll, so the soroban, the
   // step controls under it and the buttons stay on screen even on a
   // 375 × 667 phone.
-  // The beads take no taps while the question is answered (under review)
-  // or while they show the steps before an answer.
-  const locked = review !== null || beforeAnswer || answeredRight
+  // The beads take no taps while the question is answered (under review),
+  // while they show the steps before an answer, or while a flash plays
+  // (spec (flash) §2).
+  const locked = review !== null || beforeAnswer || answeredRight || playing
   // The owner's request (2026-09-23): the lines used to share the small
   // scroll above the soroban with the prompt, two lines on show at a
   // time, while below ◀ ▶ the screen stood empty. So with the panel open
@@ -390,9 +451,10 @@ export function QuestionView({
             step over them instead, until the next question, or before an
             answer until とじる, which leaves `beads` as it was. */}
         <Abacus
-          soroban={stepper.soroban ?? shownBeads}
+          soroban={stepper.soroban ?? flashBeads ?? shownBeads}
           fade={shownFade}
           easeFade={easeFade}
+          jump={playing}
           scale={beadScale}
           tintedBeads={tintedBeads}
           onTapBead={
@@ -415,7 +477,9 @@ export function QuestionView({
           and once answered to what the beads read (see `given`). All
           three share one slot of the controls' height, so the swap moves
           nothing below it either: the owner (2026-09-24) found the jump
-          from the one-line hint to the taller ◀ ▶ row distracting. */}
+          from the one-line hint to the taller ◀ ▶ row distracting. While
+          a flash plays the beads take no taps, so no hint says to tap
+          them (spec (flash) §2). */}
       <View testID="step-controls-slot" style={styles.controlsSlot}>
         {panelOpen ? (
           stepControls
@@ -428,7 +492,7 @@ export function QuestionView({
           >
             {String(reading)}
           </Text>
-        ) : (
+        ) : playing ? null : (
           <Text style={styles.hint}>{strings.beadHint}</Text>
         )}
       </View>
@@ -471,11 +535,12 @@ export function QuestionView({
               testID="reset-beads"
               variant="outline"
               label={strings.resetBeads}
+              disabled={playing}
               onPress={() => setBeads(null)}
             />
           </View>
           <View style={styles.submitSlot}>
-            <Button testID="submit" label={strings.answer} disabled={!moved} onPress={submit} />
+            <Button testID="submit" label={strings.answer} disabled={playing || !moved} onPress={submit} />
           </View>
         </View>
       ))}

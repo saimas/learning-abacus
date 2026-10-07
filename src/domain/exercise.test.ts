@@ -1,7 +1,7 @@
 import { ATOMS, atomId, moveStates } from './atoms'
 import { answerReading, exerciseForProblem, stepColouring } from './exercise'
-import { problemStates, problemSteps, type MitoriProblem } from './problem'
-import { emptySoroban, setValue, type Soroban } from './soroban'
+import { problemStates, problemSteps, type FlashProblem, type MitoriProblem } from './problem'
+import { emptySoroban, readValue, setValue, type Soroban } from './soroban'
 
 describe('exerciseForProblem', () => {
   it('sets a on a rod per digit plus one, and expects the sum', () => {
@@ -82,6 +82,31 @@ describe('exerciseForProblem', () => {
     expect(groupStarts).toHaveLength(4)
     // 47 + 30 is +5 − 2 on the tens rod, two steps; −23 starts after them.
     expect(groupStarts.slice(0, 2)).toEqual([0, 2])
+  })
+
+  // Spec (flash) §3: the flash leaves the beads on the first four numbers'
+  // total; the learner adds the fifth and answers all five's. The steps
+  // still replay from the first number, as 見取算's do.
+  it('starts a フラッシュ暗算 problem on the first four numbers\' total, and expects all five', () => {
+    const problem: FlashProblem = { op: 'flash', digits: 2, terms: [47, 30, 23, 61, 19] }
+    const exercise = exerciseForProblem(problem)
+    expect(exercise.rods).toBe(3)
+    expect(exercise.start).toBe(161)
+    expect(exercise.expected).toBe(180)
+    expect(exercise).not.toHaveProperty('onesPlace')
+    expect(exercise.states).toEqual(problemStates(problem))
+    expect(readValue(exercise.states[0] ?? emptySoroban(3))).toBe(47)
+    expect(readValue(exercise.states[exercise.states.length - 1] ?? emptySoroban(3))).toBe(180)
+    // One operation per number after the first, as 見取算's.
+    expect(exercise.groupStarts).toHaveLength(4)
+  })
+
+  it('starts a 3けた flash on four rods when its four numbers pass 999', () => {
+    expect(exerciseForProblem({ op: 'flash', digits: 3, terms: [999, 999, 999, 999, 999] })).toMatchObject({
+      rods: 4,
+      start: 3996,
+      expected: 4995,
+    })
   })
 })
 

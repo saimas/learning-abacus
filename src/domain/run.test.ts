@@ -120,6 +120,7 @@ describe('nextProblem', () => {
     { op: 'mul', digits: 1 },
     { op: 'div', digits: 1 },
     { op: 'mitori', digits: 1 },
+    { op: 'flash', digits: 1 },
   ]
 
   it.each(kinds.map((kind) => [practiceId(kind), kind] as const))(

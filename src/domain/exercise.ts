@@ -42,12 +42,21 @@ export function exerciseForProblem(problem: Problem): Exercise {
   const expected = answerOf(problem)
   return {
     rods: rodsFor(problem),
-    start: startOf(problem),
+    start: answerStart(problem),
     expected,
     ...(problem.op === 'div' ? { onesPlace: problem.digits + 1 } : {}),
     states: problemStates(problem),
     groupStarts,
   }
+}
+
+// Where the learner's beads start. Spec (flash) §3: a flash problem is
+// answered from the soroban its flash leaves, the first four numbers'
+// total, and the learner works the last number onto it. Its steps
+// (`states`) still start from the first number set (startOf), as 見取算's.
+function answerStart(problem: Problem): number {
+  if (problem.op !== 'flash') return startOf(problem)
+  return problem.terms.slice(0, -1).reduce((sum, term) => sum + term, 0)
 }
 
 // What the beads read as an answer: the soroban's value, its ones on the rod

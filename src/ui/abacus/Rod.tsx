@@ -46,6 +46,7 @@ export function Rod({
   label,
   beadOpacity = 1,
   easeOpacity = false,
+  jump = false,
   tints = [],
   onTapBead,
   onAdjust,
@@ -57,6 +58,8 @@ export function Rod({
   beadOpacity?: number
   // Ease to a new beadOpacity instead of jumping (EasedFadeLayer).
   easeOpacity?: boolean
+  // Put the beads in new places at once instead of sliding (Bead).
+  jump?: boolean
   tints?: readonly { bead: BeadRef; tint: BeadTint }[]
   onTapBead?: (bead: BeadRef) => void
   onAdjust?: (delta: number) => void
@@ -67,9 +70,16 @@ export function Rod({
   const value = { text: String(readRod(rod)) }
   const beadViews = (
     <>
-      <Bead kind="heaven" top={tops.heaven} scale={scale} tint={tintOf(tints, { kind: 'heaven' })} />
+      <Bead kind="heaven" top={tops.heaven} scale={scale} tint={tintOf(tints, { kind: 'heaven' })} jump={jump} />
       {tops.earth.map((top, i) => (
-        <Bead key={i} kind="earth" top={top} scale={scale} tint={tintOf(tints, { kind: 'earth', index: i })} />
+        <Bead
+          key={i}
+          kind="earth"
+          top={top}
+          scale={scale}
+          tint={tintOf(tints, { kind: 'earth', index: i })}
+          jump={jump}
+        />
       ))}
     </>
   )

@@ -36,20 +36,24 @@ const FILLS = {
   latest: { id: 'bead-latest', highlight: colors.beadLatestHighlight, body: colors.accent, shade: colors.accentShadow },
 } as const
 
-// Slides rather than jumps when its place changes. A new place mid-slide
-// stops the old slide and heads for the new one. The bead never takes
-// touches itself: its rod does. A tinted bead's testID says its tint
+// Slides rather than jumps when its place changes, unless told to jump. A
+// new place mid-slide stops the old slide and heads for the new one. The
+// bead never takes touches itself: its rod does. A tinted bead's testID says its tint
 // (`bead-earth-latest`); an untinted one keeps the plain `bead-earth`.
 export function Bead({
   kind,
   top,
   scale = 1,
   tint,
+  jump = false,
 }: {
   kind: 'heaven' | 'earth'
   top: number
   scale?: number
   tint?: BeadTint
+  // Spec (flash) §2: to a new place at once, as the flash's running totals
+  // go onto the beads.
+  jump?: boolean
 }) {
   const g = geometryFor(scale)
   const fill = FILLS[tint ?? 'wood']
@@ -59,10 +63,16 @@ export function Bead({
   useEffect(() => {
     if (shown.current === top) return
     shown.current = top
+    // setValue also stops a slide still on its way, and keeps y where the
+    // bead is, so sliding resumes from the right place when jump ends.
+    if (jump) {
+      y.setValue(top)
+      return
+    }
     const slide = Animated.timing(y, { toValue: top, duration: BEAD_SLIDE_MS, useNativeDriver: false })
     slide.start()
     return () => slide.stop()
-  }, [top, y])
+  }, [top, y, jump])
 
   return (
     <Animated.View
@@ -70,7 +80,10 @@ export function Bead({
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: y,
+        // Spec (flash) §2: a jump is drawn from the prop itself. A setValue
+        // outside an animation is not painted until React's next commit, so
+        // the beads would lag a flash frame; the render paints its own.
+        top: jump ? top : y,
         left: (g.rodWidth - g.beadWidth) / 2,
         width: g.beadWidth,
         height: g.beadHeight,

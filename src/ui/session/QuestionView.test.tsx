@@ -65,6 +65,11 @@ describe('QuestionView with a 3-digit problem', () => {
     setBeads(screen.getByTestId, 857, 4)
     fireEvent.press(screen.getByTestId('submit'))
     expect(onSubmit).toHaveBeenCalledWith({ correct: true, latencyMs: null, t: expect.any(Number), assisted: false })
+    // Spec (flash) §4: only a flash's answer says when its flash ended. The
+    // match above would take an undefined key for an absent one, so this
+    // checks the key is not there at all: any other answer's is as it was.
+    const call = onSubmit.mock.calls[0][0]
+    expect(call).not.toHaveProperty('flashEndedAt')
   })
 
   it('holds a miss for review, with the card up at a coaching level', () => {
