@@ -40,7 +40,9 @@ export function flashFrames(terms: readonly number[]): TimedFrame[] {
 // starts as the frame is shown, so none is cut short; covered again, the
 // flash holds its frame; a timer left when the question goes (戻る, ✕,
 // leaving) is cleared with it and fires nothing. `onShow` hears each number
-// as it appears, by its index in `terms`.
+// as it appears, by its index in `terms`. replay() plays it again from its
+// first frame, lead and all (the owner, 2026-10-08: もう一度見る), and onEnd
+// hears its end again.
 export function useFlash({
   terms,
   revealed,
@@ -51,7 +53,7 @@ export function useFlash({
   revealed: boolean
   onShow: (index: number) => void
   onEnd: () => void
-}): { frame: FlashFrame | null; stop: () => void } {
+}): { frame: FlashFrame | null; stop: () => void; replay: () => void } {
   // The question is keyed by problem, so its terms never change under it.
   const [frames] = useState<TimedFrame[]>(() => (terms === undefined ? [] : flashFrames(terms)))
   // The frame on show, an index into frames; frames.length once over.
@@ -68,5 +70,5 @@ export function useFlash({
     const timer = setTimeout(() => reached(at + 1), ms)
     return () => clearTimeout(timer)
   }, [revealed, at, frames])
-  return { frame: frames[at]?.frame ?? null, stop: () => setAt(frames.length) }
+  return { frame: frames[at]?.frame ?? null, stop: () => setAt(frames.length), replay: () => setAt(0) }
 }

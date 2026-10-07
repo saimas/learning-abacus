@@ -72,6 +72,13 @@ describe('QuestionView with a 3-digit problem', () => {
     expect(call).not.toHaveProperty('flashEndedAt')
   })
 
+  // Only a フラッシュ暗算 problem has a flash to watch again.
+  it('offers no もう一度見る', () => {
+    renderView()
+    expect(screen.getByTestId('steps-open')).toBeTruthy()
+    expect(screen.queryByTestId('flash-replay')).toBeNull()
+  })
+
   it('holds a miss for review, with the card up at a coaching level', () => {
     const { onSubmit } = renderView()
     setBeads(screen.getByTestId, 800, 4)

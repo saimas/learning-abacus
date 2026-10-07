@@ -449,6 +449,7 @@ export const en: Strings = {
   columnReading,
   flashCounter: (index, total) => `${index}/${total}`,
   flashAnswer: 'Your answer',
+  flashReplay: 'Watch again',
   flashAddLast: 'Add the fifth number on the beads, then answer',
   columnLine,
   sectionHeading,
