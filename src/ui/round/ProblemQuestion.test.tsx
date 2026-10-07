@@ -160,14 +160,23 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     expect(flashed()).toBe('47')
   })
 
+  // The answer is asked for in VoiceOver's queue, so it waits for the fifth
+  // number's reading instead of cutting it off.
   it('says each number as it appears, then asks for the answer', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     try {
       renderFlash()
       announce.mockClear()
+      queued.mockClear()
       playThrough()
-      expect(announce.mock.calls.map(([said]) => said)).toEqual(['47', '30', '23', '61', '19', 'こたえてください'])
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['47', '30', '23', '61', '19'])
+      expect(queued.mock.calls).toEqual([['こたえてください', { queue: true }]])
+      expect(Math.min(...queued.mock.invocationCallOrder)).toBeGreaterThan(
+        Math.max(...announce.mock.invocationCallOrder),
+      )
     } finally {
+      queued.mockRestore()
       announce.mockRestore()
     }
   })
@@ -175,11 +184,14 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
   // Review focus: 手順を見る mid-flash ends it at once, and for good.
   it('ends the flash at once on 手順を見る, with the panel open on the five numbers', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     try {
       const { onSubmit } = renderFlash()
       advance(FLASH_LEAD_MS)
       expect(flashed()).toBe('47')
       announce.mockClear()
+      queued.mockClear()
+      const opened = jest.now()
       fireEvent.press(screen.getByTestId('steps-open'))
       expect([flashed(), counter()]).toEqual([null, null])
       // The steps show every number, as 見取算's column, from the first.
@@ -190,6 +202,7 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
       advance(10_000)
       expect(flashed()).toBeNull()
       expect(announce).not.toHaveBeenCalled()
+      expect(queued).not.toHaveBeenCalled()
       // Closed: the beads are the learner's, on the four's total.
       fireEvent.press(screen.getByTestId('steps-close'))
       expect(rods()).toBe('161')
@@ -199,8 +212,13 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
       // Past the guard after とじる.
       advance(500)
       fireEvent.press(screen.getByTestId('submit'))
-      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ correct: true, assisted: true }))
+      // Spec (flash) §4: the flash ended at the press, and the answer's
+      // clock runs from there.
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ correct: true, assisted: true, flashEndedAt: opened }),
+      )
     } finally {
+      queued.mockRestore()
       announce.mockRestore()
     }
   })
@@ -260,14 +278,18 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
   // Review focus: the question gone mid-flash (戻る, ✕, leaving) says nothing more.
   it('says nothing more once gone mid-flash', () => {
     const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     try {
       renderFlash()
       advance(FLASH_LEAD_MS)
       screen.unmount()
       announce.mockClear()
+      queued.mockClear()
       expect(() => advance(10_000)).not.toThrow()
       expect(announce).not.toHaveBeenCalled()
+      expect(queued).not.toHaveBeenCalled()
     } finally {
+      queued.mockRestore()
       announce.mockRestore()
     }
   })

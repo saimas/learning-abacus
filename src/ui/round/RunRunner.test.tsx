@@ -2,12 +2,13 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react-n
 import * as Haptics from 'expo-haptics'
 import { AccessibilityInfo, Animated, Dimensions, ScrollView, StyleSheet } from 'react-native'
 import type { FadeLevel } from '@/domain/fade'
-import { problemSteps, type MitoriProblem, type Problem } from '@/domain/problem'
-import { answerPoints } from '@/domain/score'
+import { problemSteps, problemTargetMs, type FlashProblem, type MitoriProblem, type Problem } from '@/domain/problem'
+import { answerPoints, BEAD_SPEED_FACTOR } from '@/domain/score'
 import { BEAD_EASE_MS } from '@/ui/abacus/Rod'
 import { beadModeScale, FRAME_PADDING, SHORT_WINDOW_BEAD_SCALE } from '@/ui/abacus/geometry'
 import { OPERAND_MAX_SCALE, OPERAND_SHORT_WINDOW_SCALE } from '@/ui/multiply/OperandBoard'
 import { setBeads, tintedBeads } from '@/ui/session/testing'
+import { FLASH_GAP_MS, FLASH_LEAD_MS, FLASH_SHOW_MS } from '@/ui/session/useFlash'
 import { colors } from '@/ui/theme'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS, RunRunner } from './RunRunner'
 
@@ -1072,6 +1073,203 @@ describe('RunRunner with 見取算', () => {
       expect(StyleSheet.flatten(frame.props.style).padding).toBeCloseTo(FRAME_PADDING * scale)
     })
 
+  })
+})
+
+// Spec (flash) §2, §4: a フラッシュ暗算 run plays each card's flash once the
+// card is uncovered, then takes the total on the beads.
+describe('RunRunner with フラッシュ暗算', () => {
+  // The beads follow 47, 77, 100 and 161; the answer is 180.
+  const numbers: FlashProblem = { op: 'flash', digits: 2, terms: [47, 30, 23, 61, 19] }
+  // 12, 46, 102 and 180; the answer is 270.
+  const more: FlashProblem = { op: 'flash', digits: 2, terms: [12, 34, 56, 78, 90] }
+  const flashRun: RunOverrides = { kind: { op: 'flash', digits: 2 }, problems: [numbers, more] }
+  // The three rods of the card on screen, highest place first.
+  const rods = () => [0, 1, 2].map((i) => screen.getByTestId(`rod-${i}`).props.accessibilityValue.text).join('')
+  const flashed = () => screen.queryByTestId('flash-number')?.props.children ?? null
+
+  function advance(ms: number) {
+    act(() => {
+      jest.advanceTimersByTime(ms)
+    })
+  }
+
+  // The whole flash, frame by frame: each frame's time starts once it is shown.
+  function playThrough() {
+    advance(FLASH_LEAD_MS)
+    for (let k = 0; k < 4; k++) {
+      advance(FLASH_SHOW_MS)
+      advance(FLASH_GAP_MS)
+    }
+    advance(FLASH_SHOW_MS)
+  }
+
+  // Holds each card swipe in mid-flight until finish(), so a card can lie
+  // underneath, or be on its way off, for as long as a test needs.
+  function holdSwipes() {
+    const timing = Animated.timing
+    const held: { finish?: () => void } = {}
+    const spy = jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      const animation = timing(value, config)
+      if (config.duration !== ROLL_SWIPE_MS) return animation
+      return {
+        ...animation,
+        start: (callback) => {
+          held.finish = () => callback?.({ finished: true })
+        },
+      }
+    })
+    return { finish: () => act(() => held.finish?.()), restore: () => spy.mockRestore() }
+  }
+
+  // Answers the first card right, then uncovers the second under the swipe.
+  function onToTheSecond(swipes: ReturnType<typeof holdSwipes>) {
+    playThrough()
+    answerBeads(180)
+    passTime(ROLL_HOLD_MS)
+    passUntilSwiping()
+    swipes.finish()
+  }
+
+  it('plays each card’s flash, then takes the total on the beads', () => {
+    const swipes = holdSwipes()
+    try {
+      const { onAttempt } = renderRun(flashRun)
+      // The run's first card: nothing swipes over it, so it plays at once.
+      expect(rods()).toBe('000')
+      advance(FLASH_LEAD_MS)
+      expect(flashed()).toBe('47')
+      for (let k = 0; k < 4; k++) {
+        advance(FLASH_SHOW_MS)
+        advance(FLASH_GAP_MS)
+      }
+      advance(FLASH_SHOW_MS)
+      expect([flashed(), rods()]).toEqual([null, '161'])
+      answerBeads(180)
+      expect(onAttempt).toHaveBeenCalledWith({ id: 'flash:2', correct: true, pace: null, assisted: false, fade: 0 })
+      expect(screen.getByTestId('maru')).toBeTruthy()
+      passTime(ROLL_HOLD_MS)
+      passUntilSwiping()
+      swipes.finish()
+      playThrough()
+      expect(rods()).toBe('180')
+      answerBeads(260)
+      expect(onAttempt).toHaveBeenLastCalledWith({ id: 'flash:2', correct: false, pace: null, assisted: false, fade: 0 })
+      // A miss reviews the five numbers as a column.
+      expect(screen.getByTestId('prompt').props.accessibilityLabel).toBe('12、たす34、たす56、たす78、たす90。')
+    } finally {
+      swipes.restore()
+    }
+  })
+
+  // Review focus: the next card is laid underneath while the answered one
+  // swipes off; its flash must wait until it is uncovered.
+  it('starts the next card’s flash only once it is uncovered', () => {
+    const swipes = holdSwipes()
+    try {
+      renderRun(flashRun)
+      playThrough()
+      answerBeads(180)
+      passTime(ROLL_HOLD_MS)
+      passUntilSwiping()
+      // Underneath the card swiping off, however long it takes: the soroban
+      // at 0, nothing flashed.
+      advance(5_000)
+      const below = within(screen.getByTestId('card'))
+      expect(below.queryByTestId('flash-number')).toBeNull()
+      expect([0, 1, 2].map((i) => below.getByTestId(`rod-${i}`).props.accessibilityValue.text).join('')).toBe('000')
+      swipes.finish()
+      expect(screen.queryByTestId('card-leaving')).toBeNull()
+      advance(FLASH_LEAD_MS - 1)
+      expect(flashed()).toBeNull()
+      advance(1)
+      expect(flashed()).toBe('12')
+    } finally {
+      swipes.restore()
+    }
+  })
+
+  // Review focus, spec (flash) §4: the clock runs from the end of the flash;
+  // from the card being uncovered, the 5.3 s flash would cost the bonus.
+  it('times the answer for points from the end of the flash', () => {
+    const { onPoints } = renderRun({ ...flashRun, now: () => jest.now() })
+    playThrough()
+    // Answered at its bead target, to the whole ms, so never past it: the
+    // whole speed bonus.
+    const delay = Math.floor(problemTargetMs(numbers, 900) * BEAD_SPEED_FACTOR)
+    advance(delay)
+    answerBeads(180)
+    const scored = (answerMs: number) =>
+      answerPoints({ problem: numbers, calibrationMs: 900, level: 0, combo: 1, answerMs })
+    expect(onPoints).toHaveBeenCalledWith(scored(delay))
+    expect(scored(delay)).not.toBe(scored(delay + 5_300))
+  })
+
+  // Review focus: 手順を見る mid-flash ends it; the answer is with help.
+  it('records an answer after 手順を見る mid-flash as with help, scoring nothing', () => {
+    const { onAttempt, onPoints } = renderRun(flashRun)
+    advance(FLASH_LEAD_MS)
+    fireEvent.press(screen.getByTestId('steps-open'))
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(rods()).toBe('161')
+    answerBeads(180)
+    expect(onAttempt).toHaveBeenCalledWith({ id: 'flash:2', correct: true, pace: null, assisted: true, fade: 0 })
+    expect(onPoints).not.toHaveBeenCalled()
+  })
+
+  // Spec (flash) §4: 戻る shows the problem fresh, playing again from the
+  // start. Review focus: pressed mid-flash, the card left says nothing more.
+  it('plays a problem gone back to afresh, its flash from the start, and stops the one left', () => {
+    const swipes = holdSwipes()
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      renderRun(flashRun)
+      onToTheSecond(swipes)
+      advance(FLASH_LEAD_MS)
+      expect(flashed()).toBe('12')
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('go-back'))
+      // The run's first problem, as if shown for the first time.
+      expect([flashed(), rods()]).toEqual([null, '000'])
+      expect(screen.getByTestId('submit').props.accessibilityState).toMatchObject({ disabled: true })
+      advance(FLASH_LEAD_MS)
+      expect([flashed(), rods()]).toEqual(['47', '000'])
+      advance(FLASH_SHOW_MS)
+      advance(FLASH_GAP_MS)
+      expect([flashed(), rods()]).toEqual(['30', '047'])
+      // Only the problem on show speaks: never 34, from the problem left.
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['47', '30'])
+    } finally {
+      announce.mockRestore()
+      swipes.restore()
+    }
+  })
+
+  // Review focus: ✕ confirmed mid-flash ends on the results once, the card
+  // going off with its flash frozen where it was.
+  it('stops a flash where it is when ✕ sends its card off to the results', () => {
+    const swipes = holdSwipes()
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    try {
+      const { onEnd } = renderRun(flashRun)
+      onToTheSecond(swipes)
+      advance(FLASH_LEAD_MS)
+      expect(flashed()).toBe('12')
+      announce.mockClear()
+      fireEvent.press(screen.getByTestId('quit'))
+      expect(onEnd).toHaveBeenCalledTimes(1)
+      // On its way off, held there: frozen on 12, and silent.
+      advance(5_000)
+      expect(within(screen.getByTestId('card-leaving')).getByTestId('flash-number').props.children).toBe('12')
+      expect(announce).not.toHaveBeenCalled()
+      swipes.finish()
+      expect(screen.getByTestId('run-results')).toBeTruthy()
+      expect(screen.queryByTestId('card-leaving')).toBeNull()
+      expect(onEnd).toHaveBeenCalledTimes(1)
+    } finally {
+      announce.mockRestore()
+      swipes.restore()
+    }
   })
 })
 

@@ -148,8 +148,9 @@ export function QuestionView({
   const [flashEndedAt, setFlashEndedAt] = useState<number | null>(null)
   // Spec (flash) §2, §4: the flash, until it runs out or 手順を見る ends
   // it. VoiceOver hears each number as it appears, then is asked for the
-  // answer; 手順を見る's panel speaks for itself, so ending there says
-  // nothing.
+  // answer, queued so it waits for the fifth number's reading rather than
+  // cutting it off; 手順を見る's panel speaks for itself, so ending there
+  // says nothing.
   const flashPlay = useFlash({
     terms: flash?.terms,
     revealed: flash?.revealed ?? true,
@@ -159,7 +160,7 @@ export function QuestionView({
     },
     onEnd: () => {
       setFlashEndedAt(now())
-      AccessibilityInfo.announceForAccessibility(strings.flashAnswer)
+      AccessibilityInfo.announceForAccessibilityWithOptions(strings.flashAnswer, { queue: true })
     },
   })
   // While the numbers play the beads show the running total and take no
