@@ -24,7 +24,8 @@ export const ADD_LAST_TEXT_CAP = 1.1
 // line says what is left to do (spec (home menu) §4): the owner, 2026-10-07,
 // took こたえる and もどす for broken, with nothing on screen saying the
 // fifth number was theirs to add on the beads. The numbers are not seen
-// again, as in real フラッシュ暗算, until the step panel opens
+// again, unless the learner plays the flash again (もう一度見る, the owner,
+// 2026-10-08), until the step panel opens
 // (`columnShown`: 手順を見る, or a miss's review), where they stand as
 // 見取算's column, the number stepped to lit (`activeTerm`) and read as one
 // sentence (`columnLabel`); the line gives way to it. Whatever it shows, it

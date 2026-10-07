@@ -585,6 +585,11 @@ describe('フラッシュ暗算 strings', () => {
     expect([ja.flashAnswer, en.flashAnswer]).toEqual(['こたえてください', 'Your answer'])
   })
 
+  // The owner (2026-10-08): watch the numbers again before answering.
+  it('offers to watch the flash again', () => {
+    expect([ja.flashReplay, en.flashReplay]).toEqual(['もう一度見る', 'Watch again'])
+  })
+
   // Spec (home menu) §4: what the prompt's place says once the flash is over.
   it('says what is left once the flash is over', () => {
     expect([ja.flashAddLast, en.flashAddLast]).toEqual([

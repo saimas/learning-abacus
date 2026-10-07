@@ -128,6 +128,44 @@ describe('useFlash', () => {
     expect(onEnd).not.toHaveBeenCalled()
   })
 
+  // The owner (2026-10-08): the learner can watch the numbers again before
+  // answering. A replay plays the whole flash again, from its lead.
+  it('plays again from the start on replay, and ends again', () => {
+    // Each frame's timer starts once it is shown, so time passes frame by
+    // frame.
+    const playThrough = () => flashFrames(TERMS).forEach(({ ms }) => advance(ms))
+    const { result, onShow, onEnd } = play()
+    playThrough()
+    expect(result.current.frame).toBeNull()
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    onShow.mockClear()
+    act(() => result.current.replay())
+    expect(result.current.frame).toEqual({ shown: null, total: 0 })
+    advance(FLASH_LEAD_MS - 1)
+    expect(onShow).not.toHaveBeenCalled()
+    advance(1)
+    expect(result.current.frame).toEqual({ shown: 0, total: 0 })
+    flashFrames(TERMS).slice(1).forEach(({ ms }) => advance(ms))
+    expect(result.current.frame).toBeNull()
+    expect(onShow.mock.calls.map(([index]) => index)).toEqual([0, 1, 2, 3, 4])
+    expect(onEnd).toHaveBeenCalledTimes(2)
+  })
+
+  // 手順を見る ends the first play, とじる, then もう一度見る.
+  it('plays again from the start on replay after being stopped', () => {
+    const { result, onShow, onEnd } = play()
+    advance(FLASH_LEAD_MS + 100)
+    act(() => result.current.stop())
+    act(() => result.current.replay())
+    expect(result.current.frame).toEqual({ shown: null, total: 0 })
+    flashFrames(TERMS).forEach(({ ms }) => advance(ms))
+    expect(result.current.frame).toBeNull()
+    expect(onShow.mock.calls.map(([index]) => index)).toEqual([0, 0, 1, 2, 3, 4])
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    advance(10_000)
+    expect(onEnd).toHaveBeenCalledTimes(1)
+  })
+
   it('is over from the start for a question with no flash', () => {
     const { result } = renderHook(() => useFlash({ terms: undefined, revealed: true, onShow: jest.fn(), onEnd: jest.fn() }))
     expect(result.current.frame).toBeNull()

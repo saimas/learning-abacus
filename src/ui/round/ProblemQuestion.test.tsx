@@ -229,7 +229,8 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     }
   })
 
-  // Spec (flash) §2: the numbers are not seen again until the steps show them.
+  // Spec (flash) §2: the numbers are not seen again until the steps show them,
+  // unless the flash is played again (もう一度見る).
   it('shows none of the numbers once the flash is over, holding the column’s height', () => {
     renderFlash()
     playThrough()
@@ -324,6 +325,147 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     expect(within(box).getByTestId('flash-add-last')).toBeTruthy()
     expect(within(box).getByTestId('flash-column-space', hidden)).toBeTruthy()
     expect(box.props.accessibilityLabel).toBe('フラッシュ暗算、5口')
+  })
+
+  // The owner (2026-10-08): "user should be able to retry the フラッシュ暗算
+  // on the question". Beside 手順を見る, off while the numbers play.
+  it('offers もう一度見る beside 手順を見る, off until the flash is over', () => {
+    renderFlash()
+    expect(disabled('flash-replay')).toBe(true)
+    advance(FLASH_LEAD_MS)
+    advance(FLASH_SHOW_MS)
+    advance(FLASH_GAP_MS)
+    expect(flashed()).toBe('30')
+    // Pressed mid-flash, it does nothing: the flash goes on to the third.
+    fireEvent.press(screen.getByTestId('flash-replay'))
+    advance(FLASH_SHOW_MS)
+    advance(FLASH_GAP_MS)
+    expect([flashed(), counter()]).toEqual(['23', '3/5'])
+    for (let k = 0; k < 2; k++) {
+      expect(disabled('flash-replay')).toBe(true)
+      advance(FLASH_SHOW_MS)
+      advance(FLASH_GAP_MS)
+    }
+    advance(FLASH_SHOW_MS)
+    expect(flashed()).toBeNull()
+    expect(disabled('flash-replay')).toBe(false)
+    expect(screen.getByTestId('flash-replay')).toHaveTextContent('もう一度見る')
+    // In one row with 手順を見る.
+    const offers = screen.getByTestId('step-offers')
+    expect(within(offers).getByTestId('steps-open')).toBeTruthy()
+    expect(within(offers).getByTestId('flash-replay')).toBeTruthy()
+  })
+
+  // As the first play: the first number queued, 2 to 5 interrupting, then
+  // 「こたえてください」 queued again; nothing more once 手順を見る cuts a
+  // replay short.
+  it('says each number again as a replay plays, and nothing once 手順を見る ends it', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
+    try {
+      renderFlash()
+      playThrough()
+      announce.mockClear()
+      queued.mockClear()
+      fireEvent.press(screen.getByTestId('flash-replay'))
+      playThrough()
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['30', '23', '61', '19'])
+      expect(queued.mock.calls).toEqual([
+        ['47', { queue: true }],
+        ['こたえてください', { queue: true }],
+      ])
+      announce.mockClear()
+      queued.mockClear()
+      fireEvent.press(screen.getByTestId('flash-replay'))
+      advance(FLASH_LEAD_MS)
+      fireEvent.press(screen.getByTestId('steps-open'))
+      advance(10_000)
+      expect(announce).not.toHaveBeenCalled()
+      expect(queued.mock.calls).toEqual([['47', { queue: true }]])
+    } finally {
+      queued.mockRestore()
+      announce.mockRestore()
+    }
+  })
+
+  // A replay is the first play again: the beads follow the running total,
+  // take no taps and no answer, and come back to the first four's total.
+  it('plays the five numbers again on もう一度見る, the learner’s beads put back after', () => {
+    renderFlash()
+    playThrough()
+    setBeads(screen.getByTestId, 170, 3)
+    fireEvent.press(screen.getByTestId('flash-replay'))
+    expect([flashed(), rods(), addLast()]).toEqual([null, '000', null])
+    expect(beadsFree()).toBe(false)
+    expect(disabled('submit')).toBe(true)
+    expect(disabled('flash-replay')).toBe(true)
+    advance(FLASH_LEAD_MS)
+    expect([flashed(), counter()]).toEqual(['47', '1/5'])
+    advance(FLASH_SHOW_MS)
+    expect(rods()).toBe('047')
+    advance(FLASH_GAP_MS)
+    for (let k = 0; k < 3; k++) {
+      advance(FLASH_SHOW_MS)
+      advance(FLASH_GAP_MS)
+    }
+    expect([flashed(), rods()]).toEqual(['19', '161'])
+    advance(FLASH_SHOW_MS)
+    expect([flashed(), rods(), addLast()]).toEqual([null, '161', ADD_LAST])
+    expect(beadsFree()).toBe(true)
+    expect(disabled('flash-replay')).toBe(false)
+  })
+
+  // The owner chose a replay to cost time only: the answer's clock keeps
+  // running from the first flash's end, and the answer is not "with help".
+  it('keeps the answer’s clock from the first flash’s end through a replay', () => {
+    const { onSubmit } = renderFlash()
+    playThrough()
+    const ended = jest.now()
+    fireEvent.press(screen.getByTestId('flash-replay'))
+    playThrough()
+    setBeads(screen.getByTestId, 180, 3)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ correct: true, assisted: false, flashEndedAt: ended }),
+    )
+  })
+
+  it('keeps the answer’s clock from the first flash’s end when 手順を見る ends a replay', () => {
+    const { onSubmit } = renderFlash()
+    playThrough()
+    const ended = jest.now()
+    fireEvent.press(screen.getByTestId('flash-replay'))
+    advance(FLASH_LEAD_MS)
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(flashed()).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    setBeads(screen.getByTestId, 180, 3)
+    advance(500)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ assisted: true, flashEndedAt: ended }))
+  })
+
+  // Before answering only (the owner, 2026-10-08): a miss's review lists the
+  // five numbers in its steps, and the steps' panel takes the button's place.
+  it('offers no もう一度見る once answered, nor with the steps open', () => {
+    renderFlash()
+    playThrough()
+    fireEvent.press(screen.getByTestId('steps-open'))
+    expect(screen.queryByTestId('flash-replay')).toBeNull()
+    fireEvent.press(screen.getByTestId('steps-close'))
+    expect(screen.getByTestId('flash-replay')).toBeTruthy()
+    setBeads(screen.getByTestId, 170, 3)
+    advance(500)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('flash-replay')).toBeNull()
+  })
+
+  it('offers no もう一度見る once answered right', () => {
+    renderFlash()
+    playThrough()
+    setBeads(screen.getByTestId, 180, 3)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('flash-replay')).toBeNull()
   })
 
   // Review focus: a card laid underneath has not flashed yet.

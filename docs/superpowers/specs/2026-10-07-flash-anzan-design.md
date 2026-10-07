@@ -27,7 +27,11 @@ Decisions made with the owner:
 4. The fifth number flashes alone for 0.7 s and disappears. The beads stay on the total of the first four.
 5. Only now can the learner touch the beads: they add the last number on the soroban and press こたえる. The answer is checked against the total of all five.
 
-While the numbers play, the beads take no taps and こたえる and もどす are off. 手順を見る stays offered: opening it ends the flash at once (the steps reveal every number), and as everywhere an answer after it is "with help". The numbers cannot be replayed, as in real フラッシュ暗算.
+While the numbers play, the beads take no taps and こたえる and もどす are off. 手順を見る stays offered: opening it ends the flash at once (the steps reveal every number), and as everywhere an answer after it is "with help". ~~The numbers cannot be replayed, as in real フラッシュ暗算.~~ Changed 2026-10-08 (the owner: "user should be able to retry the フラッシュ暗算 on the question"):
+- 「もう一度見る」 / "Watch again" sits beside 手順を見る from the first play, and is off until the flash is over.
+- Tapping it plays the same five numbers again from the lead, at the same pace. The beads follow the running total and take no taps, and こたえる and もどす are off. Afterwards the learner's beads are back on the first four's total.
+- It can be pressed any number of times before the answer is in. It isn't offered after a 〇 or ✕, nor with the steps open.
+- **Cost:** a replay costs time only. The answer clock keeps running from the first flash's end (§4), so points drop, but the answer is not "with help" and still moves the level.
 
 **After answering.** As for any problem: a right answer is stamped 〇 and the run moves on; a miss shows ✕ and its review. The review's steps (手順を見る) show the five numbers as a column, as 見取算's do, and how the total builds number by number. 戻る back to a フラッシュ暗算 problem shows it fresh, and it plays again from the start.
 
@@ -69,4 +73,4 @@ Both catalogues: the kind's name (ja フラッシュ暗算, en Flash) wherever o
 
 ## 7. Out of scope
 
-Other lengths (3口, 10口), faster or level-dependent speeds, a replay button, mixed + and −, an exam mode, a lesson.
+Other lengths (3口, 10口), faster or level-dependent speeds, mixed + and −, an exam mode, a lesson.

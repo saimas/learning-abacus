@@ -145,7 +145,9 @@ export function QuestionView({
   // miss, こたえを見る, or とじる), for NEXT_GUARD_MS.
   const guardFrom = useRef<number | null>(null)
   // Spec (flash) §4: when the flash ended, run to its end or ended by
-  // 手順を見る, which the answer is timed from (Submission).
+  // 手順を見る, which the answer is timed from (Submission). Its first end:
+  // a replay (もう一度見る) costs the learner its time, not a fresh clock
+  // (the owner, 2026-10-08).
   const [flashEndedAt, setFlashEndedAt] = useState<number | null>(null)
   // Spec (flash) §2, §4: the flash, until it runs out or 手順を見る ends
   // it. VoiceOver hears each number as it appears, then is asked for the
@@ -164,7 +166,8 @@ export function QuestionView({
       else AccessibilityInfo.announceForAccessibility(String(term))
     },
     onEnd: () => {
-      setFlashEndedAt(now())
+      const t = now()
+      setFlashEndedAt((ended) => ended ?? t)
       AccessibilityInfo.announceForAccessibilityWithOptions(strings.flashAnswer, { queue: true })
     },
   })
@@ -254,12 +257,22 @@ export function QuestionView({
     // Spec (flash) §4: 手順を見る ends a flash at once: the steps show every
     // number, and the question is answered from here on.
     if (playing) {
-      setFlashEndedAt(now())
+      const t = now()
+      setFlashEndedAt((ended) => ended ?? t)
       flashPlay.stop()
     }
     assisted.current = true
     stepper.restart()
     setStepsOpen(true)
+  }
+
+  // The owner (2026-10-08): "user should be able to retry the フラッシュ暗算
+  // on the question". The same five numbers again, at the same pace, the
+  // beads following the running total as the first time; the learner's own
+  // beads are put back, and come back on the first four's total after.
+  function replayFlash() {
+    setBeads(null)
+    flashPlay.replay()
   }
 
   // Back to the question as the learner left it: the panel never touched
@@ -291,13 +304,14 @@ export function QuestionView({
   }
 
   // Offered until the question is answered, and hidden while the panel it
-  // opens is up. It stands where the step lines appear once opened, below
-  // the soroban. The owner
+  // opens is up, with a flash's もう一度見る beside it. It stands where the
+  // step lines appear once opened, below the soroban. The owner
   // (2026-09-24): it sat under the prompt while the steps showed at the
   // bottom of the screen, and should be where they are, to keep it
   // consistent.
-  const stepsOpenButton =
-    review === null && !stepsOpen && !answeredRight ? (
+  const offered = review === null && !stepsOpen && !answeredRight
+  const stepsOpenButton = offered ? (
+    <View testID="step-offers" style={styles.offers}>
       <Pressable
         testID="steps-open"
         accessibilityRole="button"
@@ -309,7 +323,26 @@ export function QuestionView({
           {strings.stepsOpen}
         </Text>
       </Pressable>
-    ) : null
+      {/* A フラッシュ暗算 problem's flash, again (replayFlash). There from
+          the first play, off until it is over, so 手順を見る never moves
+          under a finger reaching for it as the flash ends. */}
+      {flash === undefined ? null : (
+        <Pressable
+          testID="flash-replay"
+          accessibilityRole="button"
+          accessibilityLabel={strings.flashReplay}
+          accessibilityState={{ disabled: playing }}
+          disabled={playing}
+          onPress={replayFlash}
+          style={({ pressed }) => [styles.stepsOpen, pressed && styles.pressed, playing && styles.offerOff]}
+        >
+          <Text maxFontSizeMultiplier={1.3} style={styles.stepsOpenLabel}>
+            {strings.flashReplay}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  ) : null
   // The move just played: state k is the soroban after k moves, so after
   // stepping to k the highlighted move is k − 1. At the start, or when not
   // stepping, nothing is highlighted.
@@ -405,8 +438,9 @@ export function QuestionView({
         panelOpen,
         flashShown: flashPlay.frame?.shown ?? null,
         // Ended by its last number or by 手順を見る, and over once a 〇 or ✕
-        // is in. Before the card is uncovered no flash has ended.
-        flashAnswering: flashEndedAt !== null && !answered,
+        // is in. Before the card is uncovered no flash has ended, and while
+        // もう一度見る plays it again it is not over.
+        flashAnswering: flashEndedAt !== null && !answered && !playing,
       })
     )
 
@@ -610,6 +644,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.key,
   },
   stepsOpenLabel: { fontSize: fontSizes.small, fontWeight: '600', color: colors.accent },
+  // 手順を見る alone, or beside a flash's もう一度見る, centred. Wraps rather
+  // than overflow at the largest text sizes on a narrow phone; the space it
+  // sits in scrolls (bottomRegion).
+  offers: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: space.sm },
+  // もう一度見る while the flash plays, as a disabled Button is.
+  offerOff: { opacity: 0.45 },
   pressed: { opacity: 0.6 },
   // Centred in controlsSlot. Its marginTop is the controls' own, so it sits
   // level with ◀ ▶ in the row below the gap they share.
