@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { colors } from '@/ui/theme'
-import { FLASH_FONT_SIZE, FLASH_SHORT_FONT_SIZE, FlashPrompt } from './FlashPrompt'
+import { ADD_LAST_TEXT_CAP, FLASH_FONT_SIZE, FLASH_SHORT_FONT_SIZE, FlashPrompt } from './FlashPrompt'
 
 const TERMS = [47, 30, 23, 61, 19]
 const LABEL = 'フラッシュ暗算、5口'
@@ -103,6 +103,14 @@ describe('FlashPrompt', () => {
     // VoiceOver still reads the box as the problem's name; 「こたえてください」
     // is announced (QuestionView).
     expect(box.props.accessibilityLabel).toBe(LABEL)
+  })
+
+  // On a 375 pt phone at the largest text size it ran to three lines, with
+  // 「て、」 alone on the second: it grows only a little with the text size.
+  it('caps how far the line grows with the text size', () => {
+    render(prompt(null, false, undefined, true))
+    expect(screen.getByTestId('flash-add-last').props.maxFontSizeMultiplier).toBe(ADD_LAST_TEXT_CAP)
+    expect(ADD_LAST_TEXT_CAP).toBe(1.1)
   })
 
   // Discriminating: the line is there, then gone once it is not answering.
