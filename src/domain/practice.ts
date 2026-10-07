@@ -1,5 +1,5 @@
 import { MAX_FADE, nextFadeLevel, type FadeLevel } from './fade'
-import type { PracticeId } from './problem'
+import { DIGITS, practiceId, type Operation, type PracticeId } from './problem'
 
 // Spec (multi-digit ＋ −) §5: one record per practice kind. Problems are
 // generated fresh every time, so what gets better is "2-digit addition", not
@@ -92,6 +92,25 @@ export function practiceStage(record: PracticeRecord | undefined): PracticeStage
   if (record.fade >= MAX_FADE) return 'mental'
   if (record.fade >= 3) return 'fading'
   return 'beads'
+}
+
+// Spec (home menu) §2: how far the learner has got with an operation, for
+// its button on Home. `level` is the highest level among its three sizes,
+// undefined while none has been played (「まだ」); `stage` is the most
+// advanced stage among them, the button's tint. A stage only rises with the
+// level (practiceStage), so both come from the size at the highest level.
+export type OperationSummary = { level: FadeLevel | undefined; stage: PracticeStage }
+
+export function operationSummary(
+  practices: Partial<Record<PracticeId, PracticeRecord>>,
+  op: Operation,
+): OperationSummary {
+  let top: PracticeRecord | undefined
+  for (const digits of DIGITS) {
+    const record = practices[practiceId({ op, digits })]
+    if (record !== undefined && (top === undefined || record.fade > top.fade)) top = record
+  }
+  return { level: top?.fade, stage: practiceStage(top) }
 }
 
 // Spec (runs) §2: a run starts its kind's streaks afresh. Every run ends on
