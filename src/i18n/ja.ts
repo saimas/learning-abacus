@@ -466,8 +466,10 @@ export const ja = {
   flashAnswer: 'こたえてください',
   // Spec (home menu) §4: in the prompt's place once the flash is over, until
   // the answer is in. The owner (2026-10-07) took こたえる and もどす for
-  // broken: nothing on screen said the fifth number was theirs to add.
-  flashAddLast: '5つめの数を珠でたして、こたえましょう',
+  // broken: nothing on screen said the fifth number was theirs to add. It
+  // breaks after 、: left to wrap, an iPhone 17 Pro split it inside ましょう
+  // and put ょう alone on the second line.
+  flashAddLast: '5つめの数を珠でたして、\nこたえましょう',
   columnLine,
   sectionHeading,
   productLine,

@@ -96,7 +96,7 @@ describe('FlashPrompt', () => {
   // line says what is left to do, over the column's held height.
   it('says to add the fifth number on the beads while it waits for the answer', () => {
     render(prompt(null, false, undefined, true))
-    expect(screen.getByTestId('flash-add-last').props.children).toBe('5つめの数を珠でたして、こたえましょう')
+    expect(screen.getByTestId('flash-add-last').props.children).toBe('5つめの数を珠でたして、\nこたえましょう')
     expect(screen.queryByTestId('flash-number')).toBeNull()
     const box = screen.getByTestId('prompt')
     expect(within(box).getByTestId('flash-column-space', hidden)).toBeTruthy()

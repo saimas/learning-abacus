@@ -53,7 +53,7 @@ const beadsFree = () => screen.getByTestId('rod-2').props.accessibilityRole === 
 const disabled = (testID: string) => screen.getByTestId(testID).props.accessibilityState?.disabled === true
 const HINT = '珠をタップして動かします'
 // Spec (home menu) §4: the line in the prompt's place once the flash is over.
-const ADD_LAST = '5つめの数を珠でたして、こたえましょう'
+const ADD_LAST = '5つめの数を珠でたして、\nこたえましょう'
 const addLast = () => screen.queryByTestId('flash-add-last')?.props.children ?? null
 
 type Options = { fade?: FadeLevel; revealed?: boolean }

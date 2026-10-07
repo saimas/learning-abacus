@@ -588,7 +588,7 @@ describe('フラッシュ暗算 strings', () => {
   // Spec (home menu) §4: what the prompt's place says once the flash is over.
   it('says what is left once the flash is over', () => {
     expect([ja.flashAddLast, en.flashAddLast]).toEqual([
-      '5つめの数を珠でたして、こたえましょう',
+      '5つめの数を珠でたして、\nこたえましょう',
       'Add the fifth number on the beads, then answer',
     ])
   })
