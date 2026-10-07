@@ -311,7 +311,7 @@ export function QuestionView({
   // consistent.
   const offered = review === null && !stepsOpen && !answeredRight
   const stepsOpenButton = offered ? (
-    <View style={styles.offers}>
+    <View testID="step-offers" style={styles.offers}>
       <Pressable
         testID="steps-open"
         accessibilityRole="button"

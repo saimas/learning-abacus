@@ -229,7 +229,8 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     }
   })
 
-  // Spec (flash) §2: the numbers are not seen again until the steps show them.
+  // Spec (flash) §2: the numbers are not seen again until the steps show them,
+  // unless the flash is played again (もう一度見る).
   it('shows none of the numbers once the flash is over, holding the column’s height', () => {
     renderFlash()
     playThrough()
@@ -349,6 +350,42 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     expect(flashed()).toBeNull()
     expect(disabled('flash-replay')).toBe(false)
     expect(screen.getByTestId('flash-replay')).toHaveTextContent('もう一度見る')
+    // In one row with 手順を見る.
+    const offers = screen.getByTestId('step-offers')
+    expect(within(offers).getByTestId('steps-open')).toBeTruthy()
+    expect(within(offers).getByTestId('flash-replay')).toBeTruthy()
+  })
+
+  // As the first play: the first number queued, 2 to 5 interrupting, then
+  // 「こたえてください」 queued again; nothing more once 手順を見る cuts a
+  // replay short.
+  it('says each number again as a replay plays, and nothing once 手順を見る ends it', () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+    const queued = jest.spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
+    try {
+      renderFlash()
+      playThrough()
+      announce.mockClear()
+      queued.mockClear()
+      fireEvent.press(screen.getByTestId('flash-replay'))
+      playThrough()
+      expect(announce.mock.calls.map(([said]) => said)).toEqual(['30', '23', '61', '19'])
+      expect(queued.mock.calls).toEqual([
+        ['47', { queue: true }],
+        ['こたえてください', { queue: true }],
+      ])
+      announce.mockClear()
+      queued.mockClear()
+      fireEvent.press(screen.getByTestId('flash-replay'))
+      advance(FLASH_LEAD_MS)
+      fireEvent.press(screen.getByTestId('steps-open'))
+      advance(10_000)
+      expect(announce).not.toHaveBeenCalled()
+      expect(queued.mock.calls).toEqual([['47', { queue: true }]])
+    } finally {
+      queued.mockRestore()
+      announce.mockRestore()
+    }
   })
 
   // A replay is the first play again: the beads follow the running total,
@@ -419,6 +456,14 @@ describe('ProblemQuestion with a フラッシュ暗算 problem', () => {
     expect(screen.getByTestId('flash-replay')).toBeTruthy()
     setBeads(screen.getByTestId, 170, 3)
     advance(500)
+    fireEvent.press(screen.getByTestId('submit'))
+    expect(screen.queryByTestId('flash-replay')).toBeNull()
+  })
+
+  it('offers no もう一度見る once answered right', () => {
+    renderFlash()
+    playThrough()
+    setBeads(screen.getByTestId, 180, 3)
     fireEvent.press(screen.getByTestId('submit'))
     expect(screen.queryByTestId('flash-replay')).toBeNull()
   })

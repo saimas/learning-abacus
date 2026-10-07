@@ -151,6 +151,21 @@ describe('useFlash', () => {
     expect(onEnd).toHaveBeenCalledTimes(2)
   })
 
+  // 手順を見る ends the first play, とじる, then もう一度見る.
+  it('plays again from the start on replay after being stopped', () => {
+    const { result, onShow, onEnd } = play()
+    advance(FLASH_LEAD_MS + 100)
+    act(() => result.current.stop())
+    act(() => result.current.replay())
+    expect(result.current.frame).toEqual({ shown: null, total: 0 })
+    flashFrames(TERMS).forEach(({ ms }) => advance(ms))
+    expect(result.current.frame).toBeNull()
+    expect(onShow.mock.calls.map(([index]) => index)).toEqual([0, 0, 1, 2, 3, 4])
+    expect(onEnd).toHaveBeenCalledTimes(1)
+    advance(10_000)
+    expect(onEnd).toHaveBeenCalledTimes(1)
+  })
+
   it('is over from the start for a question with no flash', () => {
     const { result } = renderHook(() => useFlash({ terms: undefined, revealed: true, onShow: jest.fn(), onEnd: jest.fn() }))
     expect(result.current.frame).toBeNull()
