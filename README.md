@@ -6,9 +6,10 @@ fixed rule set and ships inside the app bundle, so the app is fully functional o
 network calls at runtime. Progress is stored on-device only.
 
 The practice is **けたの練習**: ＋ − × ÷ with 1-, 2- or 3-digit numbers, 見取算 (a column of five)
-and フラッシュ暗算 (five numbers flashed one at a time), in endless runs, started from the grid on
-Home. The learner works each problem on the soroban first; the beads fade as the answers keep
-coming right, until they cannot be seen at all and the fingers still move them.
+and フラッシュ暗算 (five numbers flashed one at a time), in endless runs, started from each
+operation's page off Home's menu. The learner works each problem on the soroban first; the beads
+fade as the answers keep coming right, until they cannot be seen at all and the fingers still move
+them.
 
 ## The 180 single-rod moves
 
@@ -40,13 +41,16 @@ learner works from the soroban in their head.
 At every level the learner answers by tapping beads and pressing こたえる, with no time limit
 (speed earns a bonus). As the beads fade they still move where they would be, invisible or not, so
 the fingers keep working the soroban (the owner, 2026-09-30); the number they read shows once the
-answer is in. A run's bar shows its level (レベル 3/6), and each grid cell on Home its kind's level.
+answer is in. A run's bar shows its level (レベル 3/6), each card on an operation's page its kind's
+level, and each button on Home the highest level among its operation's sizes.
 
 ## けたの練習
 
-Home's grid has a row per operation and a column per size, each cell coloured by its stage. A
-tap starts a run: problems keep coming until the third miss, then the results. Every size is open
-from the start.
+Home's 練習 menu has a button per operation (＋ − × ÷ ± フ), two to a row, each showing the
+highest level among its sizes (or まだ) and tinted by the most advanced stage among them. A button
+opens the operation's page: a card per size (1けた, 2けた, 3けた) with its stage, level and best
+run, in its stage's colour, and for ＋ − × ÷ a やりかた button. A card starts a run: problems keep
+coming until the third miss, then the results. Every size is open from the start.
 
 | | 1けた | 2けた | 3けた |
 |---|---|---|---|
@@ -70,8 +74,10 @@ from the start.
 - **フ**, フラッシュ暗算: five numbers, all added, flash one at a time in the prompt's place once
   the card is uncovered, about one a second (the first after 0.6 s, each for 0.7 s, 0.3 s apart),
   with a counter (1/5). After each of the first four the beads jump to the running total; the
-  fifth flashes alone, and the learner adds it on the beads and answers the total. Until the flash
-  ends the beads take no taps and もどす and こたえる are off; 手順を見る ends it at once and shows
+  fifth flashes alone, and the learner adds it on the beads and answers the total; once the flash
+  is over, until the answer is in, the prompt's place says so:
+  「5つめの数を珠でたして、こたえましょう」. Until the flash ends the beads take no taps and もどす
+  and こたえる are off; 手順を見る ends it at once and shows
   the five numbers as 見取算's column, and a flash problem gone back to with 戻る plays again from
   the start. The numbers cannot be replayed. As the level rises the beads that follow along fade
   like any others, until the whole running total is held in the head. Its points are timed from
@@ -90,8 +96,8 @@ from the start.
   Reduce Motion on, the answered card fades away in place). A miss's つぎへ moves on the same way,
   and the last card goes over the results.
 - **A wrong answer** gets a big ✕ and the same step panel, with the correct answer.
-- **やりかた**: a tutorial of its own, from Home's four tiles (＋ − × ÷), each opening that
-  operation's lessons by 桁数. 1けた ＋ − are taught move by move (そのまま, 五の合成, 十の繰上,
+- **やりかた**: a tutorial of its own, from the やりかた button on the ＋ − × ÷ pages, each opening
+  that operation's lessons by 桁数. 1けた ＋ − are taught move by move (そのまま, 五の合成, 十の繰上,
   十の繰上と五の分解, and the − ones); every other size has one worked example. A lesson walks its
   example on the soroban step by step, then やってみよう asks one like it (recorded nowhere).
   The first run of a × or ÷ kind never played opens its lesson first, ending in 練習をはじめる;
@@ -114,8 +120,10 @@ afresh and counts like any other.
 ## Screens
 
 - **Tutorial** — on first launch, reading the soroban: what number is on each rod.
-- **Home** — the days-practised seal, the rank and its bar, the けたの練習 grid, and a row of four
-  やりかた tiles (＋ − × ÷).
+- **Home** — the days-practised seal, the rank and its bar, and the 練習 menu: a button per
+  operation, on one screen.
+- **Operation page** — an operation's three sizes as cards that start runs, and やりかた for
+  ＋ − × ÷.
 - **Round** — full-screen practice: a run, its bar (lives, level, score, combo) and its results. ✕
   asks before leaving and keeps what was earned.
 - **Progress** — days practised and the けたの練習 table, each cell coloured by its stage.
