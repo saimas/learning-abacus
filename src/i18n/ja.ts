@@ -356,6 +356,15 @@ function rankToNext(points: number): string {
   return `次まで あと${formatPoints(points)}点`
 }
 
+// Spec (見取算) §4: a column of numbers read as one sentence, signs and all,
+// since the column writes no plus signs. A フラッシュ暗算 problem's column
+// reads the same once its steps show it (spec (flash) §2).
+function columnReading(terms: readonly number[]): string {
+  return `${terms
+    .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? 'ひく' : 'たす'}${Math.abs(term)}`))
+    .join('、')}。`
+}
+
 export const ja = {
   loading: '読み込み中…',
   loadingProgress: '進捗を読み込み中…',
@@ -435,14 +444,17 @@ export const ja = {
       case 'div':
         return `${problem.a}を${problem.b}でわる。`
       case 'mitori':
-        return `${problem.terms
-          .map((term, index) => (index === 0 ? `${term}` : `${term < 0 ? 'ひく' : 'たす'}${Math.abs(term)}`))
-          .join('、')}。`
+        return columnReading(problem.terms)
       // Spec (flash) §5: its count, never its numbers: they flash.
       case 'flash':
         return `フラッシュ暗算、${problem.terms.length}口`
     }
   },
+  columnReading,
+  // Spec (flash) §2, §5: the counter with a flashed number, and what
+  // VoiceOver hears once the flash is over and the beads are the learner's.
+  flashCounter: (index: number, total: number) => `${index}/${total}`,
+  flashAnswer: 'こたえてください',
   columnLine,
   sectionHeading,
   productLine,
