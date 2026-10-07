@@ -1,17 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { practiceStage, type PracticeStage } from '@/domain/practice'
+import { practiceStage } from '@/domain/practice'
 import { DIGITS, OPERATION_SYMBOL, OPERATIONS, practiceId, type PracticeKind } from '@/domain/problem'
 import type { Progress } from '@/domain/progress'
 import { useStrings } from '@/i18n'
-import { cellColors, colors, fonts, fontSizes, space } from '@/ui/theme'
-
-// The atom map's four colours, in the same order of progress.
-const STAGE_COLOR: Record<PracticeStage, string> = {
-  unseen: cellColors.unseen,
-  beads: cellColors.learning,
-  fading: cellColors.reflex,
-  mental: cellColors.mental,
-}
+import { colors, fonts, fontSizes, space } from '@/ui/theme'
+import { STAGE_COLOR, stageInk } from './stageColor'
 
 // Spec (multi-digit ＋ −) §6: a row per operation, a column per size. With
 // onChoose, Home uses this table itself as the practice grid — each cell is
@@ -43,17 +36,16 @@ export function PracticeTable({
             const kind: PracticeKind = { op, digits }
             const record = progress.practices[practiceId(kind)]
             const stage = practiceStage(record)
-            // Only the mental stage's dark background needs light text for contrast.
-            const onDark = stage === 'mental'
+            const ink = { color: stageInk(stage) }
             const testID = `practice-cell-${practiceId(kind)}`
             const label = strings.practiceCellLabel(kind, stage, record?.fade)
             // The owner (2026-09-30): a practised kind shows its level under
             // its word, drawn like the word, so it reads on every colour.
             const text = (
               <>
-                <Text style={[styles.cellText, onDark && styles.cellTextDark]}>{strings.practiceStageName(stage)}</Text>
+                <Text style={[styles.cellText, ink]}>{strings.practiceStageName(stage)}</Text>
                 {record === undefined ? null : (
-                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellText, onDark && styles.cellTextDark]}>
+                  <Text testID={`practice-level-${practiceId(kind)}`} style={[styles.cellText, ink]}>
                     {strings.levelName(record.fade)}
                   </Text>
                 )}
@@ -112,5 +104,4 @@ const styles = StyleSheet.create({
   button: { minHeight: 48 },
   pressed: { opacity: 0.85 },
   cellText: { fontSize: fontSizes.caption, color: colors.ink },
-  cellTextDark: { color: colors.paper },
 })

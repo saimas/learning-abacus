@@ -105,6 +105,12 @@ function roundName(kind: PracticeKind): string {
   return `${kind.digits}けたの${OP_NAME[kind.op]}`
 }
 
+// A grid cell as VoiceOver reads it, with its level once practised. An
+// operation's card reads the same, then its best (spec (home menu) §3).
+function practiceCellLabel(kind: PracticeKind, stage: PracticeStage, level?: FadeLevel): string {
+  return `${roundName(kind)}、${PRACTICE_STAGE[stage]}${level === undefined ? '' : `、レベル ${level}`}`
+}
+
 // Declared as a function rather than inline on the object: a member
 // referencing `ja` from inside the initialiser of `ja` makes `typeof ja`
 // circular, which TypeScript rejects.
@@ -467,9 +473,17 @@ export const ja = {
   roundSection: 'けたの練習',
   digitsName: (digits: Digits) => `${digits}けた`,
   practiceStageName: (stage: PracticeStage) => PRACTICE_STAGE[stage],
-  // A grid cell as VoiceOver reads it, with its level once practised.
-  practiceCellLabel: (kind: PracticeKind, stage: PracticeStage, level?: FadeLevel) =>
-    `${roundName(kind)}、${PRACTICE_STAGE[stage]}${level === undefined ? '' : `、レベル ${level}`}`,
+  practiceCellLabel,
+  // Spec (home menu) §3: an operation's page: its title, a size's card as
+  // VoiceOver reads it, and the button to its lessons (＋ − × ÷ only).
+  operationName: (op: Operation) => OP_NAME[op],
+  practiceCardLabel: (
+    kind: PracticeKind,
+    stage: PracticeStage,
+    level: FadeLevel | undefined,
+    best: number | undefined,
+  ) => `${practiceCellLabel(kind, stage, level)}${best === undefined ? '' : `、ベスト ${formatPoints(best)}点`}`,
+  howToButton: 'やりかた',
   // The owner (2026-09-30): the level a kind is at, on the fade ladder's own
   // 0–6, in the grid and, out of the top one, during a round.
   levelName: (level: FadeLevel) => `レベル ${level}`,

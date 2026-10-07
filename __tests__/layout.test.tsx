@@ -56,4 +56,12 @@ describe('RootLayout', () => {
     expect(Object.keys(mockScreenOptions)).not.toContain('multiply-intro')
     expect(Object.keys(mockScreenOptions)).not.toContain('divide-intro')
   })
+
+  // Spec (home menu) §3: an operation's page leads nowhere by itself, so an
+  // edge swipe back to Home is fine there, as on the やりかた pages.
+  it('lets a swipe leave an operation’s page', async () => {
+    render(<RootLayout />)
+    await act(async () => {})
+    expect(swipeBack('practice/[op]', { op: 'add' })).toBe(true)
+  })
 })

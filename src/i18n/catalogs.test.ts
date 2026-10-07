@@ -604,3 +604,25 @@ describe('フラッシュ暗算 strings', () => {
     expect(en.columnReading([47, 85, -23])).toBe('47 + 85 − 23')
   })
 })
+
+// Spec (home menu) §3: an operation's page.
+describe('an operation’s page', () => {
+  it('is titled with the operation’s name, and offers its lessons', () => {
+    expect([ja.operationName('add'), ja.operationName('flash')]).toEqual(['たし算', 'フラッシュ暗算'])
+    expect([en.operationName('add'), en.operationName('mitori')]).toEqual(['Addition', 'Columns'])
+    expect([ja.howToButton, en.howToButton]).toEqual(['やりかた', 'How it works'])
+  })
+
+  it('reads a card as the grid cell does, plus its best', () => {
+    expect(ja.practiceCardLabel({ op: 'add', digits: 1 }, 'beads', 2, 1_240)).toBe(
+      '1けたのたし算、珠で、レベル 2、ベスト 1,240点',
+    )
+    expect(ja.practiceCardLabel({ op: 'add', digits: 2 }, 'unseen', undefined, undefined)).toBe('2けたのたし算、まだ')
+    expect(en.practiceCardLabel({ op: 'add', digits: 1 }, 'beads', 2, 1_240)).toBe(
+      '1-digit addition, beads, level 2, best 1,240 points',
+    )
+    expect(en.practiceCardLabel({ op: 'mitori', digits: 3 }, 'mental', 6, undefined)).toBe(
+      '3-digit columns, mental, level 6',
+    )
+  })
+})

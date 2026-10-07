@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
 import { newPracticeRecord } from '@/domain/practice'
 import { emptyProgress } from '@/domain/progress'
-import { colors } from '@/ui/theme'
+import { cellColors, colors } from '@/ui/theme'
 import { PracticeTable } from './PracticeTable'
 
 // Extract text color from a cell's child Text element
@@ -96,6 +96,29 @@ describe('PracticeTable', () => {
 
     expect(textColorOf('practice-cell-add:2')).toBe(colors.ink)
     expect(textColorOf('practice-cell-sub:2')).toBe(colors.paper)
+  })
+
+  // Review focus: the stage colours moved to stageColor.ts, shared with Home
+  // and the operation pages (spec (home menu) §2–3); the progress screen's
+  // table must look as before (§5).
+  it('colours each cell by its stage', () => {
+    const progress = {
+      ...emptyProgress(),
+      practices: {
+        'add:1': { ...newPracticeRecord(0), fade: 1 as const },
+        'add:2': { ...newPracticeRecord(0), fade: 3 as const },
+        'add:3': { ...newPracticeRecord(0), fade: 6 as const },
+      },
+    }
+    render(<PracticeTable progress={progress} />)
+    const background = (id: string) =>
+      StyleSheet.flatten(screen.getByTestId(`practice-cell-${id}`).props.style).backgroundColor
+    expect(['sub:1', 'add:1', 'add:2', 'add:3'].map(background)).toEqual([
+      cellColors.unseen,
+      cellColors.learning,
+      cellColors.reflex,
+      cellColors.mental,
+    ])
   })
 })
 

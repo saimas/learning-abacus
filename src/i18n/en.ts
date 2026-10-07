@@ -1,6 +1,6 @@
 import type { Atom, AtomClass } from '@/domain/atoms'
 import { describeSteps } from '@/domain/explain'
-import { MAX_FADE } from '@/domain/fade'
+import { MAX_FADE, type FadeLevel } from '@/domain/fade'
 import {
   answerOf,
   digitAt,
@@ -63,6 +63,11 @@ const PRACTICE_STAGE: Record<PracticeStage, string> = {
 
 function roundName(kind: PracticeKind): string {
   return `${kind.digits}-digit ${OP_NAME[kind.op].toLowerCase()}`
+}
+
+// As ja's: a grid cell as VoiceOver reads it, and an operation's card after it.
+function practiceCellLabel(kind: PracticeKind, stage: PracticeStage, level?: FadeLevel): string {
+  return `${roundName(kind)}, ${PRACTICE_STAGE[stage]}${level === undefined ? '' : `, level ${level}`}`
 }
 
 // Spec (howto tutorial) §2–3: the lessons' names and words. English names
@@ -442,8 +447,11 @@ export const en: Strings = {
   roundSection: 'Bigger numbers',
   digitsName: (digits) => `${digits} ${digits === 1 ? 'digit' : 'digits'}`,
   practiceStageName: (stage) => PRACTICE_STAGE[stage],
-  practiceCellLabel: (kind, stage, level) =>
-    `${roundName(kind)}, ${PRACTICE_STAGE[stage]}${level === undefined ? '' : `, level ${level}`}`,
+  practiceCellLabel,
+  operationName: (op) => OP_NAME[op],
+  practiceCardLabel: (kind, stage, level, best) =>
+    `${practiceCellLabel(kind, stage, level)}${best === undefined ? '' : `, best ${formatPoints(best)} points`}`,
+  howToButton: 'How it works',
   levelName: (level) => `Level ${level}`,
   roundLevel: (level) => `Level ${level}/${MAX_FADE}`,
   rankName: (rank) => `Practice ${rankGrade(rank)}`,
