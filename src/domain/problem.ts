@@ -22,7 +22,8 @@ export type FlashProblem = { op: 'flash'; digits: Digits; terms: number[] }
 export type TermsProblem = MitoriProblem | FlashProblem
 export type Problem = PairProblem | TermsProblem
 
-export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div', 'mitori']
+// Spec (flash) §2: フラッシュ暗算 is the sixth row, under 見取算.
+export const OPERATIONS: readonly Operation[] = ['add', 'sub', 'mul', 'div', 'mitori', 'flash']
 export const DIGITS: readonly Digits[] = [1, 2, 3]
 export const PRACTICE_KINDS: readonly PracticeKind[] = OPERATIONS.flatMap((op) =>
   DIGITS.map((digits) => ({ op, digits })),

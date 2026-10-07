@@ -108,6 +108,21 @@ describe('practices', () => {
     )
     expect((await loadProgress()).practices).toEqual({ 'mitori:3': good })
   })
+
+  // Spec (flash) §2: stored ids accept フラッシュ暗算's three sizes.
+  it('keeps フラッシュ暗算 records and best runs, and drops a size that does not exist', async () => {
+    const good = { fade: 3, consecutiveCorrect: 0, consecutiveWrong: 1, lastPractisedAt: 7 }
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({
+        ...emptyProgress(),
+        practices: { 'flash:1': good, 'flash:4': good },
+        bestRuns: { 'flash:3': 420, 'flash:0': 10 },
+      }),
+    )
+    const loaded = await loadProgress()
+    expect(loaded.practices).toEqual({ 'flash:1': good })
+    expect(loaded.bestRuns).toEqual({ 'flash:3': 420 })
+  })
 })
 
 // Spec (howto tutorial) §4: the lessons done, added without a schema bump.

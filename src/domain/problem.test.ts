@@ -84,7 +84,7 @@ function expectReplaysTo(p: Problem) {
 }
 
 describe('practice ids', () => {
-  it('names the fifteen kinds', () => {
+  it('names the eighteen kinds', () => {
     expect(PRACTICE_KINDS.map(practiceId)).toEqual([
       'add:1',
       'add:2',
@@ -101,6 +101,9 @@ describe('practice ids', () => {
       'mitori:1',
       'mitori:2',
       'mitori:3',
+      'flash:1',
+      'flash:2',
+      'flash:3',
     ])
   })
 
@@ -115,6 +118,8 @@ describe('practice ids', () => {
     expect(isPracticeId('pow:1')).toBe(false)
     expect(parsePracticeId('mitori:2')).toEqual({ op: 'mitori', digits: 2 })
     expect(isPracticeId('mitori:4')).toBe(false)
+    expect(parsePracticeId('flash:2')).toEqual({ op: 'flash', digits: 2 })
+    expect(isPracticeId('flash:4')).toBe(false)
   })
 })
 

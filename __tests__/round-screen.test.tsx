@@ -6,6 +6,7 @@ import Round from '../app/round'
 import { ProgressProvider } from '@/ui/ProgressProvider'
 import { ROLL_HOLD_MS, ROLL_SWIPE_MS } from '@/ui/round/RunRunner'
 import { setBeads } from '@/ui/session/testing'
+import { FLASH_LEAD_MS } from '@/ui/session/useFlash'
 
 jest.mock('@/storage/progressStore')
 
@@ -176,6 +177,18 @@ describe('Round screen', () => {
     const { getByTestId } = renderRound()
     await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
     expect(mockRedirect).not.toHaveBeenCalled()
+  })
+
+  // Spec (flash) §2: no lesson opens before フラッシュ暗算; its run starts
+  // with the flash.
+  it('plays a フラッシュ暗算 run with no lesson first', async () => {
+    mockParams.current = { kind: 'flash:2' }
+    const { getByTestId } = renderRound()
+    await waitFor(() => expect(getByTestId('prompt')).toBeTruthy())
+    expect(getByTestId('prompt').props.accessibilityLabel).toBe('フラッシュ暗算、5口')
+    expect(mockRedirect).not.toHaveBeenCalled()
+    act(() => jest.advanceTimersByTime(FLASH_LEAD_MS))
+    expect(getByTestId('flash-counter').props.children).toBe('1/5')
   })
 
   it('starts a kind with no record in bead mode', async () => {
