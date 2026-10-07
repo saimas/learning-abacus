@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   primary: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accentFill,
     borderBottomWidth: 2,
     borderBottomColor: colors.accentShadow,
   },

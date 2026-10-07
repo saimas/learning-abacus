@@ -45,9 +45,9 @@ describe('Button', () => {
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 
-  it('fills a primary button with vermilion and outlines an outline button', () => {
+  it('fills a primary button with the pastel accent and outlines an outline button', () => {
     const primary = render(<Button testID="p" label="a" onPress={jest.fn()} />)
-    expect(styleOf(primary.getByTestId('p')).backgroundColor).toBe(colors.accent)
+    expect(styleOf(primary.getByTestId('p')).backgroundColor).toBe(colors.accentFill)
 
     const outline = render(<Button testID="o" label="a" variant="outline" onPress={jest.fn()} />)
     expect(styleOf(outline.getByTestId('o')).backgroundColor).toBeUndefined()
@@ -73,7 +73,7 @@ describe('Button', () => {
 })
 
 describe('Card', () => {
-  it('gives an accent card a vermilion left edge', () => {
+  it('gives an accent card an accent left edge', () => {
     const { getByTestId } = render(
       <Card accent testID="c">
         <Text>x</Text>
@@ -91,7 +91,7 @@ describe('Seal', () => {
 
   it('fills in when stamped', () => {
     const { getByTestId } = render(<Seal testID="s" text="済" state="stamped" />)
-    expect(styleOf(getByTestId('s')).backgroundColor).toBe(colors.accent)
+    expect(styleOf(getByTestId('s')).backgroundColor).toBe(colors.accentFill)
   })
 
   it('draws an empty seal as a dashed ring with no text', () => {

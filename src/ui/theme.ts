@@ -1,23 +1,32 @@
-// The 和紙と木 palette and type scale. Every colour on screen comes from here,
-// so a dark "lacquer" variant later is a second set of values, not an edit to
-// every component.
+// The palette and type scale. Every colour on screen comes from here, so a
+// dark variant later is a second set of values, not an edit to every
+// component. The screens are sakura pastel (the owner, 2026-10-07: "make the
+// UI color more like pastel"); the soroban keeps its walnut and lacquer.
+// Text stays dark: every text colour is at least 4.5:1 on the paper it sits
+// on.
 export const colors = {
-  paper: '#F4EEE2',
-  card: '#FBF7EF',
-  cardLine: '#E4D8C3',
-  soft: '#EAE1D0',
-  track: '#E2D8C6',
-  keyEdge: '#D6C8B0',
-  ink: '#2A2320',
-  muted: '#7A6D61',
-  accent: '#B5412C',
-  accentShadow: '#8E3322',
+  paper: '#FFF5F2',
+  card: '#FFFFFF',
+  cardLine: '#F2D9D3',
+  soft: '#FCEBE7',
+  track: '#F5E1DC',
+  keyEdge: '#EFD3CD',
+  ink: '#3A2E2E',
+  muted: '#7D6763',
+  // The deep rose, for accent text, borders and thin marks. A pastel alone
+  // is too faint to read.
+  accent: '#AE4842',
+  // The sakura pastel, behind primary buttons and the stamped seal, which
+  // carry dark onAccent text.
+  accentFill: '#F4A9A2',
+  // 2pt bottom edge under accentFill buttons.
+  accentShadow: '#E3918A',
   // Behind the step of an explanation that the learner has just stepped to.
-  accentSoft: '#F6DDD6',
+  accentSoft: '#FDE3DF',
   // A sum that comes off in the division walkthrough shows ✓ in it, as one
   // that won't shows ✗ in the accent. The app had no green.
-  ok: '#3F7D4E',
-  onAccent: '#FFF8F0',
+  ok: '#357A50',
+  onAccent: '#3A2E2E',
   frameTop: '#6E4A2F',
   frameBottom: '#4E3220',
   deck: '#EFE3CC',
@@ -28,26 +37,30 @@ export const colors = {
   beadShade: '#24130B',
   // While stepping, the beads of the operation on show are red instead of
   // wood (the owner's request, 2026-09-23), lit the same way. The latest
-  // step's beads are the deepest: the accent itself, shading to
-  // accentShadow. The operation's earlier beads are the accent mixed with
-  // paper, lighter but still dark enough to read against the deck.
+  // step's beads are the deepest, shading from beadLatest to
+  // beadLatestShade. The operation's earlier beads are that red mixed with
+  // paper, lighter but still dark enough to read against the deck. The
+  // soroban's reds are its own, the vermilion it was tuned with, so the
+  // screens' pastel accent doesn't wash them out.
   beadLatestHighlight: '#C26450',
+  beadLatest: '#B5412C',
+  beadLatestShade: '#8E3322',
   beadGroupHighlight: '#D8A090',
   beadGroup: '#C87563',
   beadGroupShade: '#BB523E',
   shadow: '#3C2314',
   // Dims Home behind the practice chooser: ink at a little over a third.
-  scrim: 'rgba(42, 35, 32, 0.38)',
+  scrim: 'rgba(58, 46, 46, 0.38)',
 } as const
 
-// Lightness only, darkening as a move is learned, so the map reads under
+// Lightness only, deepening as a move is learned, so the map reads under
 // every kind of colour blindness. Keyed like CellState in
 // src/domain/progress.ts.
 export const cellColors = {
-  unseen: '#E6DCCB',
-  learning: '#E0BE7E',
-  reflex: '#B8743F',
-  mental: '#4E3220',
+  unseen: '#F3DCD7',
+  learning: '#F5BDB5',
+  reflex: '#E0948C',
+  mental: '#9E5650',
 } as const
 
 // Hiragino Mincho ships with iOS, so nothing is bundled or loaded. Body text

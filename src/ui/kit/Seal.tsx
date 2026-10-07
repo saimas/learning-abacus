@@ -49,7 +49,7 @@ export function Seal({
           borderRadius: size / 2,
           borderWidth: large ? 4 : 2.5,
           borderStyle: state === 'empty' ? 'dashed' : 'solid',
-          backgroundColor: stamped ? colors.accent : 'transparent',
+          backgroundColor: stamped ? colors.accentFill : 'transparent',
           opacity,
           transform: [{ rotate: '-6deg' }, { scale }],
         },

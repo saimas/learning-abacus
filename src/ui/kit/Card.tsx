@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import { colors, radius, space } from '@/ui/theme'
 
-// `accent` is the correction style: a vermilion edge down the left, used
+// `accent` is the correction style: a rose edge down the left, used
 // wherever the app is telling the learner they got something wrong.
 export function Card({
   children,

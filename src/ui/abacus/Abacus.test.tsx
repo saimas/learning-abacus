@@ -179,8 +179,8 @@ describe('tinted beads', () => {
     )
     expect(stopsOf(screen.getByTestId('bead-heaven-latest'))).toEqual([
       colors.beadLatestHighlight,
-      colors.accent,
-      colors.accentShadow,
+      colors.beadLatest,
+      colors.beadLatestShade,
     ])
     expect(stopsOf(screen.getByTestId('bead-earth-group'))).toEqual([
       colors.beadGroupHighlight,

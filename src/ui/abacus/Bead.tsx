@@ -33,7 +33,7 @@ export type BeadTint = 'group' | 'latest'
 const FILLS = {
   wood: { id: 'bead', highlight: colors.beadHighlight, body: colors.bead, shade: colors.beadShade },
   group: { id: 'bead-group', highlight: colors.beadGroupHighlight, body: colors.beadGroup, shade: colors.beadGroupShade },
-  latest: { id: 'bead-latest', highlight: colors.beadLatestHighlight, body: colors.accent, shade: colors.accentShadow },
+  latest: { id: 'bead-latest', highlight: colors.beadLatestHighlight, body: colors.beadLatest, shade: colors.beadLatestShade },
 } as const
 
 // Slides rather than jumps when its place changes, unless told to jump. A

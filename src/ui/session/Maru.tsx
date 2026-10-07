@@ -2,7 +2,7 @@ import { Animated, StyleSheet } from 'react-native'
 import { colors } from '@/ui/theme'
 import { STAMP_STROKE_RATIO, useStamp } from './useStamp'
 
-// A big vermilion 〇 stamped over the answered question's soroban. The
+// A big rose 〇 stamped over the answered question's soroban. The
 // round holds the answered question under it before rolling on
 // (RunRunner, spec (roll) §3), so it is `lasting`: it stays until its
 // question rolls away, and the latency the next question records starts

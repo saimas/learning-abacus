@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "learningabacus",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#F4EEE2",
+    "backgroundColor": "#FFF5F2",
     "ios": {
       "icon": "./assets/app.icon",
       "supportsTablet": false,
@@ -25,7 +25,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F4EEE2"
+          "backgroundColor": "#FFF5F2"
         }
       ]
     ],

@@ -147,8 +147,8 @@ const styles = StyleSheet.create({
   digit: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
   quiet: { backgroundColor: 'transparent', borderColor: 'transparent', borderBottomColor: 'transparent' },
   submit: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.accentFill,
+    borderColor: colors.accentFill,
     borderBottomColor: colors.accentShadow,
   },
   submitIdle: { opacity: 0.45 },
