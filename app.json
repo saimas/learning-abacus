@@ -17,8 +17,16 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "CFBundleDisplayName": "まいにち5分！そろばん練習"
+        "CFBundleDisplayName": "まいにち5分！そろばん練習",
+        "CFBundleLocalizations": [
+          "ja",
+          "en"
+        ]
       }
+    },
+    "locales": {
+      "ja": "./locales/ja.json",
+      "en": "./locales/en.json"
     },
     "plugins": [
       "expo-router",
